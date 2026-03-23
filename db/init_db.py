@@ -56,7 +56,8 @@ def init_db():
             url TEXT,
             published_at TEXT,
             relevance_score REAL,
-            tickers TEXT  -- JSON 배열
+            tickers TEXT,  -- JSON 배열
+            category TEXT   -- stock / geopolitics / macro / sector / opportunity
         )
     """)
 
@@ -79,6 +80,7 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_prices_ticker_ts ON prices (ticker, timestamp)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_macro_indicator_ts ON macro (indicator, timestamp)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_alerts_triggered ON alerts (triggered_at)")
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)")
 
     conn.commit()
     conn.close()

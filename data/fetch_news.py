@@ -35,8 +35,37 @@ TICKER_KEYWORDS = {
     "GC=F":      ["금 시세", "gold price", "금값"],
 }
 
-# 추가 매크로 키워드
-MACRO_KEYWORDS = ["한국 증시", "미국 증시", "원달러 환율", "유가 전망", "금리 전망"]
+# 매크로 키워드 — 카테고리별 관련도 스코어
+MACRO_KEYWORDS = {
+    "geopolitics": {
+        "relevance": 0.9,
+        "keywords": [
+            "미국 이란 전쟁 최신", "호르무즈 해협 봉쇄", "중동 전쟁 확전",
+            "트럼프 이란 협상",
+        ],
+    },
+    "macro": {
+        "relevance": 0.8,
+        "keywords": [
+            "연준 Fed 금리 결정", "달러 인덱스 전망", "WTI 유가 전망",
+            "원달러 환율 전망", "코스피 전망 분석",
+        ],
+    },
+    "sector": {
+        "relevance": 0.7,
+        "keywords": [
+            "에너지 ETF 강세 전망", "방산주 투자 전망", "AI 반도체 전망",
+            "한국 방산 수출",
+        ],
+    },
+    "opportunity": {
+        "relevance": 0.85,
+        "keywords": [
+            "저평가 종목 발굴 추천", "외국인 순매수 종목", "52주 신저가 반등",
+            "섹터 로테이션 전략",
+        ],
+    },
+}
 
 
 def search_brave_news(query: str, count: int = 5) -> list[dict]:
@@ -122,6 +151,7 @@ def collect_news() -> list[dict]:
                     "url": url,
                     "published_at": article.get("age", ""),
                     "relevance_score": relevance,
+                    "category": "stock",
                     "tickers": [ticker],
                     "ticker_name": name,
                     "timestamp": now,
@@ -133,33 +163,36 @@ def collect_news() -> list[dict]:
         except Exception as e:
             print(f"  ❌ {name} ({ticker}): {e}")
 
-    # 2. 매크로 키워드 뉴스 수집
-    for kw in MACRO_KEYWORDS:
-        try:
-            results = search_brave_news(kw, count=2)
-            for article in results:
-                url = article.get("url", "")
-                if url in seen_urls:
-                    continue
-                seen_urls.add(url)
+    # 2. 매크로 키워드 뉴스 수집 (카테고리별)
+    for category, info in MACRO_KEYWORDS.items():
+        base_relevance = info["relevance"]
+        for kw in info["keywords"]:
+            try:
+                results = search_brave_news(kw, count=2)
+                for article in results:
+                    url = article.get("url", "")
+                    if url in seen_urls:
+                        continue
+                    seen_urls.add(url)
 
-                news_item = {
-                    "title": article.get("title", ""),
-                    "summary": article.get("description", ""),
-                    "source": article.get("meta_url", {}).get("hostname", "") if isinstance(article.get("meta_url"), dict) else "",
-                    "url": url,
-                    "published_at": article.get("age", ""),
-                    "relevance_score": 0.5,  # 매크로 뉴스는 기본 점수
-                    "tickers": [],
-                    "ticker_name": kw,
-                    "timestamp": now,
-                }
-                all_news.append(news_item)
+                    news_item = {
+                        "title": article.get("title", ""),
+                        "summary": article.get("description", ""),
+                        "source": article.get("meta_url", {}).get("hostname", "") if isinstance(article.get("meta_url"), dict) else "",
+                        "url": url,
+                        "published_at": article.get("age", ""),
+                        "relevance_score": base_relevance,
+                        "category": category,
+                        "tickers": [],
+                        "ticker_name": kw,
+                        "timestamp": now,
+                    }
+                    all_news.append(news_item)
 
-            print(f"  ✅ 매크로 [{kw}]: {len(results)}건 수집")
+                print(f"  ✅ {category} [{kw}]: {len(results)}건 수집")
 
-        except Exception as e:
-            print(f"  ❌ 매크로 [{kw}]: {e}")
+            except Exception as e:
+                print(f"  ❌ {category} [{kw}]: {e}")
 
     # 관련도 높은 순으로 정렬
     all_news.sort(key=lambda x: x["relevance_score"], reverse=True)
@@ -167,26 +200,60 @@ def collect_news() -> list[dict]:
     return all_news
 
 
+def ensure_category_column():
+    """news 테이블에 category 컬럼이 없으면 추가"""
+    conn = sqlite3.connect(str(DB_PATH))
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(news)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "category" not in columns:
+            cursor.execute("ALTER TABLE news ADD COLUMN category TEXT")
+            conn.commit()
+            print("  🔧 news 테이블에 category 컬럼 추가")
+    finally:
+        conn.close()
+
+
 def save_to_db(records: list[dict]):
-    """뉴스를 SQLite에 저장"""
+    """뉴스를 SQLite에 저장 (title+source 중복 무시)"""
     if not records:
         return
 
     conn = sqlite3.connect(str(DB_PATH))
     try:
         cursor = conn.cursor()
+        # UNIQUE 인덱스가 없으면 기존 중복 정리 후 생성
+        try:
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)")
+        except sqlite3.IntegrityError:
+            # 기존 중복 데이터 정리: 같은 title+source 중 id가 작은 것만 남김
+            cursor.execute("""
+                DELETE FROM news WHERE id NOT IN (
+                    SELECT MIN(id) FROM news GROUP BY title, source
+                )
+            """)
+            conn.commit()
+            removed = cursor.rowcount
+            print(f"  🧹 기존 중복 {removed}건 정리")
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)")
         inserted = 0
+        skipped = 0
         for r in records:
             cursor.execute(
-                """INSERT INTO news (title, summary, source, url, published_at, relevance_score, tickers)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT OR IGNORE INTO news (title, summary, source, url, published_at, relevance_score, tickers, category)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (r["title"], r["summary"], r["source"], r["url"],
                  r["published_at"], r["relevance_score"],
-                 json.dumps(r["tickers"], ensure_ascii=False)),
+                 json.dumps(r["tickers"], ensure_ascii=False),
+                 r.get("category", "stock")),
             )
-            inserted += 1
+            if cursor.rowcount > 0:
+                inserted += 1
+            else:
+                skipped += 1
         conn.commit()
-        print(f"  💾 뉴스 DB 저장: {inserted}건")
+        print(f"  💾 뉴스 DB 저장: {inserted}건 (중복 {skipped}건 스킵)")
     finally:
         conn.close()
 
@@ -218,6 +285,7 @@ def run():
     # DB 초기화 확인
     if not DB_PATH.exists():
         init_db()
+    ensure_category_column()
 
     # 뉴스 수집
     records = collect_news()
