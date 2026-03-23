@@ -1,0 +1,16 @@
+# 데이터베이스 (로컬 전용)
+db/history.db
+
+# 출력 파일 (자동 생성)
+output/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+.venv/
+
+# macOS
+.DS_Store

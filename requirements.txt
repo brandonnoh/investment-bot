@@ -2,4 +2,3 @@ yfinance
 requests
 python-dotenv
 schedule
-
