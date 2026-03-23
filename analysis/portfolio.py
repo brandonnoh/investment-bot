@@ -27,7 +27,7 @@ SECTOR_MAP = {
     "TSLA":      "전기차/AI",
     "GOOGL":     "빅테크",
     "XOP":       "에너지",
-    "GC=F":      "원자재(금)",
+    "GOLD_KRW_G": "원자재(금)",
 }
 
 
@@ -82,9 +82,10 @@ def calculate_holdings(prices: list[dict], exchange_rate: float) -> list[dict]:
             current_value_krw = price * qty * exchange_rate
             invested_krw = avg_cost * qty * exchange_rate if avg_cost > 0 else 0
 
-        # 평가손익
-        pnl_krw = current_value_krw - invested_krw if invested_krw > 0 else 0
-        pnl_pct = (pnl_krw / invested_krw * 100) if invested_krw > 0 else None
+        # 평가손익 (avg_cost=0인 종목은 수익률 계산 제외)
+        cost_set = avg_cost > 0
+        pnl_krw = current_value_krw - invested_krw if cost_set else None
+        pnl_pct = (pnl_krw / invested_krw * 100) if cost_set and invested_krw > 0 else None
 
         sector = SECTOR_MAP.get(ticker, "기타")
 
@@ -97,9 +98,10 @@ def calculate_holdings(prices: list[dict], exchange_rate: float) -> list[dict]:
             "avg_cost": avg_cost,
             "qty": qty,
             "current_value_krw": round(current_value_krw),
-            "invested_krw": round(invested_krw),
-            "pnl_krw": round(pnl_krw),
+            "invested_krw": round(invested_krw) if cost_set else 0,
+            "pnl_krw": round(pnl_krw) if pnl_krw is not None else None,
             "pnl_pct": round(pnl_pct, 2) if pnl_pct is not None else None,
+            "pnl_label": None if cost_set else "평단 미설정",
             "change_pct": p.get("change_pct"),
         })
 
@@ -118,7 +120,8 @@ def calculate_sector_weights(holdings: list[dict]) -> list[dict]:
         if sector not in sector_totals:
             sector_totals[sector] = {"value": 0, "invested": 0, "stocks": []}
         sector_totals[sector]["value"] += h["current_value_krw"]
-        sector_totals[sector]["invested"] += h["invested_krw"]
+        if h.get("pnl_label") is None:
+            sector_totals[sector]["invested"] += h["invested_krw"]
         sector_totals[sector]["stocks"].append(h["name"])
 
     sectors = []
@@ -241,7 +244,7 @@ def calculate_risk_metrics(holdings: list[dict]) -> dict:
 def build_summary(holdings: list[dict], sectors: list[dict],
                   risk: dict, exchange_rate: float) -> dict:
     """포트폴리오 전체 요약 생성"""
-    total_invested = sum(h["invested_krw"] for h in holdings if h["invested_krw"] > 0)
+    total_invested = sum(h["invested_krw"] for h in holdings if h.get("pnl_label") is None and h["invested_krw"] > 0)
     total_current = sum(h["current_value_krw"] for h in holdings)
     total_pnl = total_current - total_invested if total_invested > 0 else 0
     total_pnl_pct = round(total_pnl / total_invested * 100, 2) if total_invested > 0 else None
@@ -280,6 +283,11 @@ def run():
     # 종목별 평가금액 (원화 통일)
     holdings = calculate_holdings(prices, exchange_rate)
     print(f"  📊 분석 종목: {len(holdings)}개")
+
+    # 평단 미설정 종목 안내
+    no_cost = [h["name"] for h in holdings if h.get("pnl_label") == "평단 미설정"]
+    if no_cost:
+        print(f"  ⚠️  평단 미설정 (수익률 제외): {', '.join(no_cost)}")
 
     # 섹터별 비중
     sectors = calculate_sector_weights(holdings)

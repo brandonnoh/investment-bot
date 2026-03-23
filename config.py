@@ -21,7 +21,7 @@ PORTFOLIO = [
     {"name": "테슬라",              "ticker": "TSLA",      "avg_cost": 394.32, "currency": "USD", "qty": 1,   "account": "미국"},
     {"name": "알파벳",              "ticker": "GOOGL",     "avg_cost": 308.27, "currency": "USD", "qty": 2,   "account": "미국"},
     {"name": "SPDR S&P Oil",       "ticker": "XOP",       "avg_cost": 178.26, "currency": "USD", "qty": 1,   "account": "미국"},
-    {"name": "금 현물",             "ticker": "GC=F",      "avg_cost": 0,      "currency": "USD", "qty": 128, "account": "실물"},  # 128g
+    {"name": "금 현물",             "ticker": "GOLD_KRW_G", "avg_cost": 225564, "currency": "KRW", "qty": 128, "account": "실물"},  # 128g, 원/g
 ]
 
 # ── 매크로 지표 정의 ──
@@ -47,6 +47,7 @@ ALERT_THRESHOLDS = {
     "usd_krw_high":   {"threshold": 1550, "level": "RED",    "label": "환율 급등"},
     "oil_surge":      {"threshold":  5.0, "level": "YELLOW", "label": "유가 급등"},
     "gold_swing":     {"threshold":  3.0, "level": "YELLOW", "label": "금 현물 급변"},
+    "vix_high":       {"threshold": 30.0, "level": "YELLOW", "label": "VIX 급등"},
     # 포트폴리오 전체
     "portfolio_loss": {"threshold": -10.0, "level": "RED",   "label": "포트폴리오 전체 손실"},
 }
@@ -58,7 +59,9 @@ YAHOO_TIMEOUT = 10  # 초
 # ── 마켓 분류 ──
 def get_market(ticker: str) -> str:
     """티커 기반 마켓 분류"""
-    if ticker.endswith(".KS") or ticker.endswith(".KQ"):
+    if ticker.startswith("GOLD_KRW"):
+        return "COMMODITY"
+    elif ticker.endswith(".KS") or ticker.endswith(".KQ"):
         return "KR"
     elif "=F" in ticker or "=X" in ticker:
         return "COMMODITY"

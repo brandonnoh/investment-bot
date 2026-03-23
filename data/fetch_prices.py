@@ -38,6 +38,20 @@ def fetch_yahoo_quote(ticker: str) -> dict:
         raise ValueError(f"응답 파싱 실패 ({ticker}): {e}")
 
 
+def fetch_gold_krw_per_gram() -> tuple[float, float]:
+    """금 현물 원화/g 가격 계산: GC=F(달러/트로이온스) × KRW=X(환율) ÷ 31.1035"""
+    gold_meta = fetch_yahoo_quote("GC=F")
+    fx_meta = fetch_yahoo_quote("KRW=X")
+    gold_usd = gold_meta["regularMarketPrice"]
+    usd_krw = fx_meta["regularMarketPrice"]
+    gold_prev = gold_meta.get("chartPreviousClose", gold_meta.get("previousClose", gold_usd))
+    fx_prev = fx_meta.get("chartPreviousClose", fx_meta.get("previousClose", usd_krw))
+
+    price_krw_g = gold_usd * usd_krw / 31.1035
+    prev_krw_g = gold_prev * fx_prev / 31.1035
+    return round(price_krw_g, 0), round(prev_krw_g, 0)
+
+
 def collect_prices() -> list[dict]:
     """포트폴리오 전 종목 시세 수집"""
     now = datetime.now(KST).isoformat()
@@ -47,10 +61,15 @@ def collect_prices() -> list[dict]:
         ticker = stock["ticker"]
         name = stock["name"]
         try:
-            meta = fetch_yahoo_quote(ticker)
-            price = meta["regularMarketPrice"]
-            prev_close = meta.get("chartPreviousClose", meta.get("previousClose", price))
-            volume = meta.get("regularMarketVolume", 0)
+            # 금 현물(원/g) 커스텀 처리
+            if ticker == "GOLD_KRW_G":
+                price, prev_close = fetch_gold_krw_per_gram()
+                volume = 0
+            else:
+                meta = fetch_yahoo_quote(ticker)
+                price = meta["regularMarketPrice"]
+                prev_close = meta.get("chartPreviousClose", meta.get("previousClose", price))
+                volume = meta.get("regularMarketVolume", 0)
 
             # 전일 대비 변동률
             change_pct = round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
