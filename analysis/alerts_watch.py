@@ -338,7 +338,7 @@ def fire_system_event(alerts: list[dict]):
 
     try:
         result = subprocess.run(
-            ["openclaw", "system", "event", "--text", event_text, "--mode", "now"],
+            ["/opt/homebrew/bin/openclaw", "system", "event", "--text", event_text, "--mode", "now"],
             capture_output=True,
             text=True,
             timeout=30,
