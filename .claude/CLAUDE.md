@@ -75,6 +75,11 @@ daily.py ← prices.json + macro.json + alerts.json → daily_report.md
 BRAVE_API_KEY=xxx   # Phase 2 뉴스 수집용
 ```
 
+## ⚠️ 텔레그램 전송 필수 규칙
+- OpenClaw 크론잡에서 텔레그램 전송 시 **반드시 `--to 2111337920` 명시**
+- `--announce --channel telegram --to 2111337920` 세트로 항상 같이 써야 함
+- `--to` 빠지면 전송 실패 → 절대 빠뜨리지 말 것
+
 ## 주의사항
 - `db/history.db`, `output/` — git 제외 (.gitignore)
 - Yahoo Finance 과도한 요청 시 rate limit 주의 (10분 간격 권장)
