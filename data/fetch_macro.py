@@ -89,22 +89,24 @@ def collect_macro() -> list[dict]:
 def save_to_db(records: list[dict]):
     """매크로 지표를 SQLite에 저장"""
     conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    inserted = 0
+    try:
+        cursor = conn.cursor()
+        inserted = 0
 
-    for r in records:
-        if r.get("value") is None:
-            continue
-        cursor.execute(
-            """INSERT INTO macro (indicator, value, change_pct, timestamp)
-               VALUES (?, ?, ?, ?)""",
-            (r["indicator"], r["value"], r["change_pct"], r["timestamp"]),
-        )
-        inserted += 1
+        for r in records:
+            if r.get("value") is None:
+                continue
+            cursor.execute(
+                """INSERT INTO macro (indicator, value, change_pct, timestamp)
+                   VALUES (?, ?, ?, ?)""",
+                (r["indicator"], r["value"], r["change_pct"], r["timestamp"]),
+            )
+            inserted += 1
 
-    conn.commit()
-    conn.close()
-    print(f"  💾 DB 저장 완료: {inserted}건")
+        conn.commit()
+        print(f"  💾 DB 저장 완료: {inserted}건")
+    finally:
+        conn.close()
 
 
 def save_to_json(records: list[dict]):

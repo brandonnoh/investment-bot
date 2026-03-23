@@ -103,23 +103,25 @@ def collect_prices() -> list[dict]:
 def save_to_db(records: list[dict]):
     """수집된 시세를 SQLite에 저장"""
     conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    inserted = 0
+    try:
+        cursor = conn.cursor()
+        inserted = 0
 
-    for r in records:
-        if r.get("price") is None:
-            continue  # 에러 난 종목은 DB에 저장하지 않음
-        cursor.execute(
-            """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (r["ticker"], r["name"], r["price"], r["prev_close"],
-             r["change_pct"], r["volume"], r["timestamp"], r["market"]),
-        )
-        inserted += 1
+        for r in records:
+            if r.get("price") is None:
+                continue  # 에러 난 종목은 DB에 저장하지 않음
+            cursor.execute(
+                """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (r["ticker"], r["name"], r["price"], r["prev_close"],
+                 r["change_pct"], r["volume"], r["timestamp"], r["market"]),
+            )
+            inserted += 1
 
-    conn.commit()
-    conn.close()
-    print(f"  💾 DB 저장 완료: {inserted}건")
+        conn.commit()
+        print(f"  💾 DB 저장 완료: {inserted}건")
+    finally:
+        conn.close()
 
 
 def save_to_json(records: list[dict]):

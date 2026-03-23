@@ -145,32 +145,34 @@ def check_macro_alerts(macro: list[dict]) -> list[dict]:
 
 
 def check_portfolio_alert(prices: list[dict]) -> list[dict]:
-    """포트폴리오 전체 손실률 감지"""
+    """포트폴리오 통화별 손실률 감지 (KRW/USD 분리 계산)"""
     alerts = []
-    total_invested = 0
-    total_current = 0
+    threshold = ALERT_THRESHOLDS["portfolio_loss"]["threshold"]
 
+    # 통화별로 분리 계산
+    by_currency = {}
     for p in prices:
         if p.get("price") is None or p.get("avg_cost", 0) <= 0:
             continue
+        cur = p.get("currency", "USD")
+        if cur not in by_currency:
+            by_currency[cur] = {"invested": 0, "current": 0}
         qty = p.get("qty", 0)
-        avg = p["avg_cost"]
-        price = p["price"]
-        total_invested += avg * qty
-        total_current += price * qty
+        by_currency[cur]["invested"] += p["avg_cost"] * qty
+        by_currency[cur]["current"] += p["price"] * qty
 
-    if total_invested > 0:
-        total_pnl_pct = (total_current - total_invested) / total_invested * 100
-        threshold = ALERT_THRESHOLDS["portfolio_loss"]["threshold"]
-        if total_pnl_pct <= threshold:
-            alerts.append({
-                "level": "RED",
-                "event_type": "portfolio_loss",
-                "ticker": None,
-                "message": f"🔴 긴급: 포트폴리오 전체 {total_pnl_pct:+.2f}% 손실 (임계값: {threshold}%)",
-                "value": total_pnl_pct,
-                "threshold": threshold,
-            })
+    for cur, totals in by_currency.items():
+        if totals["invested"] > 0:
+            pnl_pct = (totals["current"] - totals["invested"]) / totals["invested"] * 100
+            if pnl_pct <= threshold:
+                alerts.append({
+                    "level": "RED",
+                    "event_type": "portfolio_loss",
+                    "ticker": None,
+                    "message": f"🔴 긴급: 포트폴리오({cur}) {pnl_pct:+.2f}% 손실 (임계값: {threshold}%)",
+                    "value": pnl_pct,
+                    "threshold": threshold,
+                })
 
     return alerts
 
@@ -181,20 +183,22 @@ def save_alerts_to_db(alerts: list[dict]):
         return
 
     conn = sqlite3.connect(str(DB_PATH))
-    cursor = conn.cursor()
-    now = datetime.now(KST).isoformat()
+    try:
+        cursor = conn.cursor()
+        now = datetime.now(KST).isoformat()
 
-    for a in alerts:
-        cursor.execute(
-            """INSERT INTO alerts (level, event_type, ticker, message, value, threshold, triggered_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (a["level"], a["event_type"], a.get("ticker"), a["message"],
-             a["value"], a["threshold"], now),
-        )
+        for a in alerts:
+            cursor.execute(
+                """INSERT INTO alerts (level, event_type, ticker, message, value, threshold, triggered_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (a["level"], a["event_type"], a.get("ticker"), a["message"],
+                 a["value"], a["threshold"], now),
+            )
 
-    conn.commit()
-    conn.close()
-    print(f"  💾 알림 DB 저장: {len(alerts)}건")
+        conn.commit()
+        print(f"  💾 알림 DB 저장: {len(alerts)}건")
+    finally:
+        conn.close()
 
 
 def save_alerts_to_json(alerts: list[dict]):

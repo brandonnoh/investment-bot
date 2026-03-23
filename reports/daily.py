@@ -75,40 +75,40 @@ def format_price_section(prices_data: dict | None) -> str:
 
 
 def format_portfolio_summary(prices_data: dict | None) -> str:
-    """포트폴리오 전체 요약"""
+    """포트폴리오 통화별 요약 (KRW/USD 분리 계산)"""
     if not prices_data:
         return ""
 
     prices = prices_data.get("prices", [])
-    total_invested = 0
-    total_current = 0
-    items = []
 
+    # 통화별 분리 집계
+    by_currency = {}
     for p in prices:
         if p.get("price") is None or p.get("avg_cost", 0) <= 0:
             continue
+        cur = p.get("currency", "USD")
+        if cur not in by_currency:
+            by_currency[cur] = {"invested": 0, "current": 0}
         qty = p.get("qty", 0)
-        avg = p["avg_cost"]
-        price = p["price"]
-        invested = avg * qty
-        current = price * qty
-        total_invested += invested
-        total_current += current
-        pnl = current - invested
-        items.append((p["name"], p["currency"], invested, current, pnl))
+        by_currency[cur]["invested"] += p["avg_cost"] * qty
+        by_currency[cur]["current"] += p["price"] * qty
 
-    if total_invested == 0:
+    if not by_currency:
         return ""
 
-    total_pnl = total_current - total_invested
-    total_pnl_pct = total_pnl / total_invested * 100
+    lines = ["### 💰 포트폴리오 요약\n"]
+    for cur, totals in by_currency.items():
+        invested = totals["invested"]
+        current = totals["current"]
+        pnl = current - invested
+        pnl_pct = pnl / invested * 100 if invested > 0 else 0
+        symbol = "원" if cur == "KRW" else "$"
+        if cur == "KRW":
+            lines.append(f"- **{cur}**: 투자 {invested:,.0f}원 → 현재 {current:,.0f}원 ({pnl_pct:+.2f}%)")
+        else:
+            lines.append(f"- **{cur}**: 투자 ${invested:,.2f} → 현재 ${current:,.2f} ({pnl_pct:+.2f}%)")
 
-    lines = [
-        "### 💰 포트폴리오 요약 (통화별 원금 기준)\n",
-        f"- **총 투자원금:** 통화 혼재 (KRW+USD) — 개별 종목 참조",
-        f"- **총 수익률 (원금 대비):** {total_pnl_pct:+.2f}%",
-        "",
-    ]
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -129,10 +129,10 @@ def format_macro_section(macro_data: dict | None) -> str:
         chg = m.get("change_pct", 0)
         flag = "🔴" if chg < -2 else ("🟡" if chg < 0 else "🟢")
 
-        # 환율은 원 단위로 표시
+        # 지표 유형별 표시 형식
         if m["indicator"] == "원/달러":
             val_str = f"{m['value']:,.2f}원"
-        elif m.get("category") == "INDEX":
+        elif m.get("category") in ("INDEX", "VOLATILITY", "FX"):
             val_str = f"{m['value']:,.2f}"
         else:
             val_str = f"${m['value']:,.2f}"
