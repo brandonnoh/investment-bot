@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 실시간 포트폴리오 주가 수집 + SQLite 저장
-Yahoo Finance API 사용 (무료, 키 불필요)
+한국 주식: 네이버 금융 API / 미국 주식: Yahoo Finance API
 출력: output/intel/prices.json
 """
 import json
@@ -38,6 +38,44 @@ def fetch_yahoo_quote(ticker: str) -> dict:
         raise ValueError(f"응답 파싱 실패 ({ticker}): {e}")
 
 
+def _is_kr_ticker(ticker: str) -> bool:
+    """한국 주식 티커 여부 (.KS 또는 .KQ)"""
+    return ticker.endswith(".KS") or ticker.endswith(".KQ")
+
+
+def _extract_kr_code(ticker: str) -> str:
+    """티커에서 6자리 종목코드 추출 (005930.KS → 005930)"""
+    return ticker.split(".")[0]
+
+
+def fetch_naver_price(code: str) -> dict:
+    """네이버 금융 실시간 주가 조회 (한국 주식 전용)"""
+    url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{code}"
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://finance.naver.com"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            d = json.load(r)
+        data = d["datas"][0]
+        price = int(data["closePrice"].replace(",", ""))
+        change = int(data["compareToPreviousClosePrice"].replace(",", ""))
+        prev_close = price - change
+        return {
+            "price": price,
+            "prev_close": prev_close,
+            "change_pct": float(data["fluctuationsRatio"]),
+            "volume": int(data["accumulatedTradingVolume"].replace(",", "")),
+            "high": int(data["highPrice"].replace(",", "")),
+            "low": int(data["lowPrice"].replace(",", "")),
+        }
+    except urllib.error.URLError as e:
+        raise ConnectionError(f"네이버 API 네트워크 오류 ({code}): {e}")
+    except (KeyError, IndexError) as e:
+        raise ValueError(f"네이버 API 응답 파싱 실패 ({code}): {e}")
+
+
 def fetch_gold_krw_per_gram() -> tuple[float, float]:
     """금 현물 원화/g 가격 계산: GC=F(달러/트로이온스) × KRW=X(환율) ÷ 31.1035"""
     gold_meta = fetch_yahoo_quote("GC=F")
@@ -65,6 +103,12 @@ def collect_prices() -> list[dict]:
             if ticker == "GOLD_KRW_G":
                 price, prev_close = fetch_gold_krw_per_gram()
                 volume = 0
+            elif _is_kr_ticker(ticker):
+                # 한국 주식 → 네이버 금융 API
+                naver = fetch_naver_price(_extract_kr_code(ticker))
+                price = naver["price"]
+                prev_close = naver["prev_close"]
+                volume = naver["volume"]
             else:
                 meta = fetch_yahoo_quote(ticker)
                 price = meta["regularMarketPrice"]

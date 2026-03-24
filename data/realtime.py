@@ -2,6 +2,7 @@
 """
 실시간 시세 조회 (stdout 마크다운 출력 전용)
 자비스가 리포트 생성 시 호출하여 현재 수치를 즉석 확인하는 스크립트.
+한국 주식: 네이버 금융 API / 미국 주식·매크로: Yahoo Finance API
 파일 저장 없음 — stdout에 마크다운 형식으로 출력.
 
 사용법:
@@ -29,6 +30,39 @@ KST = timezone(timedelta(hours=9))
 
 # 실시간 조회 대상 매크로 (요청된 6개)
 REALTIME_MACRO_NAMES = {"코스피", "코스닥", "원/달러", "WTI 유가", "브렌트유", "VIX"}
+
+
+def _is_kr_ticker(ticker: str) -> bool:
+    """한국 주식 티커 여부 (.KS 또는 .KQ)"""
+    return ticker.endswith(".KS") or ticker.endswith(".KQ")
+
+
+def _extract_kr_code(ticker: str) -> str:
+    """티커에서 6자리 종목코드 추출 (005930.KS → 005930)"""
+    return ticker.split(".")[0]
+
+
+def fetch_naver_price(code: str) -> dict:
+    """네이버 금융 실시간 주가 조회 (한국 주식 전용)"""
+    url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{code}"
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://finance.naver.com"
+    })
+    with urllib.request.urlopen(req, timeout=8) as r:
+        d = json.load(r)
+    data = d["datas"][0]
+    price = int(data["closePrice"].replace(",", ""))
+    change = int(data["compareToPreviousClosePrice"].replace(",", ""))
+    prev_close = price - change
+    return {
+        "price": price,
+        "prev_close": prev_close,
+        "change_pct": float(data["fluctuationsRatio"]),
+        "volume": int(data["accumulatedTradingVolume"].replace(",", "")),
+        "high": int(data["highPrice"].replace(",", "")),
+        "low": int(data["lowPrice"].replace(",", "")),
+    }
 
 
 def fetch_yahoo_quote(ticker: str) -> dict:
@@ -139,6 +173,13 @@ def run():
                 prev_close = gold["prev_close"]
                 day_high = gold["high"]
                 day_low = gold["low"]
+            elif _is_kr_ticker(ticker):
+                # 한국 주식 → 네이버 금융 API
+                naver = fetch_naver_price(_extract_kr_code(ticker))
+                price = naver["price"]
+                prev_close = naver["prev_close"]
+                day_high = naver["high"]
+                day_low = naver["low"]
             else:
                 meta = fetch_yahoo_quote(ticker)
                 price = meta["regularMarketPrice"]
