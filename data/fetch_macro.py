@@ -19,6 +19,24 @@ from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))
 
+# 네이버 금융 지수 코드
+NAVER_INDEX_CODES = {"KOSPI", "KOSDAQ"}
+
+
+def fetch_naver_index(code: str) -> dict:
+    """네이버 금융 실시간 지수 조회 (코스피/코스닥)"""
+    url = f"https://polling.finance.naver.com/api/realtime/domestic/index/{code}"
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0",
+        "Referer": "https://finance.naver.com"
+    })
+    with urllib.request.urlopen(req, timeout=8) as r:
+        d = json.load(r)
+    data = d["datas"][0]
+    price = float(data["closePrice"].replace(",", ""))
+    change_pct = float(data["fluctuationsRatio"])
+    return {"price": price, "change_pct": change_pct}
+
 
 def fetch_yahoo_quote(ticker: str) -> dict:
     """Yahoo Finance에서 지표 시세 조회"""
@@ -46,12 +64,17 @@ def collect_macro() -> list[dict]:
         ticker = indicator["ticker"]
         name = indicator["name"]
         try:
-            meta = fetch_yahoo_quote(ticker)
-            value = meta["regularMarketPrice"]
-            prev_close = meta.get("chartPreviousClose", meta.get("previousClose", value))
-
-            # 전일 대비 변동률
-            change_pct = round((value - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+            if ticker in NAVER_INDEX_CODES:
+                # 코스피/코스닥 → 네이버 금융 API
+                naver = fetch_naver_index(ticker)
+                value = naver["price"]
+                change_pct = naver["change_pct"]
+                prev_close = round(value / (1 + change_pct / 100), 2) if change_pct else value
+            else:
+                meta = fetch_yahoo_quote(ticker)
+                value = meta["regularMarketPrice"]
+                prev_close = meta.get("chartPreviousClose", meta.get("previousClose", value))
+                change_pct = round((value - prev_close) / prev_close * 100, 2) if prev_close else 0.0
 
             record = {
                 "indicator": name,

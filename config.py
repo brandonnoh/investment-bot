@@ -27,8 +27,8 @@ PORTFOLIO = [
 # ── 매크로 지표 정의 ──
 # (지표명, 야후티커, 카테고리)
 MACRO_INDICATORS = [
-    {"name": "코스피",      "ticker": "^KS11",    "category": "INDEX"},
-    {"name": "코스닥",      "ticker": "^KQ11",    "category": "INDEX"},
+    {"name": "코스피",      "ticker": "KOSPI",    "category": "INDEX"},
+    {"name": "코스닥",      "ticker": "KOSDAQ",   "category": "INDEX"},
     {"name": "원/달러",     "ticker": "KRW=X",    "category": "FX"},
     {"name": "WTI 유가",   "ticker": "CL=F",     "category": "COMMODITY"},
     {"name": "브렌트유",    "ticker": "BZ=F",     "category": "COMMODITY"},
