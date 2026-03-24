@@ -213,8 +213,9 @@ def run():
     # ── 1. 포트폴리오 종목 ──
     lines.append("## 💼 포트폴리오 종목")
     lines.append("")
-    lines.append("| 종목 | 현재가 | 전일비 | 평단비 | 오늘 고가 | 오늘 저가 | 오전비 |")
-    lines.append("|------|--------|--------|--------|-----------|-----------|--------|")
+    lines.append("> 오늘등락: 전일 대비 | 매입손익: 평균 매입가 대비\n")
+    lines.append("| 종목 | 현재가 | 오늘등락 | 매입손익 | 오늘 고가 | 오늘 저가 | 오전비 |")
+    lines.append("|------|--------|----------|----------|-----------|-----------|--------|")
 
     for stock in PORTFOLIO:
         ticker = stock["ticker"]
@@ -266,8 +267,8 @@ def run():
     lines.append("")
     lines.append("## 🌍 매크로 지표")
     lines.append("")
-    lines.append("| 지표 | 현재값 | 전일비 | 오전비 |")
-    lines.append("|------|--------|--------|--------|")
+    lines.append("| 지표 | 현재값 | 오늘등락 | 오전비 |")
+    lines.append("|------|--------|----------|--------|")
 
     for ind in MACRO_INDICATORS:
         if ind["name"] not in REALTIME_MACRO_NAMES:
