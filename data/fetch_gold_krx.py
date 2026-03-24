@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-KRX 금 현물(종목코드 4001) 시세 조회 — 키움증권 REST API
+KRX 금 현물(종목코드 M04020000) 시세 조회 — 키움증권 REST API
 토큰 캐시: .kiwoom_token.json (프로젝트 루트)
 
 단독 실행:
@@ -22,7 +22,7 @@ TOKEN_CACHE_PATH = BASE_DIR / ".kiwoom_token.json"
 
 KIWOOM_TOKEN_URL = "https://api.kiwoom.com/oauth2/token"
 KIWOOM_QUOTE_URL = "https://api.kiwoom.com/api/dostk/mrkcond"
-GOLD_KRX_CODE = "4001"
+GOLD_KRX_CODE = "M04020000"
 
 
 def _get_env():
@@ -88,10 +88,15 @@ def get_token() -> str:
     return token
 
 
+def _strip_sign(s: str) -> str:
+    """부호(+/-)를 제거하고 숫자 문자열만 반환"""
+    return s.lstrip("+-").strip()
+
+
 def fetch_gold_krx() -> dict:
     """
-    KRX 금 현물(4001) 시세 조회.
-    반환: {price, prev_close, change_pct, high, low, volume, timestamp}
+    KRX 금 현물(M04020000) 시세 조회.
+    반환: {price, prev_close, change, change_pct, high, low, volume, source}
     """
     appkey, _ = _get_env()
     token = get_token()
@@ -115,41 +120,45 @@ def fetch_gold_krx() -> dict:
     if data.get("return_code") != 0:
         raise ValueError(f"키움 API 오류: {data.get('return_msg', 'unknown')}")
 
-    # 장외 시간이면 값이 빈 문자열 → 전일종가 기반 반환
-    lst_pric = data.get("lst_pric", "")         # 현재가(최종체결가)
-    pred_close = data.get("pred_close_pric", "")  # 전일종가
-    high_pric = data.get("high_pric", "")       # 고가
-    low_pric = data.get("low_pric", "")         # 저가
-    trde_qty = data.get("trde_qty", "")         # 거래량
+    # 응답 필드 파싱
+    pred_close_raw = data.get("pred_close_pric", "")  # 전일종가
+    pred_pre_raw = data.get("pred_pre", "")            # 전일대비 (부호 포함)
+    flu_rt_raw = data.get("flu_rt", "")                # 등락율 (부호 포함)
+    high_raw = data.get("high_pric", "")               # 고가 (부호 포함)
+    low_raw = data.get("low_pric", "")                 # 저가 (부호 포함)
+    trde_qty_raw = data.get("trde_qty", "")            # 거래량
 
-    if not lst_pric and not pred_close:
+    if not pred_close_raw:
         raise ValueError("장외 시간 — 시세 데이터 없음")
 
-    # 장외 시간: 현재가 없으면 전일종가를 현재가로 사용
-    if pred_close:
-        prev_close = float(pred_close)
+    prev_close = int(pred_close_raw)
+
+    # 현재가 = 전일종가 + 전일대비
+    if pred_pre_raw:
+        change = int(pred_pre_raw.replace("+", "").replace(",", ""))
     else:
-        prev_close = 0.0
+        change = 0
+    price = prev_close + change
 
-    if lst_pric:
-        price = float(lst_pric)
+    # 등락율
+    if flu_rt_raw:
+        change_pct = float(flu_rt_raw.replace("+", "").replace(",", ""))
     else:
-        price = prev_close
+        change_pct = round(change / prev_close * 100, 2) if prev_close else 0.0
 
-    high = float(high_pric) if high_pric else price
-    low = float(low_pric) if low_pric else price
-    volume = int(trde_qty) if trde_qty else 0
-
-    change_pct = round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+    high = int(_strip_sign(high_raw)) if high_raw else price
+    low = int(_strip_sign(low_raw)) if low_raw else price
+    volume = int(trde_qty_raw) if trde_qty_raw else 0
 
     return {
         "price": price,
         "prev_close": prev_close,
+        "change": change,
         "change_pct": change_pct,
         "high": high,
         "low": low,
         "volume": volume,
-        "timestamp": datetime.now(KST).isoformat(),
+        "source": "kiwoom_krx",
     }
 
 
