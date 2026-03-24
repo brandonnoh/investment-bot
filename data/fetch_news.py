@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-뉴스 수집 모듈 — Brave Search API
-포트폴리오 종목별 최신 뉴스 수집 + 관련도 스코어링
+뉴스 수집 모듈 — Google News RSS (무료) + Brave Search API (소량) 하이브리드
+- RSS: 종목별 뉴스 + 매크로 키워드 (무료, 무제한)
+- Brave: 투자 기회 발굴용만 (월 ~240건, 무료 크레딧 이내)
 출력: output/intel/news.json
 """
 import json
@@ -11,6 +12,7 @@ import sys
 import urllib.request
 import urllib.error
 import urllib.parse
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -23,52 +25,76 @@ KST = timezone(timedelta(hours=9))
 BRAVE_API_KEY = os.environ.get("BRAVE_API_KEY", "")
 BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/news/search"
 
-# 종목별 검색 키워드 매핑
+# ── RSS로 수집할 종목 키워드 ──
 TICKER_KEYWORDS = {
-    "005930.KS": ["삼성전자", "Samsung Electronics"],
-    "005380.KS": ["현대차", "현대자동차", "Hyundai Motor"],
-    "0117V0.KS": ["AI 전력", "코리아AI전력", "AI 인프라 전력"],
-    "458730.KS": ["미국 방산", "방산 ETF", "defense ETF"],
-    "TSLA":      ["Tesla", "테슬라"],
-    "GOOGL":     ["Google", "Alphabet", "구글", "알파벳"],
-    "XOP":       ["oil gas ETF", "에너지 ETF", "유가"],
-    "GC=F":      ["금 시세", "gold price", "금값"],
+    "005930.KS": ["삼성전자 주가"],
+    "005380.KS": ["현대차 주가"],
+    "0117V0.KS": ["TIGER AI전력"],
+    "458730.KS": ["방산ETF"],
+    "TSLA":      ["테슬라"],
+    "GOOGL":     ["알파벳 구글"],
+    "XOP":       ["XOP"],
+    "GC=F":      ["금현물"],
 }
 
-# 매크로 키워드 — 카테고리별 관련도 스코어
+# ── 매크로 키워드 — 카테고리별 수집 방식 ──
 MACRO_KEYWORDS = {
+    # RSS로 수집 (무료)
     "geopolitics": {
         "relevance": 0.9,
+        "method": "rss",
         "keywords": [
-            "미국 이란 전쟁 최신", "호르무즈 해협 봉쇄", "중동 전쟁 확전",
-            "트럼프 이란 협상",
+            "이란 전쟁",
         ],
     },
     "macro": {
         "relevance": 0.8,
+        "method": "rss",
         "keywords": [
-            "연준 Fed 금리 결정", "달러 인덱스 전망", "WTI 유가 전망",
-            "원달러 환율 전망", "코스피 전망 분석",
+            "코스피", "원달러 환율", "WTI 유가", "연준 금리",
         ],
     },
-    "sector": {
-        "relevance": 0.7,
-        "keywords": [
-            "에너지 ETF 강세 전망", "방산주 투자 전망", "AI 반도체 전망",
-            "한국 방산 수출",
-        ],
-    },
+    # Brave로 수집 (유료, 소량)
     "opportunity": {
         "relevance": 0.85,
+        "method": "brave",
         "keywords": [
-            "저평가 종목 발굴 추천", "외국인 순매수 종목", "52주 신저가 반등",
-            "섹터 로테이션 전략",
+            "저평가 종목 발굴", "외국인 순매수 종목",
+            "52주 신저가 반등", "섹터 로테이션 전략",
         ],
     },
 }
 
 
-def search_brave_news(query: str, count: int = 5) -> list[dict]:
+# ── Google News RSS (무료) ──
+
+def fetch_google_news_rss(query: str, count: int = 5, lang: str = "ko") -> list[dict]:
+    """Google News RSS로 무료 뉴스 수집"""
+    encoded = urllib.parse.quote(query)
+    url = f"https://news.google.com/rss/search?q={encoded}&hl={lang}&gl=KR&ceid=KR:{lang}"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+
+    with urllib.request.urlopen(req, timeout=10) as r:
+        root = ET.fromstring(r.read())
+
+    items = []
+    for item in root.findall(".//item")[:count]:
+        title = item.findtext("title", "")
+        link = item.findtext("link", "")
+        pub_date = item.findtext("pubDate", "")
+        source = item.findtext("source", "")
+        items.append({
+            "title": title,
+            "url": link,
+            "source": source,
+            "published_at": pub_date,
+        })
+    return items
+
+
+# ── Brave Search API (유료) ──
+
+def search_brave_news(query: str, count: int = 2) -> list[dict]:
     """Brave Search API로 뉴스 검색"""
     if not BRAVE_API_KEY:
         raise ValueError("BRAVE_API_KEY 환경변수가 설정되지 않았습니다")
@@ -96,108 +122,140 @@ def search_brave_news(query: str, count: int = 5) -> list[dict]:
         raise ConnectionError(f"Brave Search 네트워크 오류: {e}")
 
 
-def calculate_relevance(article: dict, keywords: list[str]) -> float:
-    """기사의 종목 관련도 스코어 계산 (0.0 ~ 1.0)"""
-    title = (article.get("title") or "").lower()
-    description = (article.get("description") or "").lower()
-    text = f"{title} {description}"
+# ── 관련도 스코어링 ──
 
-    score = 0.0
-    matched = 0
-    for kw in keywords:
-        kw_lower = kw.lower()
-        if kw_lower in title:
-            score += 0.4  # 제목에 키워드 있으면 높은 점수
-            matched += 1
-        elif kw_lower in text:
-            score += 0.2  # 본문에만 있으면 낮은 점수
-            matched += 1
-
-    # 매칭된 키워드 비율 반영
-    if len(keywords) > 0:
-        coverage = matched / len(keywords)
-        score = min(score * (0.5 + 0.5 * coverage), 1.0)
-
-    return round(score, 2)
+def calculate_relevance(title: str, keywords: list[str]) -> float:
+    """기사 제목 기반 관련도 스코어 계산 (0.0 ~ 1.0)"""
+    title_lower = title.lower()
+    matched = sum(1 for kw in keywords if kw.lower() in title_lower)
+    if not keywords:
+        return 0.5
+    return round(min(matched / len(keywords), 1.0), 2)
 
 
-def collect_news() -> list[dict]:
-    """포트폴리오 종목별 뉴스 수집"""
+# ── 뉴스 수집 ──
+
+def collect_news() -> tuple[list[dict], int, int]:
+    """하이브리드 뉴스 수집: RSS + Brave. (records, rss_count, brave_count) 반환"""
     now = datetime.now(KST).isoformat()
     all_news = []
     seen_urls = set()
+    rss_count = 0
+    brave_count = 0
 
-    # 1. 종목별 뉴스 수집
+    # 1. 종목별 뉴스 — RSS
     for stock in PORTFOLIO:
         ticker = stock["ticker"]
         name = stock["name"]
-        keywords = TICKER_KEYWORDS.get(ticker, [name])
+        keywords = TICKER_KEYWORDS.get(ticker)
+        if not keywords:
+            continue
 
-        # 첫 번째 키워드로 검색
-        query = keywords[0] if keywords else name
+        query = keywords[0]
         try:
-            results = search_brave_news(f"{query} 뉴스", count=3)
+            results = fetch_google_news_rss(query, count=3)
             for article in results:
                 url = article.get("url", "")
                 if url in seen_urls:
                     continue
                 seen_urls.add(url)
 
-                relevance = calculate_relevance(article, keywords)
                 news_item = {
-                    "title": article.get("title", ""),
-                    "summary": article.get("description", ""),
-                    "source": article.get("meta_url", {}).get("hostname", "") if isinstance(article.get("meta_url"), dict) else "",
+                    "title": article["title"],
+                    "summary": "",
+                    "source": article["source"],
                     "url": url,
-                    "published_at": article.get("age", ""),
-                    "relevance_score": relevance,
+                    "published_at": article["published_at"],
+                    "relevance_score": calculate_relevance(article["title"], keywords),
                     "category": "stock",
                     "tickers": [ticker],
                     "ticker_name": name,
+                    "fetch_method": "rss",
                     "timestamp": now,
                 }
                 all_news.append(news_item)
+                rss_count += 1
 
-            print(f"  ✅ {name}: {len(results)}건 수집")
+            print(f"  ✅ [RSS] {name}: {len(results)}건")
 
         except Exception as e:
-            print(f"  ❌ {name} ({ticker}): {e}")
+            print(f"  ❌ [RSS] {name}: {e}")
 
-    # 2. 매크로 키워드 뉴스 수집 (카테고리별)
+    # 2. 매크로 키워드 — 방식에 따라 분기
     for category, info in MACRO_KEYWORDS.items():
         base_relevance = info["relevance"]
+        method = info["method"]
+
         for kw in info["keywords"]:
             try:
-                results = search_brave_news(kw, count=2)
-                for article in results:
-                    url = article.get("url", "")
-                    if url in seen_urls:
+                if method == "rss":
+                    results = fetch_google_news_rss(kw, count=3)
+                    for article in results:
+                        url = article.get("url", "")
+                        if url in seen_urls:
+                            continue
+                        seen_urls.add(url)
+
+                        news_item = {
+                            "title": article["title"],
+                            "summary": "",
+                            "source": article["source"],
+                            "url": url,
+                            "published_at": article["published_at"],
+                            "relevance_score": base_relevance,
+                            "category": category,
+                            "tickers": [],
+                            "ticker_name": kw,
+                            "fetch_method": "rss",
+                            "timestamp": now,
+                        }
+                        all_news.append(news_item)
+                        rss_count += 1
+
+                    print(f"  ✅ [RSS] {category} [{kw}]: {len(results)}건")
+
+                elif method == "brave":
+                    if not BRAVE_API_KEY:
+                        print(f"  ⚠️  [Brave] {category} [{kw}]: API 키 없음 — 스킵")
                         continue
-                    seen_urls.add(url)
 
-                    news_item = {
-                        "title": article.get("title", ""),
-                        "summary": article.get("description", ""),
-                        "source": article.get("meta_url", {}).get("hostname", "") if isinstance(article.get("meta_url"), dict) else "",
-                        "url": url,
-                        "published_at": article.get("age", ""),
-                        "relevance_score": base_relevance,
-                        "category": category,
-                        "tickers": [],
-                        "ticker_name": kw,
-                        "timestamp": now,
-                    }
-                    all_news.append(news_item)
+                    results = search_brave_news(kw, count=2)
+                    for article in results:
+                        url = article.get("url", "")
+                        if url in seen_urls:
+                            continue
+                        seen_urls.add(url)
 
-                print(f"  ✅ {category} [{kw}]: {len(results)}건 수집")
+                        source = ""
+                        meta_url = article.get("meta_url")
+                        if isinstance(meta_url, dict):
+                            source = meta_url.get("hostname", "")
+
+                        news_item = {
+                            "title": article.get("title", ""),
+                            "summary": article.get("description", ""),
+                            "source": source,
+                            "url": url,
+                            "published_at": article.get("age", ""),
+                            "relevance_score": base_relevance,
+                            "category": category,
+                            "tickers": [],
+                            "ticker_name": kw,
+                            "fetch_method": "brave",
+                            "timestamp": now,
+                        }
+                        all_news.append(news_item)
+                        brave_count += 1
+
+                    print(f"  ✅ [Brave] {category} [{kw}]: {len(results)}건")
 
             except Exception as e:
-                print(f"  ❌ {category} [{kw}]: {e}")
+                print(f"  ❌ [{method.upper()}] {category} [{kw}]: {e}")
 
     # 관련도 높은 순으로 정렬
     all_news.sort(key=lambda x: x["relevance_score"], reverse=True)
 
-    return all_news
+    return all_news, rss_count, brave_count
 
 
 def ensure_category_column():
@@ -227,7 +285,6 @@ def save_to_db(records: list[dict]):
         try:
             cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)")
         except sqlite3.IntegrityError:
-            # 기존 중복 데이터 정리: 같은 title+source 중 id가 작은 것만 남김
             cursor.execute("""
                 DELETE FROM news WHERE id NOT IN (
                     SELECT MIN(id) FROM news GROUP BY title, source
@@ -277,24 +334,19 @@ def run():
     """뉴스 수집 파이프라인 실행"""
     print(f"\n📰 뉴스 수집 시작 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}")
 
-    if not BRAVE_API_KEY:
-        print("  ⚠️  BRAVE_API_KEY 미설정 — 뉴스 수집 건너뜀")
-        print("  💡 설정 방법: export BRAVE_API_KEY=your_api_key")
-        return []
-
     # DB 초기화 확인
     if not DB_PATH.exists():
         init_db()
     ensure_category_column()
 
     # 뉴스 수집
-    records = collect_news()
+    records, rss_count, brave_count = collect_news()
 
     # 저장
     save_to_db(records)
     save_to_json(records)
 
-    print(f"\n✅ 뉴스 수집 완료: {len(records)}건\n")
+    print(f"\n✅ 뉴스 수집 완료: RSS {rss_count}건, Brave {brave_count}건 (합계 {len(records)}건)\n")
     return records
 
 
