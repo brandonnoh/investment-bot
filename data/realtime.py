@@ -2,7 +2,7 @@
 """
 실시간 시세 조회 (stdout 마크다운 출력 전용)
 자비스가 리포트 생성 시 호출하여 현재 수치를 즉석 확인하는 스크립트.
-한국 주식: 네이버 금융 API / 미국 주식·매크로: Yahoo Finance API
+한국 주식: 키움증권 REST API (fallback: 네이버 금융 API) / 미국 주식·매크로: Yahoo Finance API
 파일 저장 없음 — stdout에 마크다운 형식으로 출력.
 
 사용법:
@@ -64,6 +64,23 @@ def fetch_naver_price(code: str) -> dict:
         "high": int(data["highPrice"].replace(",", "")),
         "low": int(data["lowPrice"].replace(",", "")),
     }
+
+
+def _fetch_kr_stock(code: str) -> dict:
+    """
+    한국 주식 현재가 조회.
+    1순위: 키움증권 REST API (ka10007)
+    2순위(fallback): 네이버 금융 API
+    """
+    if os.environ.get("KIWOOM_APPKEY"):
+        try:
+            from data.fetch_gold_krx import fetch_kiwoom_stock
+            result = fetch_kiwoom_stock(code)
+            return result
+        except Exception as e:
+            print(f"  ⚠️ 키움 API 실패 ({code}), 네이버 fallback: {e}", file=sys.stderr)
+
+    return fetch_naver_price(code)
 
 
 NAVER_INDEX_CODES = {"KOSPI", "KOSDAQ"}
@@ -211,12 +228,12 @@ def run():
                 day_high = gold["high"]
                 day_low = gold["low"]
             elif _is_kr_ticker(ticker):
-                # 한국 주식 → 네이버 금융 API
-                naver = fetch_naver_price(_extract_kr_code(ticker))
-                price = naver["price"]
-                prev_close = naver["prev_close"]
-                day_high = naver["high"]
-                day_low = naver["low"]
+                # 한국 주식 → 키움증권 API (fallback: 네이버 금융)
+                kr = _fetch_kr_stock(_extract_kr_code(ticker))
+                price = kr["price"]
+                prev_close = kr["prev_close"]
+                day_high = kr["high"]
+                day_low = kr["low"]
             else:
                 meta = fetch_yahoo_quote(ticker)
                 price = meta["regularMarketPrice"]

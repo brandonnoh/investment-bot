@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 실시간 포트폴리오 주가 수집 + SQLite 저장
-한국 주식: 네이버 금융 API / 미국 주식: Yahoo Finance API
+한국 주식: 키움증권 REST API (fallback: 네이버 금융 API) / 미국 주식: Yahoo Finance API
 출력: output/intel/prices.json
 """
 import json
@@ -77,6 +77,24 @@ def fetch_naver_price(code: str) -> dict:
         raise ValueError(f"네이버 API 응답 파싱 실패 ({code}): {e}")
 
 
+def _fetch_kr_stock(code: str) -> dict:
+    """
+    한국 주식 현재가 조회.
+    1순위: 키움증권 REST API (ka10007)
+    2순위(fallback): 네이버 금융 API
+    """
+    if os.environ.get("KIWOOM_APPKEY"):
+        try:
+            from data.fetch_gold_krx import fetch_kiwoom_stock
+            result = fetch_kiwoom_stock(code)
+            print(f"    🔑 키움 API 사용 ({code})")
+            return result
+        except Exception as e:
+            print(f"    ⚠️ 키움 API 실패 ({code}), 네이버 fallback: {e}")
+
+    return fetch_naver_price(code)
+
+
 def fetch_gold_krw_per_gram() -> tuple[float, float]:
     """
     금 현물 원화/g 가격 계산.
@@ -120,11 +138,12 @@ def collect_prices() -> list[dict]:
                 price, prev_close = fetch_gold_krw_per_gram()
                 volume = 0
             elif _is_kr_ticker(ticker):
-                # 한국 주식 → 네이버 금융 API
-                naver = fetch_naver_price(_extract_kr_code(ticker))
-                price = naver["price"]
-                prev_close = naver["prev_close"]
-                volume = naver["volume"]
+                # 한국 주식 → 키움증권 API (fallback: 네이버 금융)
+                kr_code = _extract_kr_code(ticker)
+                kr_data = _fetch_kr_stock(kr_code)
+                price = kr_data["price"]
+                prev_close = kr_data["prev_close"]
+                volume = kr_data["volume"]
             else:
                 meta = fetch_yahoo_quote(ticker)
                 price = meta["regularMarketPrice"]

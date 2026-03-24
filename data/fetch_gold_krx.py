@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-KRX 금 현물(종목코드 M04020000) 시세 조회 — 키움증권 REST API
+키움증권 REST API — 한국 주식 현재가 + KRX 금 현물 조회
 토큰 캐시: .kiwoom_token.json (프로젝트 루트)
 
 단독 실행:
-    python3 data/fetch_gold_krx.py
+    python3 data/fetch_gold_krx.py          # 금 현물
+    python3 data/fetch_gold_krx.py 005930   # 삼성전자
 """
 import json
 import os
@@ -162,15 +163,78 @@ def fetch_gold_krx() -> dict:
     }
 
 
+def fetch_kiwoom_stock(code: str) -> dict:
+    """
+    키움증권 REST API로 한국 주식 현재가 조회 (ka10007 시세표성정보요청).
+    code: 6자리 종목코드 (예: '005930')
+    반환: {price, prev_close, change_pct, volume, high, low}
+    """
+    appkey, _ = _get_env()
+    token = get_token()
+
+    body = json.dumps({"stk_cd": code}).encode("utf-8")
+    req = urllib.request.Request(
+        KIWOOM_QUOTE_URL,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+            "appkey": appkey,
+            "api-id": "ka10007",
+        },
+        method="POST",
+    )
+
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        data = json.load(resp)
+
+    if data.get("return_code") != 0:
+        raise ValueError(f"키움 API 오류: {data.get('return_msg', 'unknown')}")
+
+    cur_prc = data.get("cur_prc", "")
+    pred_close = data.get("pred_close_pric", "")
+    flu_rt = data.get("flu_rt", "")
+    trde_qty = data.get("trde_qty", "")
+    high_pric = data.get("high_pric", "")
+    low_pric = data.get("low_pric", "")
+
+    if not cur_prc or not pred_close:
+        raise ValueError("장외 시간 — 시세 데이터 없음")
+
+    price = int(_strip_sign(cur_prc))
+    prev_close = int(pred_close)
+    change_pct = float(flu_rt.replace("+", "")) if flu_rt else (
+        round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+    )
+    volume = int(trde_qty) if trde_qty else 0
+    high = int(_strip_sign(high_pric)) if high_pric else price
+    low = int(_strip_sign(low_pric)) if low_pric else price
+
+    return {
+        "price": price,
+        "prev_close": prev_close,
+        "change_pct": change_pct,
+        "volume": volume,
+        "high": high,
+        "low": low,
+    }
+
+
 if __name__ == "__main__":
+    import sys as _sys
+    code = _sys.argv[1] if len(_sys.argv) > 1 else None
     try:
-        result = fetch_gold_krx()
-        print("✅ KRX 금 현물 시세:")
+        if code:
+            result = fetch_kiwoom_stock(code)
+            print(f"✅ {code} 현재가:")
+        else:
+            result = fetch_gold_krx()
+            print("✅ KRX 금 현물 시세:")
         print(json.dumps(result, ensure_ascii=False, indent=2))
     except EnvironmentError as e:
         print(f"❌ 환경변수 오류: {e}")
-        sys.exit(1)
+        _sys.exit(1)
     except Exception as e:
         print(f"⚠️ 조회 실패 (장외 시간일 수 있음): {e}")
         print("  → 장중(09:00~15:30 KST)에 다시 시도하세요.")
-        sys.exit(1)
+        _sys.exit(1)
