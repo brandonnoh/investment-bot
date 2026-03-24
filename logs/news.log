@@ -360,3 +360,34 @@
   📄 뉴스 JSON 저장: /Users/jarvis/Projects/investment-bot/output/intel/news.json
 
 ✅ 뉴스 수집 완료: 55건
+
+📰 뉴스 수집 시작 — 2026-03-24 09:30 KST
+  ✅ 삼성전자: 3건 수집
+  ✅ 현대차: 3건 수집
+  ✅ TIGER 코리아AI전력기: 3건 수집
+  ✅ TIGER 미국방산TOP10: 3건 수집
+  ✅ 테슬라: 3건 수집
+  ✅ 알파벳: 3건 수집
+  ✅ SPDR S&P Oil: 3건 수집
+  ✅ 금 현물: 3건 수집
+  ✅ geopolitics [미국 이란 전쟁 최신]: 2건 수집
+  ✅ geopolitics [호르무즈 해협 봉쇄]: 2건 수집
+  ✅ geopolitics [중동 전쟁 확전]: 2건 수집
+  ✅ geopolitics [트럼프 이란 협상]: 2건 수집
+  ✅ macro [연준 Fed 금리 결정]: 2건 수집
+  ✅ macro [달러 인덱스 전망]: 2건 수집
+  ✅ macro [WTI 유가 전망]: 2건 수집
+  ✅ macro [원달러 환율 전망]: 2건 수집
+  ✅ macro [코스피 전망 분석]: 2건 수집
+  ✅ sector [에너지 ETF 강세 전망]: 2건 수집
+  ✅ sector [방산주 투자 전망]: 2건 수집
+  ✅ sector [AI 반도체 전망]: 2건 수집
+  ✅ sector [한국 방산 수출]: 2건 수집
+  ✅ opportunity [저평가 종목 발굴 추천]: 2건 수집
+  ✅ opportunity [외국인 순매수 종목]: 2건 수집
+  ✅ opportunity [52주 신저가 반등]: 2건 수집
+  ✅ opportunity [섹터 로테이션 전략]: 2건 수집
+  💾 뉴스 DB 저장: 24건 (중복 30건 스킵)
+  📄 뉴스 JSON 저장: /Users/jarvis/Projects/investment-bot/output/intel/news.json
+
+✅ 뉴스 수집 완료: 54건

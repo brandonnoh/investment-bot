@@ -5,6 +5,7 @@
 출력: output/intel/prices.json
 """
 import json
+import os
 import sqlite3
 import sys
 import urllib.request
@@ -77,7 +78,22 @@ def fetch_naver_price(code: str) -> dict:
 
 
 def fetch_gold_krw_per_gram() -> tuple[float, float]:
-    """금 현물 원화/g 가격 계산: GC=F(달러/트로이온스) × KRW=X(환율) ÷ 31.1035"""
+    """
+    금 현물 원화/g 가격 계산.
+    1순위: 키움증권 KRX 금 현물(4001) API
+    2순위(fallback): GC=F × KRW=X ÷ 31.1035
+    """
+    # 키움 API 사용 가능 시 KRX 금 현물 직접 조회
+    if os.environ.get("KIWOOM_APPKEY"):
+        try:
+            from data.fetch_gold_krx import fetch_gold_krx
+            krx = fetch_gold_krx()
+            print("  🥇 KRX 금 현물(키움 API) 사용")
+            return krx["price"], krx["prev_close"]
+        except Exception as e:
+            print(f"  ⚠️ 키움 API 실패, Yahoo fallback: {e}")
+
+    # fallback: GC=F × 환율
     gold_meta = fetch_yahoo_quote("GC=F")
     fx_meta = fetch_yahoo_quote("KRW=X")
     gold_usd = gold_meta["regularMarketPrice"]

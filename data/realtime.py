@@ -15,6 +15,7 @@
     4. 위 3가지를 조합하여 텔레그램 리포트 작성
 """
 import json
+import os
 import sqlite3
 import sys
 import urllib.request
@@ -103,7 +104,25 @@ def fetch_yahoo_quote(ticker: str) -> dict:
 
 
 def fetch_gold_krw_per_gram() -> dict:
-    """금 현물 원화/g 가격 계산"""
+    """
+    금 현물 원화/g 가격 계산.
+    1순위: 키움증권 KRX 금 현물(4001) API
+    2순위(fallback): GC=F × KRW=X ÷ 31.1035
+    """
+    if os.environ.get("KIWOOM_APPKEY"):
+        try:
+            from data.fetch_gold_krx import fetch_gold_krx
+            krx = fetch_gold_krx()
+            print("  🥇 KRX 금 현물(키움 API) 사용", file=sys.stderr)
+            return {
+                "price": krx["price"],
+                "prev_close": krx["prev_close"],
+                "high": krx["high"],
+                "low": krx["low"],
+            }
+        except Exception as e:
+            print(f"  ⚠️ 키움 API 실패, Yahoo fallback: {e}", file=sys.stderr)
+
     gold_meta = fetch_yahoo_quote("GC=F")
     fx_meta = fetch_yahoo_quote("KRW=X")
     gold_usd = gold_meta["regularMarketPrice"]

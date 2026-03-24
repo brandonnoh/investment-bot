@@ -9,6 +9,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .env
+.kiwoom_token.json
 venv/
 .venv/
 
