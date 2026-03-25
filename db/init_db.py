@@ -248,6 +248,10 @@ def init_schema(conn):
     # ── 마이그레이션: 기존 테이블에 새 컬럼 추가 ──
     _migrate_add_column(cursor, "prices", "data_source", "TEXT")
     _migrate_add_column(cursor, "news", "sentiment", "REAL")
+    # F22: 6팩터 서브 점수 컬럼
+    _migrate_add_column(cursor, "opportunities", "score_value", "REAL")
+    _migrate_add_column(cursor, "opportunities", "score_quality", "REAL")
+    _migrate_add_column(cursor, "opportunities", "score_growth", "REAL")
 
     # ── 인덱스 생성 — 조회 성능 최적화 ──
 

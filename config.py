@@ -164,10 +164,12 @@ def get_market(ticker: str) -> str:
 # ── Phase 4: 종목 발굴 설정 ──
 OPPORTUNITY_CONFIG = {
     "composite_weights": {
-        "return": 0.25,
-        "rsi": 0.25,
-        "sentiment": 0.25,
-        "macro": 0.25,
+        "value": 0.20,  # 밸류에이션 (PER/PBR 역순)
+        "quality": 0.20,  # 퀄리티 (ROE/부채비율/FCF)
+        "growth": 0.15,  # 성장 (매출성장률/EPS성장률)
+        "timing": 0.20,  # 타이밍 (모멘텀+RSI)
+        "catalyst": 0.10,  # 촉매 (감성/뉴스)
+        "macro": 0.15,  # 매크로 환경
     },
     "min_composite_score": 0.4,
     "max_candidates": 100,

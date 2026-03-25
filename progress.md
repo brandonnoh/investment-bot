@@ -89,3 +89,9 @@
 - **변경 파일:** tests/test_f15_agent_guide.py, ARCHITECTURE.md, analysis/alerts.py, analysis/alerts_watch.py, analysis/screener.py, analysis/sentiment.py, data/fetch_gold_krx.py, data/realtime.py, db/aggregate.py, db/init_db.py, db/maintenance.py, reports/closing.py, reports/daily.py, reports/weekly.py, scripts/read_news.py, tests/test_f02_schema.py, tests/test_f09_fx_pnl.py, tests/test_infra.py, utils/engine_status.py, utils/http.py
 - **결과:** 성공 (362 tests passed, F15 29개 + 기존 333개)
 - **메모:** AGENT_GUIDE.md/ARCHITECTURE.md/JARVIS_INTEGRATION.md의 JSON 예시가 실제 utils/schema.py 스키마와 일치하는지 자동 검증(8개 테스트). DB 쿼리 예시가 실제 스키마에서 실행 가능한지 검증(5개). ERD 테이블/컬럼 일치 검증(5개). JARVIS_INTEGRATION.md 동기화 검증(5개). ARCHITECTURE.md 정확성 검증(6개). ARCHITECTURE.md의 portfolio_summary.json 예시를 실제 구조(exchange_rate+total nested 구조, sectors 배열, risk 필드명)에 맞게 수정. ruff 기존 경고 9개 정리(미사용 import 4개, 모호 변수명, lambda→def, 미사용 변수).
+
+## Iteration 14 — 2026-03-26
+- **Task:** F22 — 퀀트 스코어링 고도화 — 6팩터 복합 점수
+- **변경 파일:** analysis/composite_score.py, config.py, db/init_db.py, tests/test_f22_quant_scoring.py
+- **결과:** 성공 (459 tests passed, F22 23개 + 기존 436개)
+- **메모:** composite_score.py에 6팩터 확장: calculate_value_score(PER/PBR 역순 percentile), calculate_quality_score(ROE/부채비율역순/FCF), calculate_growth_score(매출성장률/EPS성장률), calculate_composite_score_v2 6팩터 가중 합산. 기존 calculate_composite_score 4팩터 하위 호환 유지 (레거시 균등 가중치). config.py에 6팩터 가중치(value 0.20/quality 0.20/growth 0.15/timing 0.20/catalyst 0.10/macro 0.15). db/init_db.py에서 opportunities 테이블에 score_value/score_quality/score_growth 마이그레이션 컬럼 추가. build_universe_stats(펀더멘탈→유니버스 통계), calculate_eps_growth(EPS 성장률) 헬퍼 함수.

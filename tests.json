@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 25,
-    "passing": 20,
-    "failing": 5,
+    "passing": 21,
+    "failing": 4,
     "last_updated": "2026-03-26"
   },
   "features": [
@@ -347,8 +347,8 @@
     {
       "id": "F22",
       "description": "퀀트 스코어링 고도화 — 6팩터 복합 점수 (밸류/퀄리티/성장/타이밍/촉매/매크로)",
-      "status": "failing",
-      "summary": "",
+      "status": "passing",
+      "summary": "composite_score.py 6팩터 확장 — calculate_value_score(PER/PBR 역순), calculate_quality_score(ROE/부채비율역순/FCF), calculate_growth_score(매출성장률/EPS성장률), calculate_composite_score_v2 통합, 기존 4팩터 하위 호환 유지, config.py 6팩터 가중치(value 0.20/quality 0.20/growth 0.15/timing 0.20/catalyst 0.10/macro 0.15), opportunities 테이블 score_value/score_quality/score_growth 컬럼 추가, build_universe_stats/calculate_eps_growth 헬퍼 (459 tests passed)",
       "priority": 2,
       "depends_on": ["F21"],
       "acceptance_criteria": [
