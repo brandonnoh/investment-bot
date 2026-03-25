@@ -156,6 +156,68 @@ def init_schema(conn):
         )
     """)
 
+    # ── Phase 4: 종목 발굴 ──
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ticker_master (
+            ticker TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            name_en TEXT,
+            market TEXT,
+            sector TEXT,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ticker_master_name
+        ON ticker_master (name)
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS agent_keywords (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keyword TEXT NOT NULL,
+            category TEXT,
+            priority INTEGER DEFAULT 5,
+            reasoning TEXT,
+            generated_at TEXT NOT NULL,
+            used_at TEXT,
+            results_count INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_agent_keywords_date
+        ON agent_keywords (generated_at)
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS opportunities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            name TEXT,
+            discovered_at TEXT NOT NULL,
+            discovered_via TEXT,
+            source TEXT,
+            composite_score REAL,
+            score_return REAL,
+            score_rsi REAL,
+            score_sentiment REAL,
+            score_macro REAL,
+            price_at_discovery REAL,
+            outcome_1w REAL,
+            outcome_1m REAL,
+            status TEXT DEFAULT 'discovered'
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_opp_ticker_date
+        ON opportunities (ticker, discovered_at)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_opp_score
+        ON opportunities (composite_score DESC)
+    """)
+
     # ── 마이그레이션: 기존 테이블에 새 컬럼 추가 ──
     _migrate_add_column(cursor, "prices", "data_source", "TEXT")
     _migrate_add_column(cursor, "news", "sentiment", "REAL")
