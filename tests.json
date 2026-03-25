@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 4,
-    "failing": 11,
+    "passing": 5,
+    "failing": 10,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -75,7 +75,8 @@
     {
       "id": "F05",
       "description": "수집 모듈 단위 테스트 (prices, macro, news)",
-      "status": "failing",
+      "status": "passing",
+      "summary": "Yahoo/Naver/Kiwoom API 모킹, 키움→네이버 폴백 검증, RSS XML 파싱, Brave 모킹, 중복 URL 제거, DB 저장/JSON 출력 스키마, 관련도 스코어, graceful degradation (40 tests, 전체 125 passed)",
       "priority": 2,
       "depends_on": ["F01"],
       "acceptance_criteria": [

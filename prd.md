@@ -26,7 +26,7 @@
 
 ## 🔬 3. 수집 계층 (Collection Layer) 강화
 
-- [ ] **F05** 수집 모듈 단위 테스트 — prices/macro/news API 모킹, 폴백, graceful degradation 검증
+- [x] **F05** 수집 모듈 단위 테스트 — prices/macro/news API 모킹, 폴백, graceful degradation 검증
 - [ ] **F06** data_source 필드 — prices.json에 데이터 출처 (kiwoom/naver/yahoo/calculated) 명시
 - [ ] **F10** 에러 복구 강화 — HTTP 재시도 + 지수 백오프 + 서킷 브레이커 + 이상값 감지
 

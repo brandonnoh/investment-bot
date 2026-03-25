@@ -35,3 +35,9 @@
 - **변경 파일:** db/maintenance.py, config.py, run_pipeline.py, tests/test_f04_maintenance.py
 - **결과:** 성공 (85 tests passed, F04 14개 + F03 17개 + F02 22개 + F01 32개)
 - **메모:** config.py에 RETENTION_POLICY 추가 (raw_months=3, news_months=12). db/maintenance.py에서 보존 기간 초과 원시 데이터 삭제 시 집계 완료 여부를 확인하여 미집계 데이터 보호. 뉴스는 12개월 초과 시 삭제. VACUUM으로 용량 최적화. run_pipeline.py에서 집계 후 분석 전 단계에 통합.
+
+## Iteration 5 — 2026-03-25
+- **Task:** F05 — 수집 모듈 단위 테스트 (prices, macro, news)
+- **변경 파일:** tests/test_f05_collectors.py
+- **결과:** 성공 (125 tests passed, F05 40개 + 기존 85개)
+- **메모:** fetch_prices: Yahoo/Naver API 모킹, 키움→네이버 폴백 검증, 금 현물 계산, 스키마 검증. fetch_macro: 네이버 지수/Yahoo 지표 모킹, 개별 실패 시 나머지 정상 수집. fetch_news: RSS XML 파싱, Brave 모킹, 중복 URL 제거, 관련도 스코어링. 공통: graceful degradation (일부 실패 시 에러 레코드 포함 반환).
