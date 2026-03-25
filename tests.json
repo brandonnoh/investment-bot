@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 20,
-    "passing": 15,
-    "failing": 5,
+    "passing": 20,
+    "failing": 0,
     "last_updated": "2026-03-26"
   },
   "features": [
@@ -250,7 +250,8 @@
     {
       "id": "F16",
       "description": "종목 사전(ticker_master) — KRX/미국 종목 매핑 DB",
-      "status": "failing",
+      "status": "passing",
+      "summary": "data/ticker_master.py 모듈 — ticker_master 테이블 생성, difflib 퍼지 매칭, 별칭 매핑(TICKER_ALIASES), 정규식 종목코드 추출, 미국 종목 정적 사전(US_TICKER_MAP), extract_companies/extract_us_tickers 텍스트 추출 (408 tests total)",
       "priority": 1,
       "depends_on": ["F01", "F02"],
       "acceptance_criteria": [
@@ -265,7 +266,8 @@
     {
       "id": "F17",
       "description": "fetch_opportunities.py — 키워드 기반 종목 발굴",
-      "status": "failing",
+      "status": "passing",
+      "summary": "data/fetch_opportunities.py 모듈 — agent_keywords/opportunities 테이블, discovery_keywords.json 읽기, Naver/Brave 검색 모킹, ticker_master 매칭으로 종목 추출, opportunities.json 출력, run_pipeline.py 통합, graceful degradation (408 tests total)",
       "priority": 2,
       "depends_on": ["F16"],
       "acceptance_criteria": [
@@ -282,7 +284,8 @@
     {
       "id": "F18",
       "description": "복합 점수 엔진 — 4팩터 Percentile Rank 스코어링",
-      "status": "failing",
+      "status": "passing",
+      "summary": "analysis/composite_score.py 모듈 — percentile_rank 정규화, 4팩터(momentum/sentiment/mention/macro) Equal Weight 복합 점수, 매크로 방향 지수, sub_scores 분해, opportunities 테이블 점수 기록 (408 tests total)",
       "priority": 2,
       "depends_on": ["F17"],
       "acceptance_criteria": [
@@ -297,7 +300,8 @@
     {
       "id": "F19",
       "description": "screener.py 고도화 — 복합 점수 통합 + 유니버스 확장",
-      "status": "failing",
+      "status": "passing",
+      "summary": "analysis/screener.py 고도화 — 기존 15종목 + opportunities 통합 유니버스, price_analysis.py 함수 재사용, 복합 점수 기반 TOP 10 선별, screener.md 포맷 개선 (408 tests total)",
       "priority": 3,
       "depends_on": ["F18"],
       "acceptance_criteria": [
@@ -311,7 +315,8 @@
     {
       "id": "F20",
       "description": "뉴스 수집 목적 분리 — 모니터링 vs 발굴",
-      "status": "failing",
+      "status": "passing",
+      "summary": "fetch_news.py에서 opportunity 카테고리 제거, fetch_opportunities.py가 발굴 전담, 기존 뉴스 테스트 통과 유지, 뉴스 카테고리 분리 검증 (408 tests total)",
       "priority": 3,
       "depends_on": ["F17"],
       "acceptance_criteria": [

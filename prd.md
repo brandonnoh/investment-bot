@@ -49,8 +49,8 @@
 
 ## Phase 4 — AI 기반 능동적 종목 발굴
 
-- [ ] **F16** 종목 사전(ticker_master) — KRX/미국 종목 매핑 DB
-- [ ] **F17** fetch_opportunities.py — 키워드 기반 종목 발굴
-- [ ] **F18** 복합 점수 엔진 — 4팩터 Percentile Rank 스코어링
-- [ ] **F19** screener.py 고도화 — 복합 점수 통합 + 유니버스 확장
-- [ ] **F20** 뉴스 수집 목적 분리 — 모니터링 vs 발굴
+- [x] **F16** 종목 사전(ticker_master) — KRX/미국 종목 매핑 DB
+- [x] **F17** fetch_opportunities.py — 키워드 기반 종목 발굴
+- [x] **F18** 복합 점수 엔진 — 4팩터 Percentile Rank 스코어링
+- [x] **F19** screener.py 고도화 — 복합 점수 통합 + 유니버스 확장
+- [x] **F20** 뉴스 수집 목적 분리 — 모니터링 vs 발굴
