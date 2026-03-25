@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 1,
-    "failing": 14,
+    "passing": 2,
+    "failing": 13,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -24,7 +24,8 @@
     {
       "id": "F02",
       "description": "DB 스키마 재설계 — 다중 해상도 저장 체계",
-      "status": "failing",
+      "status": "passing",
+      "summary": "init_schema() 분리, prices_daily/macro_daily/portfolio_history 테이블, data_source/sentiment 컬럼, 유니크 인덱스, 마이그레이션 안전 (22 tests passed)",
       "priority": 1,
       "depends_on": ["F01"],
       "acceptance_criteria": [

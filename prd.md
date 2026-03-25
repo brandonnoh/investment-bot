@@ -20,7 +20,7 @@
 
 ## 📐 2. 저장 계층 (Storage Layer) 고도화
 
-- [ ] **F02** DB 스키마 재설계 — prices_daily, macro_daily, portfolio_history 테이블 추가, 인덱스 최적화, 마이그레이션 안전
+- [x] **F02** DB 스키마 재설계 — prices_daily, macro_daily, portfolio_history 테이블 추가, 인덱스 최적화, 마이그레이션 안전
 - [ ] **F03** 일봉 자동 집계 — prices/macro 원시 데이터 → OHLCV 일봉 집계 모듈
 - [ ] **F04** DB 보존 정책 + 자동 정리 — 원시 3개월, 뉴스 1년 보존, VACUUM 자동화
 

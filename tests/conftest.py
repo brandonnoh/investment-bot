@@ -17,82 +17,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 @pytest.fixture
 def db_conn():
-    """인메모리 SQLite DB — 전체 스키마 자동 생성"""
+    """인메모리 SQLite DB — init_schema로 전체 스키마 자동 생성"""
+    from db.init_db import init_schema
+
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    # prices 테이블
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS prices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticker TEXT NOT NULL,
-            name TEXT NOT NULL,
-            price REAL NOT NULL,
-            prev_close REAL,
-            change_pct REAL,
-            volume INTEGER,
-            timestamp TEXT NOT NULL,
-            market TEXT
-        )
-    """)
-
-    # macro 테이블
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS macro (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            indicator TEXT NOT NULL,
-            value REAL NOT NULL,
-            change_pct REAL,
-            timestamp TEXT NOT NULL
-        )
-    """)
-
-    # news 테이블
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS news (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            summary TEXT,
-            source TEXT,
-            url TEXT,
-            published_at TEXT,
-            relevance_score REAL,
-            tickers TEXT,
-            category TEXT
-        )
-    """)
-
-    # alerts 테이블
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS alerts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            level TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            ticker TEXT,
-            message TEXT NOT NULL,
-            value REAL,
-            threshold REAL,
-            triggered_at TEXT NOT NULL,
-            notified INTEGER DEFAULT 0
-        )
-    """)
-
-    # 인덱스
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS idx_prices_ticker_ts ON prices (ticker, timestamp)"
-    )
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS idx_macro_indicator_ts ON macro (indicator, timestamp)"
-    )
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS idx_alerts_triggered ON alerts (triggered_at)"
-    )
-    cursor.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)"
-    )
-
-    conn.commit()
+    init_schema(conn)
     yield conn
     conn.close()
 

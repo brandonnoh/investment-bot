@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 SQLite 데이터베이스 스키마 초기화
-prices, macro, news, alerts 테이블 생성
+원시 테이블 (prices, macro, news, alerts) + 집계 테이블 (prices_daily, macro_daily) + 기록 테이블 (portfolio_history)
+마이그레이션 안전: 기존 DB에서 실행해도 데이터 보존
 """
 import sqlite3
 import sys
@@ -12,13 +13,40 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import DB_PATH
 
 
-def init_db():
-    """데이터베이스 스키마 초기화 (이미 존재하면 무시)"""
-    # db 디렉토리 확인
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+def _get_column_names(cursor, table_name):
+    """테이블의 컬럼 이름 목록 반환"""
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    return [row[1] for row in cursor.fetchall()]
 
-    conn = sqlite3.connect(str(DB_PATH))
+
+def _table_exists(cursor, table_name):
+    """테이블 존재 여부 확인"""
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+        (table_name,),
+    )
+    return cursor.fetchone() is not None
+
+
+def _migrate_add_column(cursor, table_name, column_name, column_def):
+    """기존 테이블에 컬럼 추가 (없을 때만)"""
+    if _table_exists(cursor, table_name):
+        cols = _get_column_names(cursor, table_name)
+        if column_name not in cols:
+            cursor.execute(
+                f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_def}"
+            )
+
+
+def init_schema(conn):
+    """DB 연결에 스키마 적용 (테이블 생성 + 마이그레이션)
+
+    Args:
+        conn: sqlite3.Connection 객체 (인메모리 또는 파일)
+    """
     cursor = conn.cursor()
+
+    # ── 원시 테이블 (10분 해상도, 3개월 보존) ──
 
     # 가격 히스토리 테이블
     cursor.execute("""
@@ -31,7 +59,8 @@ def init_db():
             change_pct REAL,
             volume INTEGER,
             timestamp TEXT NOT NULL,
-            market TEXT  -- KR / US / COMMODITY
+            market TEXT,
+            data_source TEXT  -- kiwoom / naver / yahoo / calculated
         )
     """)
 
@@ -46,7 +75,7 @@ def init_db():
         )
     """)
 
-    # 뉴스 테이블 (Phase 2에서 사용)
+    # 뉴스 테이블
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS news (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,8 +85,9 @@ def init_db():
             url TEXT,
             published_at TEXT,
             relevance_score REAL,
-            tickers TEXT,  -- JSON 배열
-            category TEXT   -- stock / geopolitics / macro / sector / opportunity
+            sentiment REAL,  -- -1.0 ~ 1.0 감성 점수
+            tickers TEXT,    -- JSON 배열
+            category TEXT    -- stock / geopolitics / macro / sector / opportunity
         )
     """)
 
@@ -76,13 +106,96 @@ def init_db():
         )
     """)
 
-    # 인덱스 생성 — 조회 성능 최적화
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_prices_ticker_ts ON prices (ticker, timestamp)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_macro_indicator_ts ON macro (indicator, timestamp)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_alerts_triggered ON alerts (triggered_at)")
-    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)")
+    # ── 집계 테이블 (일봉, 영구 보존) ──
+
+    # 가격 일봉 테이블
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS prices_daily (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            date TEXT NOT NULL,
+            open REAL,
+            high REAL,
+            low REAL,
+            close REAL,
+            volume INTEGER,
+            change_pct REAL,
+            data_source TEXT  -- 원시 데이터 출처
+        )
+    """)
+
+    # 매크로 일봉 테이블
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS macro_daily (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            indicator TEXT NOT NULL,
+            date TEXT NOT NULL,
+            open REAL,
+            high REAL,
+            low REAL,
+            close REAL,
+            change_pct REAL
+        )
+    """)
+
+    # ── 기록 테이블 ──
+
+    # 포트폴리오 일별 스냅샷
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS portfolio_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            total_value_krw REAL,
+            total_invested_krw REAL,
+            total_pnl_krw REAL,
+            total_pnl_pct REAL,
+            fx_rate REAL,
+            fx_pnl_krw REAL,
+            holdings_snapshot TEXT  -- JSON: 종목별 상세
+        )
+    """)
+
+    # ── 마이그레이션: 기존 테이블에 새 컬럼 추가 ──
+    _migrate_add_column(cursor, "prices", "data_source", "TEXT")
+    _migrate_add_column(cursor, "news", "sentiment", "REAL")
+
+    # ── 인덱스 생성 — 조회 성능 최적화 ──
+
+    # 원시 테이블 인덱스
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_prices_ticker_ts ON prices (ticker, timestamp)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_macro_indicator_ts ON macro (indicator, timestamp)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_alerts_triggered ON alerts (triggered_at)"
+    )
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)"
+    )
+
+    # 집계 테이블 인덱스 (유니크 — UPSERT 지원)
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_prices_daily_ticker_date ON prices_daily (ticker, date)"
+    )
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_macro_daily_indicator_date ON macro_daily (indicator, date)"
+    )
+
+    # 기록 테이블 인덱스 (일별 1행)
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_portfolio_history_date ON portfolio_history (date)"
+    )
 
     conn.commit()
+
+
+def init_db():
+    """파일 기반 DB 스키마 초기화 (이미 존재하면 마이그레이션)"""
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(DB_PATH))
+    init_schema(conn)
     conn.close()
     print(f"✅ 데이터베이스 초기화 완료: {DB_PATH}")
 
