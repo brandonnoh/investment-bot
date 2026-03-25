@@ -130,6 +130,20 @@ SCHEMAS = {
             "trend": str,
         },
     },
+    "opportunities.json": {
+        "top_level": {
+            "updated_at": str,
+            "keywords": list,
+            "opportunities": list,
+            "summary": dict,
+        },
+        "items_key": "opportunities",
+        "item_fields": {
+            "ticker": str,
+            "name": str,
+            "discovered_via": str,
+        },
+    },
     "engine_status.json": {
         "top_level": {
             "updated_at": str,

@@ -59,6 +59,20 @@ def main():
     if news_records:
         record_module_status(engine, "fetch_news", news_records, success_key="title")
 
+    # ── Phase 4: 종목 발굴 ──
+    try:
+        from data.fetch_opportunities import run as fetch_opportunities
+
+        opp_results = fetch_opportunities()
+        if opp_results:
+            record_module_status(
+                engine, "fetch_opportunities", opp_results, success_key="ticker"
+            )
+        print(f"  종목 발굴: {len(opp_results)}개 후보")
+    except Exception as e:
+        print(f"  ⚠️ fetch_opportunities 실패: {e}")
+        opp_results = []
+
     # 3. 일봉 집계 (수집 후, 분석 전)
     aggregate_daily()
 

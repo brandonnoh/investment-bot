@@ -27,6 +27,7 @@ class TestSchemaDefinitions:
             "portfolio_summary.json",
             "alerts.json",
             "price_analysis.json",
+            "opportunities.json",
             "engine_status.json",
         }
         assert expected == set(SCHEMAS.keys())
