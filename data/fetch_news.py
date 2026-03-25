@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-뉴스 수집 모듈 — Google News RSS (무료) + Brave Search API (소량) 하이브리드
+뉴스 수집 모듈 — 포트폴리오 모니터링 전용 (RSS)
 - RSS: 종목별 뉴스 + 매크로 키워드 (무료, 무제한)
-- Brave: 투자 기회 발굴용만 (월 ~240건, 무료 크레딧 이내)
+- 투자 기회 발굴은 fetch_opportunities.py가 전담 (Brave Search)
 출력: output/intel/news.json
 """
 
@@ -59,17 +59,8 @@ MACRO_KEYWORDS = {
             "연준 금리",
         ],
     },
-    # Brave로 수집 (유료, 소량)
-    "opportunity": {
-        "relevance": 0.85,
-        "method": "brave",
-        "keywords": [
-            "저평가 종목 발굴",
-            "외국인 순매수 종목",
-            "52주 신저가 반등",
-            "섹터 로테이션 전략",
-        ],
-    },
+    # NOTE: opportunity 카테고리는 fetch_opportunities.py로 이관됨 (F20)
+    # Brave Search 기반 종목 발굴은 fetch_opportunities가 전담
 }
 
 
