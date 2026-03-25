@@ -408,7 +408,7 @@ class TestGoldKrwPerGram:
         mock_yahoo.side_effect = side_effect
 
         with patch.dict("os.environ", {}, clear=True):
-            price, prev_close = fetch_gold_krw_per_gram()
+            price, prev_close, data_source, calc_method = fetch_gold_krw_per_gram()
 
         expected_price = round(2000.0 * 1380.0 / 31.1035, 0)
         assert price == expected_price
@@ -1047,6 +1047,7 @@ class TestGracefulDegradation:
             "prev_close": 81500,
             "change_pct": 0.61,
             "volume": 15000000,
+            "data_source": "naver",
         }
 
         def yahoo_side(ticker):

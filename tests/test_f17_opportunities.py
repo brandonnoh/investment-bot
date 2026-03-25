@@ -1,9 +1,10 @@
 """Phase 4 종목 발굴 테스트"""
+
 import json
 import sys
 import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -77,7 +78,12 @@ def test_save_keywords_to_db(db_conn):
     from data.fetch_opportunities import save_keywords_to_db
 
     keywords = [
-        {"keyword": "방산 수주", "category": "sector", "priority": 1, "reasoning": "테스트"}
+        {
+            "keyword": "방산 수주",
+            "category": "sector",
+            "priority": 1,
+            "reasoning": "테스트",
+        }
     ]
     save_keywords_to_db(db_conn, keywords, "2026-03-25T05:30:00+09:00")
     row = db_conn.execute("SELECT keyword FROM agent_keywords").fetchone()

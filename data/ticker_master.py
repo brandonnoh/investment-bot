@@ -6,7 +6,6 @@
 """
 
 import difflib
-import json
 import re
 import sqlite3
 import sys
@@ -52,9 +51,7 @@ def find_tickers(query: str, master: list, threshold: float = 0.6) -> list:
         return partial
 
     # 3. difflib 퍼지 매칭
-    matches = difflib.get_close_matches(
-        query, name_map.keys(), n=3, cutoff=threshold
-    )
+    matches = difflib.get_close_matches(query, name_map.keys(), n=3, cutoff=threshold)
     return [name_map[m] for m in matches]
 
 
@@ -85,13 +82,33 @@ def extract_us_tickers(text: str) -> list:
     candidates = word_pattern.findall(text)
     # 일반 영단어 제외
     common_words = {
-        "AI", "CEO", "IPO", "ETF", "IT", "US", "UK", "EU", "GDP",
-        "API", "THE", "AND", "FOR", "BUT", "NOT", "ALL", "NEW",
-        "TOP", "BIG", "LOW", "HIGH", "SEC", "FED", "IMF",
+        "AI",
+        "CEO",
+        "IPO",
+        "ETF",
+        "IT",
+        "US",
+        "UK",
+        "EU",
+        "GDP",
+        "API",
+        "THE",
+        "AND",
+        "FOR",
+        "BUT",
+        "NOT",
+        "ALL",
+        "NEW",
+        "TOP",
+        "BIG",
+        "LOW",
+        "HIGH",
+        "SEC",
+        "FED",
+        "IMF",
     }
     return [
-        t for t in candidates
-        if t in config.US_TICKER_MAP and t not in common_words
+        t for t in candidates if t in config.US_TICKER_MAP and t not in common_words
     ]
 
 
@@ -175,15 +192,19 @@ def get_seed_master() -> list:
     for p in config.PORTFOLIO:
         if p["ticker"] not in seen:
             seen.add(p["ticker"])
-            market = "COMMODITY" if "GOLD" in p["ticker"] else (
-                "KR" if p["ticker"].endswith((".KS", ".KQ")) else "US"
+            market = (
+                "COMMODITY"
+                if "GOLD" in p["ticker"]
+                else ("KR" if p["ticker"].endswith((".KS", ".KQ")) else "US")
             )
-            master.append({
-                "ticker": p["ticker"],
-                "name": p["name"],
-                "market": market,
-                "sector": "",
-            })
+            master.append(
+                {
+                    "ticker": p["ticker"],
+                    "name": p["name"],
+                    "market": market,
+                    "sector": "",
+                }
+            )
 
     # SCREENING_TARGETS에서 추출
     # analysis/screener.py에 정의됨 (config.py가 아님)
@@ -198,15 +219,15 @@ def get_seed_master() -> list:
             for t in sector_data.get("tickers", []):
                 if t["ticker"] not in seen:
                     seen.add(t["ticker"])
-                    market = (
-                        "KR" if t["ticker"].endswith((".KS", ".KQ")) else "US"
+                    market = "KR" if t["ticker"].endswith((".KS", ".KQ")) else "US"
+                    master.append(
+                        {
+                            "ticker": t["ticker"],
+                            "name": t["name"],
+                            "market": market,
+                            "sector": sector_name,
+                        }
                     )
-                    master.append({
-                        "ticker": t["ticker"],
-                        "name": t["name"],
-                        "market": market,
-                        "sector": sector_name,
-                    })
 
     return master
 
@@ -220,11 +241,15 @@ def run(conn=None):
     Returns:
         종목 사전 리스트
     """
+    own_conn = False
     if conn is None:
         conn = sqlite3.connect(str(DB_PATH))
+        own_conn = True
     master = get_seed_master()
     save_master_to_db(conn, master)
     print(f"  ✅ 종목 사전 저장 완료: {len(master)}개 종목")
+    if own_conn:
+        conn.close()
     return master
 
 
@@ -232,4 +257,6 @@ if __name__ == "__main__":
     result = run()
     print(f"\n종목 사전 ({len(result)}개):")
     for item in result:
-        print(f"  {item['ticker']:15s} {item['name']:20s} {item['market']:5s} {item['sector']}")
+        print(
+            f"  {item['ticker']:15s} {item['name']:20s} {item['market']:5s} {item['sector']}"
+        )

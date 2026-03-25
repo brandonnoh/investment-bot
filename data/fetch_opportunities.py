@@ -23,15 +23,16 @@ import config
 try:
     from analysis.sentiment import calculate_sentiment
 except ImportError:
+
     def calculate_sentiment(title, summary):
         return 0.0
+
 
 try:
     from data.ticker_master import (
         extract_ticker_codes,
         extract_companies,
         extract_us_tickers,
-        find_tickers,
         load_master_from_db,
     )
 except ImportError:
@@ -221,17 +222,19 @@ def extract_opportunities(news: list, master: list, keyword: str) -> list:
             if ticker not in seen_tickers:
                 seen_tickers.add(ticker)
                 sentiment = calculate_sentiment(title, desc)
-                opportunities.append({
-                    "ticker": ticker,
-                    "name": m["name"],
-                    "discovered_via": keyword,
-                    "source": source,
-                    "url": url,
-                    "sentiment": sentiment,
-                    "title": title,
-                    "composite_score": None,
-                    "price_at_discovery": None,
-                })
+                opportunities.append(
+                    {
+                        "ticker": ticker,
+                        "name": m["name"],
+                        "discovered_via": keyword,
+                        "source": source,
+                        "url": url,
+                        "sentiment": sentiment,
+                        "title": title,
+                        "composite_score": None,
+                        "price_at_discovery": None,
+                    }
+                )
 
     return opportunities
 
@@ -364,6 +367,7 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
         # DB에 없으면 시드 데이터로 초기화
         try:
             from data.ticker_master import run as init_master
+
             master = init_master(conn)
         except Exception as e:
             logger.warning(f"종목 사전 초기화 실패: {e}")
@@ -420,8 +424,14 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
     # 8. JSON 파일 저장
     out_dir.mkdir(parents=True, exist_ok=True)
     json_data = generate_json(
-        [{"keyword": k["keyword"], "category": k.get("category", ""),
-          "priority": k.get("priority", 5)} for k in keywords],
+        [
+            {
+                "keyword": k["keyword"],
+                "category": k.get("category", ""),
+                "priority": k.get("priority", 5),
+            }
+            for k in keywords
+        ],
         all_opportunities,
     )
     json_path = out_dir / "opportunities.json"
