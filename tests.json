@@ -1,8 +1,8 @@
 {
   "summary": {
-    "total": 12,
+    "total": 15,
     "passing": 0,
-    "failing": 12,
+    "failing": 15,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -13,156 +13,223 @@
       "priority": 1,
       "depends_on": [],
       "acceptance_criteria": [
-        "tests/ 디렉토리에 conftest.py 생성 (DB fixture, 샘플 데이터)",
-        "pytest로 기존 모듈 import 테스트 통과",
+        "tests/ 디렉토리에 conftest.py 생성",
+        "in-memory SQLite DB fixture (테이블 자동 생성)",
+        "샘플 prices/macro/news 데이터 fixture",
+        "기존 전체 모듈 import 테스트 통과",
         "python3 -m pytest tests/ -v 실행 가능"
       ]
     },
     {
       "id": "F02",
-      "description": "fetch_prices 단위 테스트",
+      "description": "DB 스키마 재설계 — 다중 해상도 저장 체계",
       "status": "failing",
-      "priority": 2,
+      "priority": 1,
       "depends_on": ["F01"],
       "acceptance_criteria": [
-        "Yahoo Finance API 응답 모킹 테스트",
-        "Naver Finance API 응답 모킹 테스트",
-        "폴백 로직 테스트 (Kiwoom 실패 → Naver)",
-        "prices.json 출력 스키마 검증",
-        "Graceful degradation 테스트 (일부 종목 실패)"
+        "prices_daily 테이블 추가 (date, ticker, open, high, low, close, volume, change_pct, data_source)",
+        "macro_daily 테이블 추가 (date, indicator, open, high, low, close, change_pct)",
+        "portfolio_history 테이블 추가 (date, total_value_krw, total_invested_krw, total_pnl_krw, total_pnl_pct, fx_rate, fx_pnl_krw, holdings_snapshot)",
+        "prices 테이블에 data_source 컬럼 추가",
+        "news 테이블에 sentiment 컬럼 추가",
+        "모든 테이블 인덱스 최적화 (ticker+timestamp, indicator+date 등)",
+        "init_db.py 업데이트 + 마이그레이션 안전 (기존 DB 보존)",
+        "테스트: 스키마 생성, 마이그레이션, CRUD 검증"
       ]
     },
     {
       "id": "F03",
-      "description": "fetch_macro 단위 테스트",
+      "description": "일봉 자동 집계 모듈",
       "status": "failing",
       "priority": 2,
-      "depends_on": ["F01"],
+      "depends_on": ["F02"],
       "acceptance_criteria": [
-        "각 지표별 API 응답 모킹 테스트",
-        "macro.json 출력 스키마 검증",
-        "개별 지표 실패 시 나머지 정상 수집 확인"
+        "db/aggregate.py 모듈 생성",
+        "prices 원시 → prices_daily OHLCV 집계 (당일 데이터 기반)",
+        "macro 원시 → macro_daily OHLC 집계",
+        "중복 집계 방지 (UPSERT 패턴)",
+        "run_pipeline.py에 통합 (장마감 후 실행)",
+        "테스트: 샘플 원시 데이터 → 집계 결과 검증"
       ]
     },
     {
       "id": "F04",
-      "description": "fetch_news 단위 테스트",
+      "description": "DB 보존 정책 + 자동 정리",
       "status": "failing",
       "priority": 2,
-      "depends_on": ["F01"],
+      "depends_on": ["F02", "F03"],
       "acceptance_criteria": [
-        "Google RSS 파싱 테스트",
-        "Brave API 응답 모킹 테스트",
-        "뉴스 중복 제거 로직 테스트",
-        "relevance_score 계산 검증",
-        "news.json 출력 스키마 검증"
+        "db/maintenance.py 모듈 생성",
+        "config.py에 RETENTION_POLICY 설정 추가",
+        "원시 데이터 N개월 이전 삭제 (기본 3개월)",
+        "뉴스 N개월 이전 삭제 (기본 12개월)",
+        "VACUUM 실행으로 DB 용량 최적화",
+        "삭제 전 집계 완료 확인 (집계 안 된 원시 데이터 삭제 방지)",
+        "테스트: 보존 정책 적용 검증"
       ]
     },
     {
       "id": "F05",
-      "description": "price_analysis.json 생성 모듈",
+      "description": "수집 모듈 단위 테스트 (prices, macro, news)",
       "status": "failing",
-      "priority": 3,
-      "depends_on": ["F01", "F02"],
+      "priority": 2,
+      "depends_on": ["F01"],
       "acceptance_criteria": [
-        "analysis/price_analysis.py 모듈 생성",
-        "DB prices 테이블에서 N일 이동평균(MA5, MA20) 계산",
-        "52주 최고/최저가 계산",
-        "30일 변동성 계산",
-        "추세 판단 (uptrend/downtrend/sideways)",
-        "output/intel/price_analysis.json 출력",
-        "run_pipeline.py에 통합"
+        "fetch_prices: Yahoo/Naver/Kiwoom API 응답 모킹, 폴백 로직 검증, 스키마 검증",
+        "fetch_macro: 각 지표별 API 모킹, 개별 실패 시 나머지 정상 수집 확인",
+        "fetch_news: RSS XML 파싱 테스트, Brave 모킹, 중복 제거 로직, 스키마 검증",
+        "공통: Graceful degradation 테스트 (일부 항목 실패 시 나머지 정상)"
       ]
     },
     {
       "id": "F06",
-      "description": "portfolio_history 테이블 + 일별 스냅샷",
+      "description": "prices.json에 data_source 필드 추가",
       "status": "failing",
       "priority": 3,
-      "depends_on": ["F01"],
+      "depends_on": ["F02", "F05"],
       "acceptance_criteria": [
-        "DB에 portfolio_history 테이블 추가 (date, total_krw, total_pnl, pnl_pct)",
-        "portfolio.py에서 일별 스냅샷 저장 로직 추가",
-        "portfolio_summary.json에 최근 30일 수익률 추이 포함",
-        "init_db.py 스키마 업데이트"
+        "각 종목별 데이터 출처 기록 (kiwoom/naver/yahoo/calculated)",
+        "금 현물 장외 시간: data_source='calculated' + 계산 방법 명시",
+        "prices_daily 집계 시 data_source 보존",
+        "기존 자비스 파싱에 영향 없음 (하위 호환)",
+        "테스트: 각 소스별 data_source 값 검증"
       ]
     },
     {
       "id": "F07",
-      "description": "prices.json에 data_source 필드 추가",
+      "description": "price_analysis.json — 기술 분석 엔진",
       "status": "failing",
-      "priority": 4,
-      "depends_on": ["F02"],
+      "priority": 3,
+      "depends_on": ["F02", "F03"],
       "acceptance_criteria": [
-        "각 종목의 데이터 출처 명시 (kiwoom/naver/yahoo/calculated)",
-        "금 현물 장외 시간 GC=F×KRW=X 환산 시 data_source='calculated' 표시",
-        "기존 자비스 파싱에 영향 없음 (하위 호환)"
+        "analysis/price_analysis.py 모듈 생성",
+        "이동평균 계산 (MA5, MA20, MA60) — prices_daily 기반",
+        "RSI 14일 계산",
+        "52주 최고/최저 + 현재 위치 (% 기준)",
+        "30일 변동성 계산 (일간 수익률 표준편차)",
+        "추세 판단 (uptrend/downtrend/sideways) + 지속 일수",
+        "지지선/저항선 추정 (최근 N일 고/저 기반)",
+        "output/intel/price_analysis.json 출력",
+        "run_pipeline.py에 통합",
+        "데이터 부족 시 graceful 처리 (신규 종목 등)",
+        "테스트: 알려진 데이터로 계산 정확도 검증"
       ]
     },
     {
       "id": "F08",
-      "description": "환율 손익 분리 계산",
+      "description": "portfolio_history — 일별 자산 스냅샷",
       "status": "failing",
-      "priority": 4,
-      "depends_on": ["F01"],
+      "priority": 3,
+      "depends_on": ["F02"],
       "acceptance_criteria": [
-        "portfolio_summary.json에 fx_pnl 필드 추가",
-        "USD 종목: 매입 시점 환율 vs 현재 환율 구분",
-        "주식 손익과 환율 손익 별도 표시",
-        "총 손익 = 주식 손익 + 환율 손익"
+        "portfolio.py에 일별 스냅샷 저장 로직 추가",
+        "portfolio_history 테이블에 매일 1행 저장",
+        "holdings_snapshot: 종목별 상세 JSON 저장",
+        "portfolio_summary.json에 최근 30일 수익률 추이 포함",
+        "테스트: 스냅샷 저장/조회 검증"
       ]
     },
     {
       "id": "F09",
-      "description": "alerts.py 레거시 정리",
+      "description": "환율 손익 분리 계산",
       "status": "failing",
-      "priority": 5,
-      "depends_on": ["F01"],
+      "priority": 3,
+      "depends_on": ["F02", "F08"],
       "acceptance_criteria": [
-        "alerts.py와 alerts_watch.py 중복 코드 제거",
-        "alerts.py를 alerts_watch.py의 헬퍼로 리팩터링 또는 제거",
-        "run_pipeline.py에서 호출 체인 정리",
-        "기존 동작 유지 (알림 생성/삭제 로직 보존)"
+        "config.py에 USD 종목 매입 시점 환율 (buy_fx_rate) 필드 추가",
+        "portfolio.py: 주식 손익 vs 환율 손익 분리 계산",
+        "portfolio_summary.json에 fx_pnl_krw, stock_pnl_krw 필드 추가",
+        "portfolio_history에도 fx_rate, fx_pnl_krw 기록",
+        "테스트: 환율 변동에 따른 손익 분리 정확도 검증"
       ]
     },
     {
       "id": "F10",
-      "description": "에러 복구 강화 (재시도 + 백오프)",
+      "description": "에러 복구 강화 — HTTP 재시도 + 서킷 브레이커",
       "status": "failing",
-      "priority": 5,
-      "depends_on": ["F02", "F03"],
+      "priority": 4,
+      "depends_on": ["F05"],
       "acceptance_criteria": [
-        "공통 HTTP 요청 헬퍼에 지수 백오프 재시도 추가",
-        "최대 3회 재시도, 1초/2초/4초 대기",
-        "재시도 로그 기록",
-        "기존 graceful degradation 패턴 유지"
+        "공통 HTTP 헬퍼 모듈 생성 (utils/http.py 또는 기존 모듈 내)",
+        "지수 백오프 재시도 (최대 3회, 1초/2초/4초)",
+        "서킷 브레이커: 연속 N회 실패 시 해당 소스 일정 시간 스킵",
+        "수집 시점 데이터 검증 (가격 0, 전일비 ±50% 이상 → 경고)",
+        "재시도/스킵 로그 기록",
+        "기존 graceful degradation 패턴 유지",
+        "테스트: 재시도 로직, 서킷 브레이커 동작 검증"
       ]
     },
     {
       "id": "F11",
       "description": "JSON 출력 스키마 검증",
       "status": "failing",
-      "priority": 5,
-      "depends_on": ["F01"],
+      "priority": 4,
+      "depends_on": ["F05"],
       "acceptance_criteria": [
-        "output/intel/*.json 파일들의 스키마 정의",
-        "각 수집 모듈 run() 후 출력 검증 함수 추가",
-        "필수 필드 누락 시 경고 로그",
-        "자비스가 파싱할 수 없는 구조 방지"
+        "output/intel/ JSON 파일별 필수 필드 정의 (스키마 딕셔너리)",
+        "각 수집/분석 모듈 run() 후 출력 검증 함수 호출",
+        "필수 필드 누락 시 경고 로그 (파이프라인 중단 아님)",
+        "잘못된 타입 감지 (문자열이 와야 할 곳에 None 등)",
+        "테스트: 유효/무효 JSON으로 검증 함수 테스트"
       ]
     },
     {
       "id": "F12",
-      "description": "뉴스 감성 점수 (stdlib 기반)",
+      "description": "alerts.py 레거시 정리 + 통합",
+      "status": "failing",
+      "priority": 4,
+      "depends_on": ["F01"],
+      "acceptance_criteria": [
+        "alerts.py와 alerts_watch.py 중복 코드 제거",
+        "alerts.py를 alerts_watch.py에 통합 또는 공통 로직 추출",
+        "run_pipeline.py 호출 체인 정리",
+        "기존 알림 동작 100% 보존 (alerts.json 생성/삭제, system event)",
+        "테스트: 알림 생성/중복 방지/삭제 시나리오 검증"
+      ]
+    },
+    {
+      "id": "F13",
+      "description": "뉴스 감성 점수 (키워드 기반, stdlib)",
+      "status": "failing",
+      "priority": 5,
+      "depends_on": ["F02", "F05"],
+      "acceptance_criteria": [
+        "한국어 긍정/부정 키워드 사전 구축 (금융 도메인)",
+        "영어 긍정/부정 키워드 사전 구축",
+        "제목 + 요약 기반 감성 점수 계산 (-1.0 ~ 1.0)",
+        "news 테이블 sentiment 컬럼에 저장",
+        "news.json에 sentiment 필드 포함",
+        "종목별 평균 감성 점수 집계 가능",
+        "외부 패키지 사용 금지 (순수 stdlib)",
+        "테스트: 알려진 긍정/부정 뉴스로 점수 검증"
+      ]
+    },
+    {
+      "id": "F14",
+      "description": "engine_status.json — 엔진 상태 모니터링",
+      "status": "failing",
+      "priority": 5,
+      "depends_on": ["F01"],
+      "acceptance_criteria": [
+        "각 수집 모듈 실행 후 상태 기록 (성공/실패/마지막 수집 시각)",
+        "output/intel/engine_status.json 자동 갱신",
+        "오늘 에러 횟수, DB 용량, 연속 가동일 등 메타데이터",
+        "에이전트가 데이터 신뢰성을 판단할 수 있는 충분한 정보",
+        "테스트: 정상/에러 시나리오별 상태 출력 검증"
+      ]
+    },
+    {
+      "id": "F15",
+      "description": "에이전트 사용 가이드 최종 검증 + ERD 문서",
       "status": "failing",
       "priority": 6,
-      "depends_on": ["F04"],
+      "depends_on": ["F02", "F07", "F08", "F09", "F13", "F14"],
       "acceptance_criteria": [
-        "키워드 기반 감성 분석 (긍정/부정 사전)",
-        "한국어 + 영어 키워드 지원",
-        "news 테이블에 sentiment 컬럼 추가 (-1.0 ~ 1.0)",
-        "news.json에 sentiment 필드 포함",
-        "외부 패키지 사용 금지 (순수 stdlib)"
+        "AGENT_GUIDE.md의 모든 JSON 예시가 실제 출력과 일치",
+        "DB 쿼리 예시가 실제 스키마와 일치",
+        "ERD 다이어그램이 실제 테이블과 일치",
+        "JARVIS_INTEGRATION.md와 AGENT_GUIDE.md 정보 동기화",
+        "새 에이전트가 이 문서만 읽고 즉시 데이터 활용 가능한지 검증"
       ]
     }
   ]

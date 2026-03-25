@@ -3,8 +3,17 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 프로젝트 개요
-AI 에이전트(자비스/OpenClaw)가 읽을 투자 데이터 수집/분석 파이프라인.
-프로그램이 정확한 데이터를 처리하고, AI는 해석/판단/대화에 집중하는 구조.
+개인 투자자를 위한 **기관급 금융 인텔리전스 엔진**.
+수집/계산/저장은 이 엔진이, 해석/판단/전략/대화는 AI 에이전트(자비스/OpenClaw)가 담당.
+
+엔진의 데이터 품질이 에이전트의 판단 품질을 결정하며, 미래 투자 자동매매까지 대비하는 인프라.
+
+### 3계층 아키텍처
+- **수집 계층 (Collection)**: 다중 소스 폴백, 서킷 브레이커, 이상값 감지
+- **저장 계층 (Storage)**: 다중 해상도(원시→일봉→주봉), 보존 정책, 인덱스 최적화
+- **분석 계층 (Analysis)**: 기술 분석, 포트폴리오 리스크, 감성 분석
+
+상세: [ARCHITECTURE.md](../ARCHITECTURE.md) | [AGENT_GUIDE.md](../AGENT_GUIDE.md) | [JARVIS_INTEGRATION.md](../JARVIS_INTEGRATION.md)
 
 ## 빌드 & 테스트 명령어
 ```bash
@@ -78,11 +87,19 @@ output/intel/ → 자비스가 읽는 유일한 인터페이스
 **Phase 3 (진행 중)**: 기술 분석(price_analysis), 포트폴리오 이력, 뉴스 감성, 환율 손익
 
 ## DB 스키마 (db/init_db.py)
-4개 테이블: `prices`, `macro`, `news`, `alerts`
-- `prices`: ticker, name, price, prev_close, change_pct, volume, timestamp, market
+
+### 원시 테이블 (10분 해상도, 3개월 보존)
+- `prices`: ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source
 - `macro`: indicator, value, change_pct, timestamp
-- `news`: title, summary, source, url, published_at, relevance_score, tickers, category
+
+### 집계 테이블 (일봉, 영구 보존)
+- `prices_daily`: ticker, date, open, high, low, close, volume, change_pct, data_source
+- `macro_daily`: indicator, date, open, high, low, close, change_pct
+
+### 분석/기록 테이블
+- `news`: title, summary, source, url, published_at, relevance_score, sentiment, tickers, category
 - `alerts`: level, event_type, ticker, message, value, threshold, triggered_at, notified
+- `portfolio_history`: date, total_value_krw, total_invested_krw, total_pnl_krw, total_pnl_pct, fx_rate, fx_pnl_krw, holdings_snapshot
 
 ## 환경 변수
 ```bash
@@ -110,10 +127,11 @@ KIWOOM_SECRETKEY=xxx     # 키움증권 REST API (선택)
 5. 실패 시: LESSONS.md에 교훈 기록
 
 참고 파일:
-- `prd.md` — 태스크 체크리스트
-- `tests.json` — 기능 목록 + 수락 기준
-- `ARCHITECTURE.md` — 시스템 구조
-- `JARVIS_INTEGRATION.md` — 자비스 연동 명세
+- `prd.md` — 태스크 체크리스트 (15개 기능)
+- `tests.json` — 기능 목록 + 수락 기준 + 의존성 그래프
+- `ARCHITECTURE.md` — 3계층 아키텍처 + ERD + 확장 로드맵
+- `AGENT_GUIDE.md` — 에이전트 사용 매뉴얼 (JSON 구조, DB 쿼리 예시)
+- `JARVIS_INTEGRATION.md` — 자비스 연동 명세 + 고도화 요청사항
 - `LESSONS.md` — 학습된 교훈
 - `progress.md` — 반복 진행 기록
 
