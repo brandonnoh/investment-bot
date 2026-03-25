@@ -159,3 +159,63 @@ def get_market(ticker: str) -> str:
         return "COMMODITY"
     else:
         return "US"
+
+
+# ── Phase 4: 종목 발굴 설정 ──
+OPPORTUNITY_CONFIG = {
+    "composite_weights": {
+        "return": 0.25,
+        "rsi": 0.25,
+        "sentiment": 0.25,
+        "macro": 0.25,
+    },
+    "min_composite_score": 0.4,
+    "max_candidates": 100,
+    "search_count": 10,
+    "cache_ttl_seconds": 600,
+}
+
+# 종목 사전 — 주요 한국 종목 별칭
+TICKER_ALIASES = {
+    "삼전": "삼성전자",
+    "현차": "현대차",
+    "하에스": "한화에어로스페이스",
+    "SK하닉": "SK하이닉스",
+    "카카오뱅": "카카오뱅크",
+    "네이버": "NAVER",
+}
+
+# 미국 주요 종목 정적 사전 (ticker → 일반명)
+US_TICKER_MAP = {
+    "AAPL": "Apple",
+    "MSFT": "Microsoft",
+    "GOOGL": "Alphabet",
+    "AMZN": "Amazon",
+    "NVDA": "NVIDIA",
+    "TSLA": "Tesla",
+    "META": "Meta",
+    "AVGO": "Broadcom",
+    "LLY": "Eli Lilly",
+    "JPM": "JPMorgan",
+    "V": "Visa",
+    "UNH": "UnitedHealth",
+    "XOM": "Exxon Mobil",
+    "MA": "Mastercard",
+    "PG": "Procter & Gamble",
+    "COST": "Costco",
+    "HD": "Home Depot",
+    "ABBV": "AbbVie",
+    "CRM": "Salesforce",
+    "AMD": "AMD",
+    "MRK": "Merck",
+    "NFLX": "Netflix",
+    "LMT": "Lockheed Martin",
+    "RTX": "RTX",
+    "BA": "Boeing",
+    "CAT": "Caterpillar",
+    "GS": "Goldman Sachs",
+}
+
+# Naver API (선택사항 — 없으면 Brave로 폴백)
+# 환경변수: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
+# 네이버 개발자센터에서 앱 등록 후 발급
