@@ -29,3 +29,9 @@
 - **변경 파일:** db/aggregate.py, tests/test_f03_aggregate.py, run_pipeline.py
 - **결과:** 성공 (71 tests passed, F03 17개 + F02 22개 + F01 32개)
 - **메모:** prices→prices_daily OHLCV 집계 (open/high/low/close/volume), macro→macro_daily OHLC 집계, ON CONFLICT UPSERT로 중복 방지, target_date 파라미터로 특정 날짜만 집계 가능, run_pipeline.py에서 수집 후 분석 전 단계에 통합
+
+## Iteration 4 — 2026-03-25
+- **Task:** F04 — DB 보존 정책 + 자동 정리
+- **변경 파일:** db/maintenance.py, config.py, run_pipeline.py, tests/test_f04_maintenance.py
+- **결과:** 성공 (85 tests passed, F04 14개 + F03 17개 + F02 22개 + F01 32개)
+- **메모:** config.py에 RETENTION_POLICY 추가 (raw_months=3, news_months=12). db/maintenance.py에서 보존 기간 초과 원시 데이터 삭제 시 집계 완료 여부를 확인하여 미집계 데이터 보호. 뉴스는 12개월 초과 시 삭제. VACUUM으로 용량 최적화. run_pipeline.py에서 집계 후 분석 전 단계에 통합.
