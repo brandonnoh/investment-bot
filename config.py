@@ -53,6 +53,7 @@ PORTFOLIO = [
         "currency": "USD",
         "qty": 1,
         "account": "미국",
+        "buy_fx_rate": 1350.0,  # 매입 시점 원/달러 환율
     },
     {
         "name": "알파벳",
@@ -61,6 +62,7 @@ PORTFOLIO = [
         "currency": "USD",
         "qty": 2,
         "account": "미국",
+        "buy_fx_rate": 1380.0,  # 매입 시점 원/달러 환율
     },
     {
         "name": "SPDR S&P Oil",
@@ -69,6 +71,7 @@ PORTFOLIO = [
         "currency": "USD",
         "qty": 1,
         "account": "미국",
+        "buy_fx_rate": 1400.0,  # 매입 시점 원/달러 환율
     },
     {
         "name": "금 현물",

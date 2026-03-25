@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 8,
-    "failing": 7,
+    "passing": 9,
+    "failing": 6,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -140,7 +140,8 @@
     {
       "id": "F09",
       "description": "환율 손익 분리 계산",
-      "status": "failing",
+      "status": "passing",
+      "summary": "config.py에 buy_fx_rate 필드 추가, calculate_holdings에서 stock_pnl_krw/fx_pnl_krw 분리 계산 (stock_pnl + fx_pnl = total_pnl 항등식), build_summary에 합계 포함, save_snapshot에 fx_pnl_krw 저장, fetch_prices에 buy_fx_rate 전달 (18 tests, 전체 196 passed)",
       "priority": 3,
       "depends_on": ["F02", "F08"],
       "acceptance_criteria": [

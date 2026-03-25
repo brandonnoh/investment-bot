@@ -4,6 +4,7 @@
 한국 주식: 키움증권 REST API (fallback: 네이버 금융 API) / 미국 주식: Yahoo Finance API
 출력: output/intel/prices.json
 """
+
 import json
 import os
 import sqlite3
@@ -15,7 +16,14 @@ from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import PORTFOLIO, DB_PATH, OUTPUT_DIR, YAHOO_HEADERS, YAHOO_TIMEOUT, get_market
+from config import (
+    PORTFOLIO,
+    DB_PATH,
+    OUTPUT_DIR,
+    YAHOO_HEADERS,
+    YAHOO_TIMEOUT,
+    get_market,
+)
 from db.init_db import init_db
 
 # 한국 시간대
@@ -52,10 +60,10 @@ def _extract_kr_code(ticker: str) -> str:
 def fetch_naver_price(code: str) -> dict:
     """네이버 금융 실시간 주가 조회 (한국 주식 전용)"""
     url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{code}"
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0",
-        "Referer": "https://finance.naver.com"
-    })
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com"},
+    )
     try:
         with urllib.request.urlopen(req, timeout=8) as r:
             d = json.load(r)
@@ -82,32 +90,43 @@ def _fetch_kr_stock(code: str) -> dict:
     한국 주식 현재가 조회.
     1순위: 키움증권 REST API (ka10007)
     2순위(fallback): 네이버 금융 API
+
+    Returns:
+        dict: 시세 데이터 + data_source 키 포함
     """
     if os.environ.get("KIWOOM_APPKEY"):
         try:
             from data.fetch_gold_krx import fetch_kiwoom_stock
+
             result = fetch_kiwoom_stock(code)
+            result["data_source"] = "kiwoom"
             print(f"    🔑 키움 API 사용 ({code})")
             return result
         except Exception as e:
             print(f"    ⚠️ 키움 API 실패 ({code}), 네이버 fallback: {e}")
 
-    return fetch_naver_price(code)
+    result = fetch_naver_price(code)
+    result["data_source"] = "naver"
+    return result
 
 
-def fetch_gold_krw_per_gram() -> tuple[float, float]:
+def fetch_gold_krw_per_gram() -> tuple[float, float, str, str | None]:
     """
     금 현물 원화/g 가격 계산.
     1순위: 키움증권 KRX 금 현물(4001) API
     2순위(fallback): GC=F × KRW=X ÷ 31.1035
+
+    Returns:
+        (price, prev_close, data_source, calc_method)
     """
     # 키움 API 사용 가능 시 KRX 금 현물 직접 조회
     if os.environ.get("KIWOOM_APPKEY"):
         try:
             from data.fetch_gold_krx import fetch_gold_krx
+
             krx = fetch_gold_krx()
             print("  🥇 KRX 금 현물(키움 API) 사용")
-            return krx["price"], krx["prev_close"]
+            return krx["price"], krx["prev_close"], "kiwoom", None
         except Exception as e:
             print(f"  ⚠️ 키움 API 실패, Yahoo fallback: {e}")
 
@@ -116,12 +135,19 @@ def fetch_gold_krw_per_gram() -> tuple[float, float]:
     fx_meta = fetch_yahoo_quote("KRW=X")
     gold_usd = gold_meta["regularMarketPrice"]
     usd_krw = fx_meta["regularMarketPrice"]
-    gold_prev = gold_meta.get("chartPreviousClose", gold_meta.get("previousClose", gold_usd))
+    gold_prev = gold_meta.get(
+        "chartPreviousClose", gold_meta.get("previousClose", gold_usd)
+    )
     fx_prev = fx_meta.get("chartPreviousClose", fx_meta.get("previousClose", usd_krw))
 
     price_krw_g = gold_usd * usd_krw / 31.1035
     prev_krw_g = gold_prev * fx_prev / 31.1035
-    return round(price_krw_g, 0), round(prev_krw_g, 0)
+    return (
+        round(price_krw_g, 0),
+        round(prev_krw_g, 0),
+        "calculated",
+        "GC=F × KRW=X ÷ 31.1035",
+    )
 
 
 def collect_prices() -> list[dict]:
@@ -134,8 +160,10 @@ def collect_prices() -> list[dict]:
         name = stock["name"]
         try:
             # 금 현물(원/g) 커스텀 처리
+            data_source = None
+            calc_method = None
             if ticker == "GOLD_KRW_G":
-                price, prev_close = fetch_gold_krw_per_gram()
+                price, prev_close, data_source, calc_method = fetch_gold_krw_per_gram()
                 volume = 0
             elif _is_kr_ticker(ticker):
                 # 한국 주식 → 키움증권 API (fallback: 네이버 금융)
@@ -144,18 +172,26 @@ def collect_prices() -> list[dict]:
                 price = kr_data["price"]
                 prev_close = kr_data["prev_close"]
                 volume = kr_data["volume"]
+                data_source = kr_data["data_source"]
             else:
                 meta = fetch_yahoo_quote(ticker)
                 price = meta["regularMarketPrice"]
-                prev_close = meta.get("chartPreviousClose", meta.get("previousClose", price))
+                prev_close = meta.get(
+                    "chartPreviousClose", meta.get("previousClose", price)
+                )
                 volume = meta.get("regularMarketVolume", 0)
+                data_source = "yahoo"
 
             # 전일 대비 변동률
-            change_pct = round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+            change_pct = (
+                round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+            )
 
             # 평단 대비 손익률
             avg_cost = stock["avg_cost"]
-            pnl_pct = round((price - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
+            pnl_pct = (
+                round((price - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
+            )
 
             record = {
                 "ticker": ticker,
@@ -171,14 +207,20 @@ def collect_prices() -> list[dict]:
                 "account": stock["account"],
                 "market": get_market(ticker),
                 "timestamp": now,
+                "data_source": data_source,
             }
+            # 매입 시점 환율 (환율 손익 분리용)
+            if stock.get("buy_fx_rate"):
+                record["buy_fx_rate"] = stock["buy_fx_rate"]
+            if calc_method:
+                record["calc_method"] = calc_method
             results.append(record)
             print(f"  ✅ {name} ({ticker}): {price:,.2f} ({change_pct:+.2f}%)")
 
         except Exception as e:
             print(f"  ❌ {name} ({ticker}): {e}")
             # 실패해도 나머지 종목은 계속 수집
-            results.append({
+            error_record = {
                 "ticker": ticker,
                 "name": name,
                 "price": None,
@@ -192,8 +234,12 @@ def collect_prices() -> list[dict]:
                 "account": stock["account"],
                 "market": get_market(ticker),
                 "timestamp": now,
+                "data_source": None,
                 "error": str(e),
-            })
+            }
+            if stock.get("buy_fx_rate"):
+                error_record["buy_fx_rate"] = stock["buy_fx_rate"]
+            results.append(error_record)
 
     return results
 
@@ -209,10 +255,19 @@ def save_to_db(records: list[dict]):
             if r.get("price") is None:
                 continue  # 에러 난 종목은 DB에 저장하지 않음
             cursor.execute(
-                """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (r["ticker"], r["name"], r["price"], r["prev_close"],
-                 r["change_pct"], r["volume"], r["timestamp"], r["market"]),
+                """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    r["ticker"],
+                    r["name"],
+                    r["price"],
+                    r["prev_close"],
+                    r["change_pct"],
+                    r["volume"],
+                    r["timestamp"],
+                    r["market"],
+                    r.get("data_source"),
+                ),
             )
             inserted += 1
 

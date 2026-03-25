@@ -96,7 +96,7 @@ def save_snapshot(conn, summary: dict, date_str: str):
             total.get("pnl_krw"),
             total.get("pnl_pct"),
             summary.get("exchange_rate"),
-            None,  # fx_pnl_krw — F09에서 구현
+            total.get("fx_pnl_krw"),
             holdings_json,
         ),
     )
@@ -136,7 +136,7 @@ def load_history(conn, days: int = 30) -> list[dict]:
 
 
 def calculate_holdings(prices: list[dict], exchange_rate: float) -> list[dict]:
-    """종목별 평가금액 계산 (원화 통일)"""
+    """종목별 평가금액 계산 (원화 통일) + 환율/주식 손익 분리"""
     holdings = []
 
     for p in prices:
@@ -148,6 +148,7 @@ def calculate_holdings(prices: list[dict], exchange_rate: float) -> list[dict]:
         avg_cost = p.get("avg_cost", 0)
         qty = p.get("qty", 0)
         currency = p.get("currency", "USD")
+        buy_fx_rate = p.get("buy_fx_rate")
 
         # 평가금액 (원화 환산)
         if currency == "KRW":
@@ -155,7 +156,13 @@ def calculate_holdings(prices: list[dict], exchange_rate: float) -> list[dict]:
             invested_krw = avg_cost * qty if avg_cost > 0 else 0
         else:
             current_value_krw = price * qty * exchange_rate
-            invested_krw = avg_cost * qty * exchange_rate if avg_cost > 0 else 0
+            # 매입 환율이 있으면 실제 투자금(매입 시점) 사용
+            if avg_cost > 0 and buy_fx_rate:
+                invested_krw = avg_cost * qty * buy_fx_rate
+            elif avg_cost > 0:
+                invested_krw = avg_cost * qty * exchange_rate
+            else:
+                invested_krw = 0
 
         # 평가손익 (avg_cost=0인 종목은 수익률 계산 제외)
         cost_set = avg_cost > 0
@@ -163,6 +170,20 @@ def calculate_holdings(prices: list[dict], exchange_rate: float) -> list[dict]:
         pnl_pct = (
             (pnl_krw / invested_krw * 100) if cost_set and invested_krw > 0 else None
         )
+
+        # 환율 손익 분리: stock_pnl + fx_pnl = pnl_krw
+        if cost_set and currency != "KRW" and buy_fx_rate:
+            # 주식 손익 = (현재가 - 평균단가) × 수량 × 매입환율
+            stock_pnl_krw = round((price - avg_cost) * qty * buy_fx_rate)
+            # 환율 손익 = 현재가 × 수량 × (현재환율 - 매입환율)
+            fx_pnl_krw = round(price * qty * (exchange_rate - buy_fx_rate))
+        elif cost_set and currency == "KRW":
+            stock_pnl_krw = round(pnl_krw) if pnl_krw is not None else 0
+            fx_pnl_krw = 0
+        else:
+            # 매입 환율 미설정 USD 종목 또는 평단 미설정
+            stock_pnl_krw = round(pnl_krw) if pnl_krw is not None else None
+            fx_pnl_krw = 0
 
         sector = SECTOR_MAP.get(ticker, "기타")
 
@@ -179,6 +200,8 @@ def calculate_holdings(prices: list[dict], exchange_rate: float) -> list[dict]:
                 "invested_krw": round(invested_krw) if cost_set else 0,
                 "pnl_krw": round(pnl_krw) if pnl_krw is not None else None,
                 "pnl_pct": round(pnl_pct, 2) if pnl_pct is not None else None,
+                "stock_pnl_krw": stock_pnl_krw,
+                "fx_pnl_krw": fx_pnl_krw,
                 "pnl_label": None if cost_set else "평단 미설정",
                 "change_pct": p.get("change_pct"),
             }
@@ -348,6 +371,15 @@ def build_summary(
         round(total_pnl / total_invested * 100, 2) if total_invested > 0 else None
     )
 
+    # 환율/주식 손익 합계
+    valid_holdings = [h for h in holdings if h.get("pnl_label") is None]
+    total_fx_pnl = sum(h.get("fx_pnl_krw", 0) for h in valid_holdings)
+    total_stock_pnl = sum(
+        h.get("stock_pnl_krw", 0)
+        for h in valid_holdings
+        if h.get("stock_pnl_krw") is not None
+    )
+
     return {
         "updated_at": datetime.now(KST).isoformat(),
         "exchange_rate": exchange_rate,
@@ -356,6 +388,8 @@ def build_summary(
             "current_value_krw": total_current,
             "pnl_krw": total_pnl,
             "pnl_pct": total_pnl_pct,
+            "stock_pnl_krw": total_stock_pnl,
+            "fx_pnl_krw": total_fx_pnl,
         },
         "holdings": holdings,
         "sectors": sectors,
@@ -433,6 +467,9 @@ def run():
         print(
             f"\n  {flag} 총 포트폴리오: {total['pnl_krw']:+,.0f}원 ({total['pnl_pct']:+.2f}%)"
         )
+        if total.get("fx_pnl_krw") is not None:
+            print(f"    📈 주식 손익: {total['stock_pnl_krw']:+,.0f}원")
+            print(f"    💱 환율 손익: {total['fx_pnl_krw']:+,.0f}원")
 
     if history:
         print(f"  📈 수익률 추이: 최근 {len(history)}일")

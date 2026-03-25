@@ -53,3 +53,9 @@
 - **변경 파일:** analysis/portfolio.py, tests/test_f08_portfolio_history.py
 - **결과:** 성공 (178 tests passed, F08 13개 + 기존 165개)
 - **메모:** save_snapshot() UPSERT로 일별 1행 저장 (ON CONFLICT(date)), load_history() 최근 N일 조회 (날짜 오름차순), _get_db_conn() 테스트 패치용 헬퍼, build_summary()에 history 파라미터 추가, run()에서 DB 스냅샷 자동 저장 + 이력 조회 + portfolio_summary.json에 30일 수익률 추이 포함. holdings_snapshot에 종목별 상세 JSON 저장.
+
+## Iteration 8 — 2026-03-25
+- **Task:** F09 — 환율 손익 분리 계산
+- **변경 파일:** config.py, analysis/portfolio.py, data/fetch_prices.py, tests/test_f09_fx_pnl.py
+- **결과:** 성공 (196 tests passed, F09 18개 + 기존 178개)
+- **메모:** config.py PORTFOLIO에 USD 종목별 buy_fx_rate(매입 시점 환율) 추가. calculate_holdings에서 USD 종목 invested_krw를 매입환율 기반으로 계산, stock_pnl_krw = (현재가-평단)×수량×매입환율, fx_pnl_krw = 현재가×수량×(현재환율-매입환율), stock+fx=total 항등식 보장. build_summary에 총 fx_pnl_krw/stock_pnl_krw 합계 포함. save_snapshot에서 fx_pnl_krw 실제 저장. fetch_prices에서 buy_fx_rate를 prices.json에 전달. KRW 종목은 fx_pnl=0, stock_pnl=total_pnl.
