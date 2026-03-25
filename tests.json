@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 9,
-    "failing": 6,
+    "passing": 10,
+    "failing": 5,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -155,7 +155,8 @@
     {
       "id": "F10",
       "description": "에러 복구 강화 — HTTP 재시도 + 서킷 브레이커",
-      "status": "failing",
+      "status": "passing",
+      "summary": "utils/http.py 공통 모듈 — retry_request 지수 백오프(1초/2초), CircuitBreaker 3상태(closed/open/half_open), validate_price_data 이상값 감지. 수집 모듈 import 연결, config.py 설정 중앙 관리 (32 tests, 전체 228 passed)",
       "priority": 4,
       "depends_on": ["F05"],
       "acceptance_criteria": [

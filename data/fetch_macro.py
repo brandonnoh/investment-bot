@@ -4,6 +4,7 @@
 코스피, 코스닥, 원/달러, WTI, 브렌트유, 금, DXY, VIX
 출력: output/intel/macro.json
 """
+
 import json
 import sqlite3
 import sys
@@ -14,8 +15,16 @@ from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import MACRO_INDICATORS, DB_PATH, OUTPUT_DIR, YAHOO_HEADERS, YAHOO_TIMEOUT
+from config import (
+    MACRO_INDICATORS,
+    DB_PATH,
+    OUTPUT_DIR,
+    YAHOO_HEADERS,
+    YAHOO_TIMEOUT,
+    HTTP_RETRY_CONFIG,
+)
 from db.init_db import init_db
+from utils.http import retry_request, validate_price_data
 
 KST = timezone(timedelta(hours=9))
 
@@ -24,14 +33,17 @@ NAVER_INDEX_CODES = {"KOSPI", "KOSDAQ"}
 
 
 def fetch_naver_index(code: str) -> dict:
-    """네이버 금융 실시간 지수 조회 (코스피/코스닥)"""
+    """네이버 금융 실시간 지수 조회 (코스피/코스닥, 자동 재시도)"""
     url = f"https://polling.finance.naver.com/api/realtime/domestic/index/{code}"
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0",
-        "Referer": "https://finance.naver.com"
-    })
-    with urllib.request.urlopen(req, timeout=8) as r:
-        d = json.load(r)
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com"}
+    body = retry_request(
+        url,
+        headers=headers,
+        timeout=8,
+        max_retries=HTTP_RETRY_CONFIG["max_retries"],
+        base_delay=HTTP_RETRY_CONFIG["base_delay"],
+    )
+    d = json.loads(body)
     data = d["datas"][0]
     price = float(data["closePrice"].replace(",", ""))
     change_pct = float(data["fluctuationsRatio"])
@@ -39,16 +51,21 @@ def fetch_naver_index(code: str) -> dict:
 
 
 def fetch_yahoo_quote(ticker: str) -> dict:
-    """Yahoo Finance에서 지표 시세 조회"""
+    """Yahoo Finance에서 지표 시세 조회 (자동 재시도)"""
     url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=5d"
-    req = urllib.request.Request(url, headers=YAHOO_HEADERS)
     try:
-        with urllib.request.urlopen(req, timeout=YAHOO_TIMEOUT) as resp:
-            data = json.load(resp)
-            result = data["chart"]["result"]
-            if not result:
-                raise ValueError(f"데이터 없음: {ticker}")
-            return result[0]["meta"]
+        body = retry_request(
+            url,
+            headers=YAHOO_HEADERS,
+            timeout=YAHOO_TIMEOUT,
+            max_retries=HTTP_RETRY_CONFIG["max_retries"],
+            base_delay=HTTP_RETRY_CONFIG["base_delay"],
+        )
+        data = json.loads(body)
+        result = data["chart"]["result"]
+        if not result:
+            raise ValueError(f"데이터 없음: {ticker}")
+        return result[0]["meta"]
     except urllib.error.URLError as e:
         raise ConnectionError(f"네트워크 오류 ({ticker}): {e}")
     except (KeyError, IndexError) as e:
@@ -69,12 +86,20 @@ def collect_macro() -> list[dict]:
                 naver = fetch_naver_index(ticker)
                 value = naver["price"]
                 change_pct = naver["change_pct"]
-                prev_close = round(value / (1 + change_pct / 100), 2) if change_pct else value
+                prev_close = (
+                    round(value / (1 + change_pct / 100), 2) if change_pct else value
+                )
             else:
                 meta = fetch_yahoo_quote(ticker)
                 value = meta["regularMarketPrice"]
-                prev_close = meta.get("chartPreviousClose", meta.get("previousClose", value))
-                change_pct = round((value - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+                prev_close = meta.get(
+                    "chartPreviousClose", meta.get("previousClose", value)
+                )
+                change_pct = (
+                    round((value - prev_close) / prev_close * 100, 2)
+                    if prev_close
+                    else 0.0
+                )
 
             record = {
                 "indicator": name,
@@ -85,6 +110,10 @@ def collect_macro() -> list[dict]:
                 "category": indicator["category"],
                 "timestamp": now,
             }
+            # 이상값 검증
+            for warning in validate_price_data(value, prev_close, ticker):
+                print(f"  ⚠️ {warning}")
+
             results.append(record)
 
             # 환율은 값 자체가 중요하므로 별도 표시
@@ -95,16 +124,18 @@ def collect_macro() -> list[dict]:
 
         except Exception as e:
             print(f"  ❌ {name} ({ticker}): {e}")
-            results.append({
-                "indicator": name,
-                "ticker": ticker,
-                "value": None,
-                "prev_close": None,
-                "change_pct": None,
-                "category": indicator["category"],
-                "timestamp": now,
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "indicator": name,
+                    "ticker": ticker,
+                    "value": None,
+                    "prev_close": None,
+                    "change_pct": None,
+                    "category": indicator["category"],
+                    "timestamp": now,
+                    "error": str(e),
+                }
+            )
 
     return results
 
@@ -149,7 +180,9 @@ def save_to_json(records: list[dict]):
 
 def run():
     """매크로 지표 수집 파이프라인 실행"""
-    print(f"\n🌍 매크로 지표 수집 시작 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}")
+    print(
+        f"\n🌍 매크로 지표 수집 시작 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}"
+    )
 
     # DB 초기화 확인
     if not DB_PATH.exists():

@@ -22,25 +22,32 @@ from config import (
     OUTPUT_DIR,
     YAHOO_HEADERS,
     YAHOO_TIMEOUT,
+    HTTP_RETRY_CONFIG,
     get_market,
 )
 from db.init_db import init_db
+from utils.http import retry_request, validate_price_data
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
 
 
 def fetch_yahoo_quote(ticker: str) -> dict:
-    """Yahoo Finance에서 단일 종목 시세 조회"""
+    """Yahoo Finance에서 단일 종목 시세 조회 (자동 재시도)"""
     url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d"
-    req = urllib.request.Request(url, headers=YAHOO_HEADERS)
     try:
-        with urllib.request.urlopen(req, timeout=YAHOO_TIMEOUT) as resp:
-            data = json.load(resp)
-            result = data["chart"]["result"]
-            if not result:
-                raise ValueError(f"데이터 없음: {ticker}")
-            return result[0]["meta"]
+        body = retry_request(
+            url,
+            headers=YAHOO_HEADERS,
+            timeout=YAHOO_TIMEOUT,
+            max_retries=HTTP_RETRY_CONFIG["max_retries"],
+            base_delay=HTTP_RETRY_CONFIG["base_delay"],
+        )
+        data = json.loads(body)
+        result = data["chart"]["result"]
+        if not result:
+            raise ValueError(f"데이터 없음: {ticker}")
+        return result[0]["meta"]
     except urllib.error.URLError as e:
         raise ConnectionError(f"네트워크 오류 ({ticker}): {e}")
     except (KeyError, IndexError) as e:
@@ -58,15 +65,18 @@ def _extract_kr_code(ticker: str) -> str:
 
 
 def fetch_naver_price(code: str) -> dict:
-    """네이버 금융 실시간 주가 조회 (한국 주식 전용)"""
+    """네이버 금융 실시간 주가 조회 (한국 주식 전용, 자동 재시도)"""
     url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{code}"
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com"},
-    )
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com"}
     try:
-        with urllib.request.urlopen(req, timeout=8) as r:
-            d = json.load(r)
+        body = retry_request(
+            url,
+            headers=headers,
+            timeout=8,
+            max_retries=HTTP_RETRY_CONFIG["max_retries"],
+            base_delay=HTTP_RETRY_CONFIG["base_delay"],
+        )
+        d = json.loads(body)
         data = d["datas"][0]
         price = int(data["closePrice"].replace(",", ""))
         change = int(data["compareToPreviousClosePrice"].replace(",", ""))
@@ -214,6 +224,10 @@ def collect_prices() -> list[dict]:
                 record["buy_fx_rate"] = stock["buy_fx_rate"]
             if calc_method:
                 record["calc_method"] = calc_method
+            # 이상값 검증
+            for warning in validate_price_data(price, prev_close, ticker):
+                print(f"  ⚠️ {warning}")
+
             results.append(record)
             print(f"  ✅ {name} ({ticker}): {price:,.2f} ({change_pct:+.2f}%)")
 

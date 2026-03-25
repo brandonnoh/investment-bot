@@ -135,6 +135,18 @@ ANALYSIS_PARAMS = {
 YAHOO_HEADERS = {"User-Agent": "Mozilla/5.0"}
 YAHOO_TIMEOUT = 10  # 초
 
+# ── HTTP 재시도 설정 ──
+HTTP_RETRY_CONFIG = {
+    "max_retries": 3,  # 최대 재시도 횟수
+    "base_delay": 1,  # 기본 대기 시간 (초) → 1초/2초/4초
+}
+
+# ── 서킷 브레이커 설정 ──
+CIRCUIT_BREAKER_CONFIG = {
+    "failure_threshold": 5,  # 연속 실패 시 차단
+    "recovery_timeout": 300,  # 차단 후 재시도까지 대기 (초)
+}
+
 
 # ── 마켓 분류 ──
 def get_market(ticker: str) -> str:

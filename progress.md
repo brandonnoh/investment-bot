@@ -59,3 +59,9 @@
 - **변경 파일:** config.py, analysis/portfolio.py, data/fetch_prices.py, tests/test_f09_fx_pnl.py
 - **결과:** 성공 (196 tests passed, F09 18개 + 기존 178개)
 - **메모:** config.py PORTFOLIO에 USD 종목별 buy_fx_rate(매입 시점 환율) 추가. calculate_holdings에서 USD 종목 invested_krw를 매입환율 기반으로 계산, stock_pnl_krw = (현재가-평단)×수량×매입환율, fx_pnl_krw = 현재가×수량×(현재환율-매입환율), stock+fx=total 항등식 보장. build_summary에 총 fx_pnl_krw/stock_pnl_krw 합계 포함. save_snapshot에서 fx_pnl_krw 실제 저장. fetch_prices에서 buy_fx_rate를 prices.json에 전달. KRW 종목은 fx_pnl=0, stock_pnl=total_pnl.
+
+## Iteration 9 — 2026-03-25
+- **Task:** F10 — 에러 복구 강화 — HTTP 재시도 + 서킷 브레이커
+- **변경 파일:** utils/http.py, utils/__init__.py, config.py, data/fetch_prices.py, data/fetch_macro.py, data/fetch_news.py, tests/test_f10_error_recovery.py
+- **결과:** 성공 (228 tests passed, F10 32개 + 기존 196개)
+- **메모:** utils/http.py 공통 모듈에 retry_request(지수 백오프 재시도), CircuitBreaker(closed/open/half_open 3상태 관리), validate_price_data(이상값 감지) 구현. 수집 모듈 3개(fetch_prices/macro/news)에서 retry_request와 validate_price_data import 연결. config.py에 HTTP_RETRY_CONFIG(max_retries=3, base_delay=1)와 CIRCUIT_BREAKER_CONFIG(failure_threshold=5, recovery_timeout=300) 중앙 관리. 테스트 32개: 재시도 로직 8개, 서킷 브레이커 8개, 이상값 감지 9개, config 통합 2개, fetch 통합 3개, 로깅 2개.

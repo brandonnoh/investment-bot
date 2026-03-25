@@ -5,6 +5,7 @@
 - Brave: 투자 기회 발굴용만 (월 ~240건, 무료 크레딧 이내)
 출력: output/intel/news.json
 """
+
 import json
 import os
 import sqlite3
@@ -18,8 +19,9 @@ from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import PORTFOLIO, DB_PATH, OUTPUT_DIR
+from config import PORTFOLIO, DB_PATH, OUTPUT_DIR, HTTP_RETRY_CONFIG
 from db.init_db import init_db
+from utils.http import retry_request
 
 KST = timezone(timedelta(hours=9))
 BRAVE_API_KEY = os.environ.get("BRAVE_API_KEY", "")
@@ -31,10 +33,10 @@ TICKER_KEYWORDS = {
     "005380.KS": ["현대차 주가"],
     "0117V0.KS": ["TIGER AI전력"],
     "458730.KS": ["방산ETF"],
-    "TSLA":      ["테슬라"],
-    "GOOGL":     ["알파벳 구글"],
-    "XOP":       ["XOP"],
-    "GC=F":      ["금현물"],
+    "TSLA": ["테슬라"],
+    "GOOGL": ["알파벳 구글"],
+    "XOP": ["XOP"],
+    "GC=F": ["금현물"],
 }
 
 # ── 매크로 키워드 — 카테고리별 수집 방식 ──
@@ -51,7 +53,10 @@ MACRO_KEYWORDS = {
         "relevance": 0.8,
         "method": "rss",
         "keywords": [
-            "코스피", "원달러 환율", "WTI 유가", "연준 금리",
+            "코스피",
+            "원달러 환율",
+            "WTI 유가",
+            "연준 금리",
         ],
     },
     # Brave로 수집 (유료, 소량)
@@ -59,8 +64,10 @@ MACRO_KEYWORDS = {
         "relevance": 0.85,
         "method": "brave",
         "keywords": [
-            "저평가 종목 발굴", "외국인 순매수 종목",
-            "52주 신저가 반등", "섹터 로테이션 전략",
+            "저평가 종목 발굴",
+            "외국인 순매수 종목",
+            "52주 신저가 반등",
+            "섹터 로테이션 전략",
         ],
     },
 }
@@ -68,14 +75,21 @@ MACRO_KEYWORDS = {
 
 # ── Google News RSS (무료) ──
 
-def fetch_google_news_rss(query: str, count: int = 5, lang: str = "ko") -> list[dict]:
-    """Google News RSS로 무료 뉴스 수집"""
-    encoded = urllib.parse.quote(query)
-    url = f"https://news.google.com/rss/search?q={encoded}&hl={lang}&gl=KR&ceid=KR:{lang}"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
 
-    with urllib.request.urlopen(req, timeout=10) as r:
-        root = ET.fromstring(r.read())
+def fetch_google_news_rss(query: str, count: int = 5, lang: str = "ko") -> list[dict]:
+    """Google News RSS로 무료 뉴스 수집 (자동 재시도)"""
+    encoded = urllib.parse.quote(query)
+    url = (
+        f"https://news.google.com/rss/search?q={encoded}&hl={lang}&gl=KR&ceid=KR:{lang}"
+    )
+    body = retry_request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=10,
+        max_retries=HTTP_RETRY_CONFIG["max_retries"],
+        base_delay=HTTP_RETRY_CONFIG["base_delay"],
+    )
+    root = ET.fromstring(body)
 
     items = []
     for item in root.findall(".//item")[:count]:
@@ -83,46 +97,53 @@ def fetch_google_news_rss(query: str, count: int = 5, lang: str = "ko") -> list[
         link = item.findtext("link", "")
         pub_date = item.findtext("pubDate", "")
         source = item.findtext("source", "")
-        items.append({
-            "title": title,
-            "url": link,
-            "source": source,
-            "published_at": pub_date,
-        })
+        items.append(
+            {
+                "title": title,
+                "url": link,
+                "source": source,
+                "published_at": pub_date,
+            }
+        )
     return items
 
 
 # ── Brave Search API (유료) ──
+
 
 def search_brave_news(query: str, count: int = 2) -> list[dict]:
     """Brave Search API로 뉴스 검색"""
     if not BRAVE_API_KEY:
         raise ValueError("BRAVE_API_KEY 환경변수가 설정되지 않았습니다")
 
-    params = urllib.parse.urlencode({
-        "q": query,
-        "count": count,
-        "freshness": "pd",  # 최근 24시간
-    })
+    params = urllib.parse.urlencode(
+        {
+            "q": query,
+            "count": count,
+            "freshness": "pd",  # 최근 24시간
+        }
+    )
     url = f"{BRAVE_SEARCH_URL}?{params}"
-    req = urllib.request.Request(url, headers={
-        "Accept": "application/json",
-        "X-Subscription-Token": BRAVE_API_KEY,
-    })
 
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.load(resp)
-            return data.get("results", [])
-    except urllib.error.HTTPError as e:
-        if e.code == 429:
-            print(f"    ⚠️  Rate limit 초과 — 잠시 후 재시도")
-        raise
+        body = retry_request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "X-Subscription-Token": BRAVE_API_KEY,
+            },
+            timeout=15,
+            max_retries=HTTP_RETRY_CONFIG["max_retries"],
+            base_delay=HTTP_RETRY_CONFIG["base_delay"],
+        )
+        data = json.loads(body)
+        return data.get("results", [])
     except urllib.error.URLError as e:
         raise ConnectionError(f"Brave Search 네트워크 오류: {e}")
 
 
 # ── 관련도 스코어링 ──
+
 
 def calculate_relevance(title: str, keywords: list[str]) -> float:
     """기사 제목 기반 관련도 스코어 계산 (0.0 ~ 1.0)"""
@@ -134,6 +155,7 @@ def calculate_relevance(title: str, keywords: list[str]) -> float:
 
 
 # ── 뉴스 수집 ──
+
 
 def collect_news() -> tuple[list[dict], int, int]:
     """하이브리드 뉴스 수집: RSS + Brave. (records, rss_count, brave_count) 반환"""
@@ -283,7 +305,9 @@ def save_to_db(records: list[dict]):
         cursor = conn.cursor()
         # UNIQUE 인덱스가 없으면 기존 중복 정리 후 생성
         try:
-            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)")
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)"
+            )
         except sqlite3.IntegrityError:
             cursor.execute("""
                 DELETE FROM news WHERE id NOT IN (
@@ -293,17 +317,25 @@ def save_to_db(records: list[dict]):
             conn.commit()
             removed = cursor.rowcount
             print(f"  🧹 기존 중복 {removed}건 정리")
-            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)")
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)"
+            )
         inserted = 0
         skipped = 0
         for r in records:
             cursor.execute(
                 """INSERT OR IGNORE INTO news (title, summary, source, url, published_at, relevance_score, tickers, category)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (r["title"], r["summary"], r["source"], r["url"],
-                 r["published_at"], r["relevance_score"],
-                 json.dumps(r["tickers"], ensure_ascii=False),
-                 r.get("category", "stock")),
+                (
+                    r["title"],
+                    r["summary"],
+                    r["source"],
+                    r["url"],
+                    r["published_at"],
+                    r["relevance_score"],
+                    json.dumps(r["tickers"], ensure_ascii=False),
+                    r.get("category", "stock"),
+                ),
             )
             if cursor.rowcount > 0:
                 inserted += 1
@@ -346,7 +378,9 @@ def run():
     save_to_db(records)
     save_to_json(records)
 
-    print(f"\n✅ 뉴스 수집 완료: RSS {rss_count}건, Brave {brave_count}건 (합계 {len(records)}건)\n")
+    print(
+        f"\n✅ 뉴스 수집 완료: RSS {rss_count}건, Brave {brave_count}건 (합계 {len(records)}건)\n"
+    )
     return records
 
 
