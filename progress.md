@@ -41,3 +41,9 @@
 - **변경 파일:** tests/test_f05_collectors.py
 - **결과:** 성공 (125 tests passed, F05 40개 + 기존 85개)
 - **메모:** fetch_prices: Yahoo/Naver API 모킹, 키움→네이버 폴백 검증, 금 현물 계산, 스키마 검증. fetch_macro: 네이버 지수/Yahoo 지표 모킹, 개별 실패 시 나머지 정상 수집. fetch_news: RSS XML 파싱, Brave 모킹, 중복 URL 제거, 관련도 스코어링. 공통: graceful degradation (일부 실패 시 에러 레코드 포함 반환).
+
+## Iteration 6 — 2026-03-25
+- **Task:** F07 — price_analysis.json 기술 분석 엔진
+- **변경 파일:** analysis/price_analysis.py, tests/test_f07_price_analysis.py, run_pipeline.py
+- **결과:** 성공 (165 tests passed, F07 29개 + 기존 136개)
+- **메모:** 구현+테스트+파이프라인 통합이 이미 완료되어 있음을 확인. MA5/20/60 이동평균, RSI 14일, 52주 고저+현재 위치(%), 30일 변동성(연환산), 추세 판단(uptrend/downtrend/sideways)+지속일수, 지지/저항선 추정. config.py ANALYSIS_PARAMS 중앙 관리. 데이터 부족 시 graceful 처리(None 반환). 모든 acceptance criteria 충족.

@@ -27,12 +27,12 @@
 ## 🔬 3. 수집 계층 (Collection Layer) 강화
 
 - [x] **F05** 수집 모듈 단위 테스트 — prices/macro/news API 모킹, 폴백, graceful degradation 검증
-- [ ] **F06** data_source 필드 — prices.json에 데이터 출처 (kiwoom/naver/yahoo/calculated) 명시
+- [x] **F06** data_source 필드 — prices.json에 데이터 출처 (kiwoom/naver/yahoo/calculated) 명시
 - [ ] **F10** 에러 복구 강화 — HTTP 재시도 + 지수 백오프 + 서킷 브레이커 + 이상값 감지
 
 ## 📊 4. 분석 계층 (Analysis Layer) 구축
 
-- [ ] **F07** price_analysis.json — MA5/20/60, RSI, 52주 고저, 변동성, 추세, 지지/저항
+- [x] **F07** price_analysis.json — MA5/20/60, RSI, 52주 고저, 변동성, 추세, 지지/저항
 - [ ] **F08** portfolio_history — 일별 자산 스냅샷, 30일 수익률 추이
 - [ ] **F09** 환율 손익 분리 — 주식 손익 vs 환율 손익 분리, fx_pnl 별도 계산
 - [ ] **F13** 뉴스 감성 점수 — 한/영 키워드 기반 감성 분석 (stdlib만)

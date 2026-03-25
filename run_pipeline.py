@@ -17,6 +17,7 @@ from data.fetch_macro import run as fetch_macro
 from data.fetch_news import run as fetch_news
 from db.aggregate import run as aggregate_daily
 from db.maintenance import run as maintain_db
+from analysis.price_analysis import run as analyze_prices
 from analysis.alerts import run as check_alerts
 from analysis.screener import run as run_screener
 from analysis.portfolio import run as analyze_portfolio
@@ -50,6 +51,7 @@ def main():
     maintain_db()
 
     # 4. 분석
+    analyze_prices()
     check_alerts()
     run_screener()
     analyze_portfolio()

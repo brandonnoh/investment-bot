@@ -118,6 +118,16 @@ RETENTION_POLICY = {
     "news_months": 12,  # 뉴스 보존 개월 수
 }
 
+# ── 분석 파라미터 ──
+ANALYSIS_PARAMS = {
+    "ma_periods": [5, 20, 60],  # 이동평균 기간
+    "rsi_period": 14,  # RSI 기간
+    "volatility_period": 30,  # 변동성 계산 기간 (일)
+    "trend_period": 20,  # 추세 판단 기간 (일)
+    "support_resistance_period": 20,  # 지지/저항 계산 기간 (일)
+    "week_52_days": 252,  # 52주 거래일 수
+}
+
 # ── Yahoo Finance 요청 설정 ──
 YAHOO_HEADERS = {"User-Agent": "Mozilla/5.0"}
 YAHOO_TIMEOUT = 10  # 초

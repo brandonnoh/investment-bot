@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 5,
-    "failing": 10,
+    "passing": 7,
+    "failing": 8,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -89,7 +89,8 @@
     {
       "id": "F06",
       "description": "prices.json에 data_source 필드 추가",
-      "status": "failing",
+      "status": "passing",
+      "summary": "collect_prices에 data_source 필드 추가 (yahoo/naver/kiwoom/calculated), 금 현물 calculated+calc_method, _fetch_kr_stock에 소스 추적, save_to_db data_source 저장, 에러 레코드 data_source=None, 하위 호환 유지 (11 tests, 전체 136 passed)",
       "priority": 3,
       "depends_on": ["F02", "F05"],
       "acceptance_criteria": [
@@ -103,7 +104,8 @@
     {
       "id": "F07",
       "description": "price_analysis.json — 기술 분석 엔진",
-      "status": "failing",
+      "status": "passing",
+      "summary": "analysis/price_analysis.py 모듈 — MA5/20/60 이동평균, RSI 14일, 52주 고저+위치, 30일 변동성(연환산), 추세 판단+지속일수, 지지/저항선 추정, price_analysis.json 출력, run_pipeline.py 통합, graceful degradation (29 tests, 전체 165 passed)",
       "priority": 3,
       "depends_on": ["F02", "F03"],
       "acceptance_criteria": [
