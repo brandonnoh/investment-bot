@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total": 15,
+    "total": 20,
     "passing": 15,
-    "failing": 0,
-    "last_updated": "2026-03-25"
+    "failing": 5,
+    "last_updated": "2026-03-26"
   },
   "features": [
     {
@@ -245,6 +245,80 @@
         "ERD 다이어그램이 실제 테이블과 일치",
         "JARVIS_INTEGRATION.md와 AGENT_GUIDE.md 정보 동기화",
         "새 에이전트가 이 문서만 읽고 즉시 데이터 활용 가능한지 검증"
+      ]
+    },
+    {
+      "id": "F16",
+      "description": "종목 사전(ticker_master) — KRX/미국 종목 매핑 DB",
+      "status": "failing",
+      "priority": 1,
+      "depends_on": ["F01", "F02"],
+      "acceptance_criteria": [
+        "ticker_master 테이블 생성",
+        "difflib 기반 퍼지 매칭 함수",
+        "별칭 매핑",
+        "정규식 종목코드 추출",
+        "미국 종목 정적 사전",
+        "테스트: 정확/퍼지/별칭/미매칭"
+      ]
+    },
+    {
+      "id": "F17",
+      "description": "fetch_opportunities.py — 키워드 기반 종목 발굴",
+      "status": "failing",
+      "priority": 2,
+      "depends_on": ["F16"],
+      "acceptance_criteria": [
+        "agent_keywords 테이블 생성",
+        "opportunities 테이블 생성",
+        "discovery_keywords.json 읽기 → Naver/Brave 검색",
+        "검색 결과에서 종목 추출 (ticker_master 매칭)",
+        "opportunities.json 출력",
+        "run_pipeline.py 통합",
+        "Graceful degradation",
+        "테스트: 키워드 파싱, 검색 모킹, 종목 추출, JSON 스키마"
+      ]
+    },
+    {
+      "id": "F18",
+      "description": "복합 점수 엔진 — 4팩터 Percentile Rank 스코어링",
+      "status": "failing",
+      "priority": 2,
+      "depends_on": ["F17"],
+      "acceptance_criteria": [
+        "percentile_rank 정규화 함수",
+        "복합 점수 계산 (Equal Weight)",
+        "매크로 방향 지수 계산",
+        "sub_scores 분해",
+        "opportunities 테이블에 점수 기록",
+        "테스트: 정규화 경계, 동일값, 이상치, 가중치"
+      ]
+    },
+    {
+      "id": "F19",
+      "description": "screener.py 고도화 — 복합 점수 통합 + 유니버스 확장",
+      "status": "failing",
+      "priority": 3,
+      "depends_on": ["F18"],
+      "acceptance_criteria": [
+        "기존 15종목 + opportunities 통합",
+        "price_analysis.py 함수 재사용",
+        "복합 점수 기반 TOP 10 선별",
+        "screener.md 포맷 개선",
+        "테스트: 유니버스 병합, 점수 정렬, 리포트 생성"
+      ]
+    },
+    {
+      "id": "F20",
+      "description": "뉴스 수집 목적 분리 — 모니터링 vs 발굴",
+      "status": "failing",
+      "priority": 3,
+      "depends_on": ["F17"],
+      "acceptance_criteria": [
+        "fetch_news.py에서 opportunity 카테고리 제거",
+        "fetch_opportunities.py가 발굴 전담",
+        "기존 테스트 통과 유지",
+        "테스트: 뉴스 카테고리 분리 검증"
       ]
     }
   ]

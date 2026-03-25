@@ -46,3 +46,11 @@
 ## 📖 6. 문서 + 에이전트 인터페이스
 
 - [x] **F15** 에이전트 가이드 최종 검증 + ERD — AGENT_GUIDE.md 실제 출력 일치 확인, DB ERD 동기화
+
+## Phase 4 — AI 기반 능동적 종목 발굴
+
+- [ ] **F16** 종목 사전(ticker_master) — KRX/미국 종목 매핑 DB
+- [ ] **F17** fetch_opportunities.py — 키워드 기반 종목 발굴
+- [ ] **F18** 복합 점수 엔진 — 4팩터 Percentile Rank 스코어링
+- [ ] **F19** screener.py 고도화 — 복합 점수 통합 + 유니버스 확장
+- [ ] **F20** 뉴스 수집 목적 분리 — 모니터링 vs 발굴
