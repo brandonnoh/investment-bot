@@ -4,6 +4,7 @@
 Phase 1: 수집 → 분석 → 일일 리포트
 Phase 2: 뉴스 수집 → 스크리너 → 포트폴리오 분석 → 주간 리포트
 """
+
 import sys
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from db.init_db import init_db
 from data.fetch_prices import run as fetch_prices
 from data.fetch_macro import run as fetch_macro
 from data.fetch_news import run as fetch_news
+from db.aggregate import run as aggregate_daily
 from analysis.alerts import run as check_alerts
 from analysis.screener import run as run_screener
 from analysis.portfolio import run as analyze_portfolio
@@ -40,7 +42,10 @@ def main():
     fetch_macro()
     fetch_news()
 
-    # 3. 분석
+    # 3. 일봉 집계 (수집 후, 분석 전)
+    aggregate_daily()
+
+    # 4. 분석
     check_alerts()
     run_screener()
     analyze_portfolio()

@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 2,
-    "failing": 13,
+    "passing": 3,
+    "failing": 12,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -42,7 +42,8 @@
     {
       "id": "F03",
       "description": "일봉 자동 집계 모듈",
-      "status": "failing",
+      "status": "passing",
+      "summary": "db/aggregate.py 모듈 생성, prices→prices_daily OHLCV 집계, macro→macro_daily OHLC 집계, UPSERT 중복 방지, target_date 지정 집계, run_pipeline.py 통합 (71 tests passed)",
       "priority": 2,
       "depends_on": ["F02"],
       "acceptance_criteria": [

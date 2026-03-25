@@ -23,3 +23,9 @@
 - **변경 파일:** db/init_db.py, tests/conftest.py, tests/test_f02_schema.py
 - **결과:** 성공 (54 tests passed, F02 22개 + F01 32개)
 - **메모:** init_db()에서 init_schema(conn) 분리하여 테스트/마이그레이션 유연성 확보. prices_daily/macro_daily/portfolio_history 신규 테이블, prices.data_source + news.sentiment 컬럼 추가, 유니크 인덱스, ALTER TABLE 기반 안전 마이그레이션. conftest.py를 init_schema() 호출로 단순화하여 스키마 중복 제거.
+
+## Iteration 3 — 2026-03-25
+- **Task:** F03 — 일봉 자동 집계 모듈
+- **변경 파일:** db/aggregate.py, tests/test_f03_aggregate.py, run_pipeline.py
+- **결과:** 성공 (71 tests passed, F03 17개 + F02 22개 + F01 32개)
+- **메모:** prices→prices_daily OHLCV 집계 (open/high/low/close/volume), macro→macro_daily OHLC 집계, ON CONFLICT UPSERT로 중복 방지, target_date 파라미터로 특정 날짜만 집계 가능, run_pipeline.py에서 수집 후 분석 전 단계에 통합
