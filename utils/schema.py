@@ -130,6 +130,17 @@ SCHEMAS = {
             "trend": str,
         },
     },
+    "engine_status.json": {
+        "top_level": {
+            "updated_at": str,
+            "pipeline_ok": bool,
+            "total_errors": int,
+            "db_size_mb": "number",
+            "uptime_days": int,
+            "first_run": str,
+            "modules": dict,
+        },
+    },
 }
 
 

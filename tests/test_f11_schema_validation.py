@@ -27,14 +27,17 @@ class TestSchemaDefinitions:
             "portfolio_summary.json",
             "alerts.json",
             "price_analysis.json",
+            "engine_status.json",
         }
         assert expected == set(SCHEMAS.keys())
 
     def test_schema_has_required_keys(self):
-        """각 스키마에 top_level과 item_fields가 있어야 함"""
+        """각 스키마에 top_level 필수, item_fields는 항목 구조가 있는 경우만"""
         for name, schema in SCHEMAS.items():
             assert "top_level" in schema, f"{name}: top_level 누락"
-            assert "item_fields" in schema, f"{name}: item_fields 누락"
+            # item_fields는 항목 배열/딕셔너리가 있는 스키마만 필요
+            if schema.get("items_key"):
+                assert "item_fields" in schema, f"{name}: item_fields 누락"
 
     def test_schema_fields_have_types(self):
         """모든 필드에 타입이 지정되어 있어야 함"""
@@ -44,7 +47,7 @@ class TestSchemaDefinitions:
                 assert ftype in valid_types, (
                     f"{name}.top_level.{field}: 유효하지 않은 타입 {ftype}"
                 )
-            for field, ftype in schema["item_fields"].items():
+            for field, ftype in schema.get("item_fields", {}).items():
                 assert ftype in valid_types, (
                     f"{name}.item_fields.{field}: 유효하지 않은 타입 {ftype}"
                 )

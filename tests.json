@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 12,
-    "failing": 3,
+    "passing": 13,
+    "failing": 2,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -187,7 +187,8 @@
     {
       "id": "F12",
       "description": "alerts.py 레거시 정리 + 통합",
-      "status": "failing",
+      "status": "passing",
+      "summary": "alerts.py에 공통 감지 로직 통합(check_stock/macro/portfolio_alert, save_to_db/json), alerts_watch.py에서 import하여 중복 제거. VIX 알림 추가, save_to_db에 conn/notified 파라미터, save_to_json에 output_dir 파라미터, is_duplicate_alert에 conn 파라미터 추가. 파이프라인 호출 체인 유지 (26 tests, 전체 312 passed)",
       "priority": 4,
       "depends_on": ["F01"],
       "acceptance_criteria": [
@@ -219,7 +220,8 @@
     {
       "id": "F14",
       "description": "engine_status.json — 엔진 상태 모니터링",
-      "status": "failing",
+      "status": "passing",
+      "summary": "utils/engine_status.py 모듈 — EngineStatus 클래스로 모듈별 성공/실패/에러 기록, record_module_status 레코드 기반 자동 카운트, DB 용량 조회, first_run 기반 연속 가동일 계산, pipeline_ok 핵심 모듈 상태 판정, engine_status.json 출력, run_pipeline.py 통합, utils/schema.py 스키마 추가 (21 tests, 전체 333 passed)",
       "priority": 5,
       "depends_on": ["F01"],
       "acceptance_criteria": [

@@ -40,8 +40,8 @@
 ## 🔧 5. 코드 품질 + 안정성
 
 - [x] **F11** JSON 스키마 검증 — output/intel/ 출력 파일 필수 필드 + 타입 검증
-- [ ] **F12** alerts.py 레거시 정리 — alerts_watch.py 통합, 중복 제거
-- [ ] **F14** engine_status.json — 엔진 상태 모니터링 (에러 횟수, 마지막 수집 시각, DB 용량)
+- [x] **F12** alerts.py 레거시 정리 — alerts_watch.py 통합, 중복 제거
+- [x] **F14** engine_status.json — 엔진 상태 모니터링 (에러 횟수, 마지막 수집 시각, DB 용량)
 
 ## 📖 6. 문서 + 에이전트 인터페이스
 

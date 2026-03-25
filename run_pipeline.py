@@ -24,11 +24,17 @@ from analysis.portfolio import run as analyze_portfolio
 from reports.daily import run as generate_daily
 from reports.weekly import run as generate_weekly
 from utils.schema import validate_all_outputs  # noqa: E402
+from utils.engine_status import (  # noqa: E402
+    EngineStatus,
+    record_module_status,
+    run as save_engine_status,
+)
 
 
 def main():
     """전체 파이프라인 실행"""
     weekly_mode = "--weekly" in sys.argv
+    engine = EngineStatus()
 
     print("=" * 60)
     if weekly_mode:
@@ -40,10 +46,18 @@ def main():
     # 1. DB 초기화
     init_db()
 
-    # 2. 데이터 수집
-    fetch_prices()
-    fetch_macro()
-    fetch_news()
+    # 2. 데이터 수집 + 상태 기록
+    price_records = fetch_prices()
+    if price_records:
+        record_module_status(engine, "fetch_prices", price_records, success_key="price")
+
+    macro_records = fetch_macro()
+    if macro_records:
+        record_module_status(engine, "fetch_macro", macro_records, success_key="value")
+
+    news_records = fetch_news()
+    if news_records:
+        record_module_status(engine, "fetch_news", news_records, success_key="title")
 
     # 3. 일봉 집계 (수집 후, 분석 전)
     aggregate_daily()
@@ -59,6 +73,9 @@ def main():
 
     # 4.5. JSON 출력 스키마 검증
     validate_all_outputs()
+
+    # 4.6. 엔진 상태 저장
+    save_engine_status(engine)
 
     # 5. 일일 리포트 생성
     generate_daily()

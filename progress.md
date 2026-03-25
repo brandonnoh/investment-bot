@@ -77,3 +77,9 @@
 - **변경 파일:** analysis/sentiment.py, data/fetch_news.py, utils/schema.py, tests/test_f13_sentiment.py, tests/test_f11_schema_validation.py
 - **결과:** 성공 (286 tests passed, F13 32개 + 기존 254개)
 - **메모:** 구현+테스트+파이프라인 통합이 이미 완료되어 있음을 확인. analysis/sentiment.py에 한/영 금융 키워드 사전(KO_POSITIVE/KO_NEGATIVE/EN_POSITIVE/EN_NEGATIVE 각 26~31개), calculate_sentiment(-1.0~1.0), analyze_news_sentiment 레코드 처리, save_sentiment_to_db DB 업데이트, aggregate_sentiment_by_ticker 종목별 평균. fetch_news.py run()에서 수집→감성분석→저장→DB업데이트 파이프라인 통합. news.json 스키마에 sentiment 필수 필드 추가로 F11 테스트 데이터 수정 필요했음. ruff 미사용 import 정리.
+
+## Iteration 12 — 2026-03-25
+- **Task:** F14 — engine_status.json 엔진 상태 모니터링
+- **변경 파일:** utils/engine_status.py, tests/test_f14_engine_status.py, run_pipeline.py, utils/schema.py, tests/test_f11_schema_validation.py
+- **결과:** 성공 (333 tests passed, F14 21개 + 기존 312개)
+- **메모:** utils/engine_status.py에 EngineStatus 클래스(모듈별 success/item_count/error_count/last_run 기록), record_module_status(레코드 리스트 기반 자동 성공/실패 카운트), get_db_size_mb(DB 파일 용량), get_uptime_days(first_run 기반 연속 가동일), build_engine_status(pipeline_ok 판정 — fetch_prices/fetch_macro 핵심 모듈 실패 시 False), save_engine_status(JSON 저장). run_pipeline.py에서 수집 모듈 반환값을 record_module_status로 기록 후 스키마 검증 뒤 engine_status 저장. utils/schema.py에 engine_status.json 스키마 추가. F11 테스트에서 item_fields 없는 스키마(engine_status) 허용하도록 수정.
