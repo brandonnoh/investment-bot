@@ -13,5 +13,13 @@ __pycache__/
 venv/
 .venv/
 
+# RALF 로그
+.claude-logs/
+
 # macOS
 .DS_Store
+
+# npm (create-claude-harness 실행 잔여물)
+node_modules/
+package.json
+package-lock.json

@@ -1,10 +1,29 @@
 {
   "permissions": {
     "allow": [
-      "Bash(*)",
-      "Read(*)",
-      "Write(*)",
-      "Edit(*)"
+      "Read", "Edit", "Write", "Glob", "Grep",
+      "Bash(python3 *)", "Bash(pip3 *)",
+      "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)",
+      "Bash(git add *)", "Bash(git commit *)", "Bash(git branch *)", "Bash(git checkout *)",
+      "Bash(ls *)", "Bash(cat *)", "Bash(head *)", "Bash(tail *)",
+      "Bash(wc *)", "Bash(find *)", "Bash(mkdir *)", "Bash(cp *)", "Bash(mv *)", "Bash(echo *)",
+      "Bash(jq *)", "Bash(sqlite3 *)", "Bash(ruff *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)", "Bash(rm -r / *)", "Bash(sudo *)",
+      "Bash(curl *)", "Bash(wget *)",
+      "Bash(git push *)", "Bash(git push --force *)", "Bash(git rebase *)",
+      "Bash(chmod 777 *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [{ "matcher": "", "hooks": [{ "type": "command", "command": ".claude/hooks/session-context.sh" }] }],
+    "PreToolUse": [
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": ".claude/hooks/block-dangerous.sh" }] },
+      { "matcher": "Edit", "hooks": [{ "type": "command", "command": ".claude/hooks/protect-files.sh" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Edit", "hooks": [{ "type": "command", "command": ".claude/hooks/auto-format.sh" }] }
     ]
   }
 }

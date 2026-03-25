@@ -1,0 +1,169 @@
+{
+  "summary": {
+    "total": 12,
+    "passing": 0,
+    "failing": 12,
+    "last_updated": "2026-03-25"
+  },
+  "features": [
+    {
+      "id": "F01",
+      "description": "테스트 인프라 구축",
+      "status": "failing",
+      "priority": 1,
+      "depends_on": [],
+      "acceptance_criteria": [
+        "tests/ 디렉토리에 conftest.py 생성 (DB fixture, 샘플 데이터)",
+        "pytest로 기존 모듈 import 테스트 통과",
+        "python3 -m pytest tests/ -v 실행 가능"
+      ]
+    },
+    {
+      "id": "F02",
+      "description": "fetch_prices 단위 테스트",
+      "status": "failing",
+      "priority": 2,
+      "depends_on": ["F01"],
+      "acceptance_criteria": [
+        "Yahoo Finance API 응답 모킹 테스트",
+        "Naver Finance API 응답 모킹 테스트",
+        "폴백 로직 테스트 (Kiwoom 실패 → Naver)",
+        "prices.json 출력 스키마 검증",
+        "Graceful degradation 테스트 (일부 종목 실패)"
+      ]
+    },
+    {
+      "id": "F03",
+      "description": "fetch_macro 단위 테스트",
+      "status": "failing",
+      "priority": 2,
+      "depends_on": ["F01"],
+      "acceptance_criteria": [
+        "각 지표별 API 응답 모킹 테스트",
+        "macro.json 출력 스키마 검증",
+        "개별 지표 실패 시 나머지 정상 수집 확인"
+      ]
+    },
+    {
+      "id": "F04",
+      "description": "fetch_news 단위 테스트",
+      "status": "failing",
+      "priority": 2,
+      "depends_on": ["F01"],
+      "acceptance_criteria": [
+        "Google RSS 파싱 테스트",
+        "Brave API 응답 모킹 테스트",
+        "뉴스 중복 제거 로직 테스트",
+        "relevance_score 계산 검증",
+        "news.json 출력 스키마 검증"
+      ]
+    },
+    {
+      "id": "F05",
+      "description": "price_analysis.json 생성 모듈",
+      "status": "failing",
+      "priority": 3,
+      "depends_on": ["F01", "F02"],
+      "acceptance_criteria": [
+        "analysis/price_analysis.py 모듈 생성",
+        "DB prices 테이블에서 N일 이동평균(MA5, MA20) 계산",
+        "52주 최고/최저가 계산",
+        "30일 변동성 계산",
+        "추세 판단 (uptrend/downtrend/sideways)",
+        "output/intel/price_analysis.json 출력",
+        "run_pipeline.py에 통합"
+      ]
+    },
+    {
+      "id": "F06",
+      "description": "portfolio_history 테이블 + 일별 스냅샷",
+      "status": "failing",
+      "priority": 3,
+      "depends_on": ["F01"],
+      "acceptance_criteria": [
+        "DB에 portfolio_history 테이블 추가 (date, total_krw, total_pnl, pnl_pct)",
+        "portfolio.py에서 일별 스냅샷 저장 로직 추가",
+        "portfolio_summary.json에 최근 30일 수익률 추이 포함",
+        "init_db.py 스키마 업데이트"
+      ]
+    },
+    {
+      "id": "F07",
+      "description": "prices.json에 data_source 필드 추가",
+      "status": "failing",
+      "priority": 4,
+      "depends_on": ["F02"],
+      "acceptance_criteria": [
+        "각 종목의 데이터 출처 명시 (kiwoom/naver/yahoo/calculated)",
+        "금 현물 장외 시간 GC=F×KRW=X 환산 시 data_source='calculated' 표시",
+        "기존 자비스 파싱에 영향 없음 (하위 호환)"
+      ]
+    },
+    {
+      "id": "F08",
+      "description": "환율 손익 분리 계산",
+      "status": "failing",
+      "priority": 4,
+      "depends_on": ["F01"],
+      "acceptance_criteria": [
+        "portfolio_summary.json에 fx_pnl 필드 추가",
+        "USD 종목: 매입 시점 환율 vs 현재 환율 구분",
+        "주식 손익과 환율 손익 별도 표시",
+        "총 손익 = 주식 손익 + 환율 손익"
+      ]
+    },
+    {
+      "id": "F09",
+      "description": "alerts.py 레거시 정리",
+      "status": "failing",
+      "priority": 5,
+      "depends_on": ["F01"],
+      "acceptance_criteria": [
+        "alerts.py와 alerts_watch.py 중복 코드 제거",
+        "alerts.py를 alerts_watch.py의 헬퍼로 리팩터링 또는 제거",
+        "run_pipeline.py에서 호출 체인 정리",
+        "기존 동작 유지 (알림 생성/삭제 로직 보존)"
+      ]
+    },
+    {
+      "id": "F10",
+      "description": "에러 복구 강화 (재시도 + 백오프)",
+      "status": "failing",
+      "priority": 5,
+      "depends_on": ["F02", "F03"],
+      "acceptance_criteria": [
+        "공통 HTTP 요청 헬퍼에 지수 백오프 재시도 추가",
+        "최대 3회 재시도, 1초/2초/4초 대기",
+        "재시도 로그 기록",
+        "기존 graceful degradation 패턴 유지"
+      ]
+    },
+    {
+      "id": "F11",
+      "description": "JSON 출력 스키마 검증",
+      "status": "failing",
+      "priority": 5,
+      "depends_on": ["F01"],
+      "acceptance_criteria": [
+        "output/intel/*.json 파일들의 스키마 정의",
+        "각 수집 모듈 run() 후 출력 검증 함수 추가",
+        "필수 필드 누락 시 경고 로그",
+        "자비스가 파싱할 수 없는 구조 방지"
+      ]
+    },
+    {
+      "id": "F12",
+      "description": "뉴스 감성 점수 (stdlib 기반)",
+      "status": "failing",
+      "priority": 6,
+      "depends_on": ["F04"],
+      "acceptance_criteria": [
+        "키워드 기반 감성 분석 (긍정/부정 사전)",
+        "한국어 + 영어 키워드 지원",
+        "news 테이블에 sentiment 컬럼 추가 (-1.0 ~ 1.0)",
+        "news.json에 sentiment 필드 포함",
+        "외부 패키지 사용 금지 (순수 stdlib)"
+      ]
+    }
+  ]
+}

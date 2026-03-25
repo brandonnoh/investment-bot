@@ -1,6 +1,6 @@
-# 🏦 Investment Intelligence System — 완전 설계
+# 🏦 Investment Intelligence System — 시스템 아키텍처
 
-> 작성: 자비스 | 2026-03-23
+> 작성: 자비스 | 최종 업데이트: 2026-03-25
 > 원칙: 수집/감시는 프로그램, 해석/판단/대화는 AI
 
 ---
@@ -32,185 +32,164 @@
 │  ┌──────────────────────────────────────▼────────────┐    │
 │  │              OpenClaw (자비스 AI)                   │    │
 │  │                                                    │    │
-│  │  ┌─────────────────────────────────────────────┐   │    │
-│  │  │ 🚨 긴급 알림 (즉시)                           │   │    │
-│  │  │  alerts_watch.py 신호 → system event         │   │    │
-│  │  │  → 자비스 즉시 wake → 분석 → 텔레그램 전송    │   │    │
-│  │  └─────────────────────────────────────────────┘   │    │
-│  │                                                    │    │
-│  │  ┌─────────────────────────────────────────────┐   │    │
-│  │  │ 📊 05:30 투자팀 분석 (크론잡)                 │   │    │
-│  │  │  realtime.py + DB 히스토리 + Brave 뉴스      │   │    │
-│  │  │  → strategy.md + cio-briefing.md 생성       │   │    │
-│  │  └─────────────────────────────────────────────┘   │    │
-│  │                                                    │    │
-│  │  ┌─────────────────────────────────────────────┐   │    │
-│  │  │ 🌅 07:30 모닝 브리핑 (크론잡)                 │   │    │
-│  │  │  realtime.py + cio-briefing.md              │   │    │
-│  │  │  + Gmail + 캘린더 + 날씨 + 뉴스              │   │    │
-│  │  │  → 텔레그램 종합 브리핑                       │   │    │
-│  │  └─────────────────────────────────────────────┘   │    │
-│  │                                                    │    │
-│  │  ┌─────────────────────────────────────────────┐   │    │
-│  │  │ 📈 16:00 장 마감 리포트 (크론잡)              │   │    │
-│  │  │  오늘 최종 손익 + 내일 전략 → 텔레그램        │   │    │
-│  │  └─────────────────────────────────────────────┘   │    │
+│  │  🚨 긴급 알림 (즉시) — system event → 텔레그램     │    │
+│  │  📊 05:30 투자팀 분석 — CIO 보고서 생성            │    │
+│  │  🌅 07:30 모닝 브리핑 — 종합 브리핑 텔레그램        │    │
+│  │  📈 16:00 장 마감 — 오늘 결산 + 내일 전략           │    │
 │  └────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 1. 수집 프로그램 상세
-
-### `data/fetch_prices.py` (현재 있음, 개선 필요)
-- 실행: 장 중 매 10분
-- Yahoo Finance → 8종목 현재가
-- DB prices 테이블 저장
-- **추가 필요:** 오늘 고가/저가 추적
-
-### `data/fetch_macro.py` (현재 있음, 개선 필요)
-- 실행: 장 중 매 10분
-- 코스피, 코스닥, 원/달러, WTI, 브렌트, VIX, DXY
-- DB macro 테이블 저장
-
-### `data/fetch_news.py` (현재 있음)
-- 실행: 매 1시간
-- Brave API → 종목별/매크로 뉴스 수집
-- DB news 테이블 저장
-
-### `analysis/alerts_watch.py` ⭐ **신규 핵심 모듈**
-- 실행: 장 중 매 10분
-- DB 최신 데이터 읽어서 임계값 체크
-- **알림 발생 시:**
-  1. DB alerts 테이블 저장
-  2. `output/intel/alerts.json` 생성
-  3. `openclaw system event` 즉시 실행 → 자비스 wake
-- **알림 없을 시:** 조용히 종료 (system event 없음)
-
-```python
-# 알림 임계값
-THRESHOLDS = {
-    "종목 급락":    {"value": -5.0,  "level": "RED",    "notify": True},
-    "종목 급등":    {"value": +5.0,  "level": "GREEN",  "notify": True},
-    "코스피 폭락":  {"value": -3.0,  "level": "RED",    "notify": True},
-    "환율 급등":    {"value": 1550,  "level": "RED",    "notify": True},
-    "유가 급등":    {"value": +5.0,  "level": "YELLOW", "notify": True},
-    "VIX 급등":    {"value": 30.0,  "level": "YELLOW", "notify": True},
-    "포트폴리오":   {"value": -10.0, "level": "RED",    "notify": True},
-}
-```
-
-### `data/realtime.py` (현재 있음)
-- 자비스가 리포트 생성 시 즉석 호출
-- 그 순간의 실시간 주가 + 매크로 → stdout 출력
-
-### `reports/daily.py` (현재 있음)
-- 매일 05:00 자동 실행
-- DB 이력 기반 일일 요약 생성
-
-### `reports/weekly.py` (현재 있음)
-- 매주 월요일 04:00 자동 실행
-- 주간 성과 + 스크리너 결과
-
----
-
-## 2. 자비스 크론잡 상세
-
-### 🚨 긴급 알림 (즉시 반응)
-- **트리거:** `alerts_watch.py`가 `openclaw system event` 실행
-- **자비스 동작:**
-  1. `output/intel/alerts.json` 읽기
-  2. `realtime.py` 실행 (현재 수치 확인)
-  3. Brave 검색 (관련 뉴스)
-  4. 텔레그램 즉시 전송
+## 모듈 관계도
 
 ```
-🚨 긴급 알림 — 14:23 KST
-
-🔴 삼성전자 -5.72% 급락
-현재가: 188,000원 | 평단比: -7.44%
-
-📰 관련 뉴스: "중동 확전 우려에 외국인 매도세..."
-
-💡 판단: 패닉 매도보다 홀드 권장. 목표주가 30만원 유지.
-```
-
-### 📊 05:30 투자팀 분석
-- realtime.py → 현재 주가
-- DB 이력 → 전일 대비, 주간 추세
-- Brave 뉴스 → 오늘 주요 이슈
-- 종합 → strategy.md + cio-briefing.md 생성
-
-### 🌅 07:30 모닝 브리핑
-- realtime.py (그 순간 실시간)
-- cio-briefing.md (05:30 분석)
-- Gmail + 캘린더 + 날씨
-- Brave 뉴스 (최신)
-- → 텔레그램 종합 브리핑
-
-### 📈 16:00 장 마감 리포트 ⭐ **신규**
-- 오늘 시가/고가/저가/종가 정리
-- 오늘 최종 손익
-- 내일 전략 한 줄
-- → 텔레그램 마감 브리핑
-
----
-
-## 3. crontab 최종
-
-```bash
-# 장 중 매 10분 (월~금 09~15시)
-*/10 9-15 * * 1-5  python3 fetch_prices.py
-*/10 9-15 * * 1-5  python3 fetch_macro.py
-*/10 9-15 * * 1-5  python3 alerts_watch.py   # ← 핵심: 알림+신호
-
-# 뉴스 매 1시간
-0 * * * *          python3 fetch_news.py
-
-# 일일/주간 리포트
-0 5 * * *          python3 run_pipeline.py
-0 4 * * 1          python3 run_pipeline.py --weekly
+config.py ─────────────────────────────────────────────┐
+  │ (PORTFOLIO, MACRO_INDICATORS, ALERT_THRESHOLDS)    │
+  │                                                     │
+  ├─→ data/fetch_prices.py ─┬─→ DB: prices 테이블      │
+  │     ├ Kiwoom REST API   │                           │
+  │     ├ Naver Finance     ├─→ output/intel/prices.json│
+  │     └ Yahoo Finance     │                           │
+  │                         │                           │
+  ├─→ data/fetch_macro.py ─┬─→ DB: macro 테이블        │
+  │     ├ Naver Finance    ├─→ output/intel/macro.json  │
+  │     └ Yahoo Finance    │                            │
+  │                        │                            │
+  ├─→ data/fetch_news.py ─┬─→ DB: news 테이블          │
+  │     ├ Google News RSS  ├─→ output/intel/news.json   │
+  │     └ Brave Search API │                            │
+  │                        │                            │
+  ├─→ data/fetch_gold_krx.py (fetch_prices에서 import) │
+  │                                                     │
+  ├─→ analysis/alerts.py ────→ output/intel/alerts.json │
+  │     └ prices.json + macro.json 읽기                 │
+  │                                                     │
+  ├─→ analysis/alerts_watch.py ─→ DB: alerts 테이블     │
+  │     └ DB 직접 조회 → openclaw system event 트리거   │
+  │                                                     │
+  ├─→ analysis/screener.py ──→ output/intel/screener.md │
+  │     └ Yahoo Finance (섹터 데이터)                    │
+  │                                                     │
+  ├─→ analysis/portfolio.py ─→ output/intel/portfolio_summary.json
+  │     └ prices.json + config.py                       │
+  │                                                     │
+  ├─→ reports/daily.py ──→ output/intel/daily_report.md │
+  ├─→ reports/weekly.py ─→ output/intel/weekly_report.md│
+  ├─→ reports/closing.py → output/intel/closing_report.md
+  │                                                     │
+  └─→ data/realtime.py ──→ stdout (자비스 직접 호출)    │
 ```
 
 ---
 
-## 4. OpenClaw 크론잡 최종
+## 핵심 파일 목록
 
-| 시간 | 이름 | 역할 |
-|------|------|------|
-| 즉시 (system event) | 긴급 알림 | 임계값 초과 즉시 알림 |
-| 05:30 | 투자팀 분석 | 전략/CIO 보고서 생성 |
-| 07:30 | 모닝 브리핑 | 종합 브리핑 전송 |
-| 16:00 | 장 마감 리포트 | 오늘 결산 + 내일 전략 |
-
----
-
-## 5. 데이터 흐름 최종
-
-```
-Yahoo Finance
-    ↓ (10분마다)
-fetch_prices/macro.py
-    ↓
-SQLite DB (history.db)
-    ↓                    ↓
-alerts_watch.py      realtime.py
-    ↓ (임계값 초과)       ↓ (자비스 호출 시)
-system event         stdout 출력
-    ↓
-자비스 즉시 wake
-    ↓
-분석 + 텔레그램
-```
+| 파일 | 역할 | 줄 수 | 의존성 |
+|------|------|-------|--------|
+| `config.py` | 포트폴리오/지표/임계값 중앙 관리 | ~70 | 없음 |
+| `run_pipeline.py` | 파이프라인 오케스트레이터 | ~62 | 모든 모듈 |
+| `db/init_db.py` | SQLite 스키마 초기화 | ~92 | sqlite3 |
+| `data/fetch_prices.py` | 주가 수집 (3소스 폴백) | ~264 | config, fetch_gold_krx |
+| `data/fetch_macro.py` | 매크로 지표 수집 | ~174 | config |
+| `data/fetch_news.py` | 뉴스 수집 (RSS+Brave) | ~355 | config |
+| `data/fetch_gold_krx.py` | 키움 REST API 래퍼 | ~180 | 없음 |
+| `data/realtime.py` | 실시간 시세 출력 (stdout) | ~320 | config |
+| `analysis/alerts.py` | 알림 감지 (레거시) | ~200 | config |
+| `analysis/alerts_watch.py` | 실시간 알림 모니터 | ~300 | config, DB |
+| `analysis/screener.py` | 섹터 분석 | ~200 | Yahoo Finance |
+| `analysis/portfolio.py` | 포트폴리오 계산 | ~250 | config |
+| `reports/daily.py` | 일간 리포트 | ~250 | JSON 파일들 |
+| `reports/weekly.py` | 주간 리포트 | ~250 | JSON 파일들 |
+| `reports/closing.py` | 장마감 리포트 | ~200 | DB |
 
 ---
 
-## 개발 우선순위
+## API 폴백 전략
 
-### 즉시 (Phase 2.5) — ✅ 완료 (2026-03-23)
-- [x] `analysis/alerts_watch.py` — system event 연동 핵심
-- [x] `reports/closing.py` — 15:40 장 마감 리포트
-- [x] crontab 업데이트 (alerts_watch.py + closing.py 추가)
-- [x] OpenClaw 크론잡 (05:30 투자팀 분석 + 07:30 모닝 브리핑 + 16:00 마감 리포트)
-- [x] 전체 모듈 통합 검증 완료 (13개 모듈 import + run() 테스트 통과)
+```
+한국 주식 (.KS/.KQ):
+  Kiwoom REST API (KIWOOM_APPKEY 설정 시)
+    └→ 실패/미설정 시 → Naver Finance API (무료)
+
+금 현물 (GOLD_KRW_G):
+  Kiwoom KRX Gold (M04020000, 장 중)
+    └→ 실패/장외 시 → Yahoo GC=F × USD/KRW ÷ 31.1035
+
+미국 주식 (TSLA, GOOGL, XOP):
+  Yahoo Finance API (단일, 무료)
+
+매크로 지표:
+  코스피/코스닥 → Naver Finance
+  환율/유가/VIX/DXY/금 → Yahoo Finance
+```
+
+---
+
+## DB 스키마
+
+```sql
+-- 주가 이력
+CREATE TABLE prices (
+  id INTEGER PRIMARY KEY,
+  ticker TEXT, name TEXT, price REAL,
+  prev_close REAL, change_pct REAL,
+  volume INTEGER, timestamp TEXT, market TEXT
+);
+CREATE INDEX idx_prices ON prices(ticker, timestamp);
+
+-- 매크로 지표 이력
+CREATE TABLE macro (
+  id INTEGER PRIMARY KEY,
+  indicator TEXT, value REAL,
+  change_pct REAL, timestamp TEXT
+);
+CREATE INDEX idx_macro ON macro(indicator, timestamp);
+
+-- 뉴스
+CREATE TABLE news (
+  id INTEGER PRIMARY KEY,
+  title TEXT, summary TEXT, source TEXT, url TEXT,
+  published_at TEXT, relevance_score REAL,
+  tickers TEXT, category TEXT
+);
+CREATE UNIQUE INDEX idx_news ON news(title, source);
+
+-- 알림
+CREATE TABLE alerts (
+  id INTEGER PRIMARY KEY,
+  level TEXT, event_type TEXT, ticker TEXT,
+  message TEXT, value REAL, threshold REAL,
+  triggered_at TEXT, notified INTEGER DEFAULT 0
+);
+CREATE INDEX idx_alerts ON alerts(triggered_at);
+```
+
+---
+
+## output/intel/ 인터페이스 파일
+
+| 파일 | 생성 모듈 | 갱신 주기 | 자비스 활용 |
+|------|---------|---------|-----------|
+| `prices.json` | fetch_prices | 장 중 10분 | 현재가 참조 |
+| `macro.json` | fetch_macro | 장 중 10분 | 매크로 지표 |
+| `news.json` | fetch_news | 매시간 | 뉴스 컨텍스트 |
+| `alerts.json` | alerts_watch | 임계값 초과 시 | 긴급 알림 |
+| `portfolio_summary.json` | portfolio | 05:00 | 손익 요약 |
+| `daily_report.md` | daily | 05:00 | 일간 브리핑 |
+| `weekly_report.md` | weekly | 월 04:00 | 주간 브리핑 |
+| `closing_report.md` | closing | 15:40 | 장마감 브리핑 |
+| `screener.md` | screener | 05:00 | 종목 발굴 |
+
+---
+
+## 개발 단계
+
+| Phase | 상태 | 내용 |
+|-------|------|------|
+| 1 | ✅ 완료 | 기본 수집 + 알림 + 일간 리포트 |
+| 2 | ✅ 완료 | 뉴스(RSS+Brave), 스크리너, 포트폴리오, 주간 리포트 |
+| 2.5 | ✅ 완료 | 실시간 알림(alerts_watch), 장마감 리포트, system event |
+| 3 | 🔧 진행 중 | 기술 분석, 포트폴리오 이력, 뉴스 감성, 환율 손익 |
+| 4 | 📋 계획 | 백테스트, 차트 이미지, 자동매매 API |
