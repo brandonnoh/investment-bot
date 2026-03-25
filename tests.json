@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 25,
-    "passing": 22,
-    "failing": 3,
+    "passing": 23,
+    "failing": 2,
     "last_updated": "2026-03-26"
   },
   "features": [
@@ -381,8 +381,8 @@
     {
       "id": "F24",
       "description": "마커스 에이전트 설정 — 시니어 펀드매니저 전문 에이전트",
-      "status": "failing",
-      "summary": "",
+      "status": "passing",
+      "summary": "docs/marcus/SOUL.md 골드만삭스 15년차 펀드매니저 페르소나, docs/marcus/prompt.md 05:30 분석 파이프라인 프롬프트(8개 데이터 소스 참조), scripts/marcus_analysis.py 출력 형식 검증(확신 레벨/필수 섹션/면책 조항), config.py MARCUS_CONFIG 설정, JARVIS_INTEGRATION.md 마커스 연동 명세, 자비스 07:30 모닝 브리핑 연동 가이드 (497 tests passed)",
       "priority": 3,
       "depends_on": ["F22", "F23"],
       "acceptance_criteria": [

@@ -225,6 +225,60 @@ python3 /Users/jarvis/Projects/investment-bot/data/fetch_opportunities.py
 - `output/intel/opportunities.json` — 발굴 종목 + 복합 점수
 - `output/intel/screener.md` — 기존 스크리닝 + 발굴 종목 통합
 
+---
+
+## 12. Phase 4.1: 마커스 에이전트 연동
+
+### 마커스란?
+골드만삭스 15년차 시니어 펀드매니저 페르소나의 AI 에이전트.
+리스크 우선, 데이터 근거 필수, 확신 레벨 명시가 핵심 원칙.
+
+### 파일 구조
+
+| 파일 | 용도 |
+|------|------|
+| `docs/marcus/SOUL.md` | 마커스 페르소나 정의 |
+| `docs/marcus/prompt.md` | 05:30 분석 크론잡 프롬프트 |
+| `scripts/marcus_analysis.py` | 출력 형식 검증 모듈 |
+| `output/intel/marcus-analysis.md` | 마커스 분석 결과 (출력) |
+
+### 실행 흐름
+
+```
+05:00  run_pipeline.py → 데이터 수집/분석 완료
+05:30  마커스 크론잡 실행
+       ├─ engine_status.json 확인 (데이터 신뢰성)
+       ├─ 8개 데이터 파일 읽기
+       ├─ RISK FIRST → MARKET REGIME → PORTFOLIO → OPPORTUNITIES → CALL
+       └─ output/intel/marcus-analysis.md 저장
+07:30  자비스 모닝 브리핑
+       ├─ marcus-analysis.md 읽기
+       └─ 확신 레벨 + 핵심 리스크 + TODAY'S CALL 요약 → 텔레그램 전송
+```
+
+### 자비스 모닝 브리핑 연동
+
+자비스 07:30 크론잡에서 추가:
+```
+마커스 분석 읽기:
+cat /Users/jarvis/Projects/investment-bot/output/intel/marcus-analysis.md
+
+마커스의 분석을 2~3줄로 요약하여 모닝 브리핑에 포함:
+- 마커스 확신 레벨
+- 핵심 리스크 1~2개
+- TODAY'S CALL 인용
+```
+
+### 출력 형식 검증
+
+```bash
+python3 /Users/jarvis/Projects/investment-bot/scripts/marcus_analysis.py
+```
+
+검증 항목: 확신 레벨 존재, 필수 섹션(RISK FIRST/MARKET REGIME/PORTFOLIO REVIEW/TODAY'S CALL), 면책 조항.
+
+---
+
 ### 복합 점수 구조
 각 종목의 점수는 4개 팩터로 분해:
 - return: 1개월 수익률 백분위

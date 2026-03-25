@@ -218,6 +218,19 @@ US_TICKER_MAP = {
     "GS": "Goldman Sachs",
 }
 
+# ── Phase 4.1: 마커스 에이전트 설정 ──
+MARCUS_CONFIG = {
+    "output_file": "marcus-analysis.md",
+    "required_sections": [
+        "RISK FIRST",
+        "MARKET REGIME",
+        "PORTFOLIO REVIEW",
+        "TODAY'S CALL",
+    ],
+    "soul_path": "docs/marcus/SOUL.md",
+    "prompt_path": "docs/marcus/prompt.md",
+}
+
 # Naver API (선택사항 — 없으면 Brave로 폴백)
 # 환경변수: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 # 네이버 개발자센터에서 앱 등록 후 발급

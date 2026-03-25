@@ -101,3 +101,9 @@
 - **변경 파일:** data/fetch_supply.py, analysis/composite_score.py, db/init_db.py, run_pipeline.py, tests/test_f23_supply_data.py
 - **결과:** 성공 (477 tests passed, F23 18개 + 기존 459개)
 - **메모:** data/fetch_supply.py 신규 모듈: KRX 투자자별 매매동향 API(data.krx.co.kr)로 외국인/기관 순매수 수집, parse_krx_response 파싱(콤마 포함 숫자 처리), CNN Fear & Greed Index API 수집(production.dataviz.cnn.io), fear_greed_to_score(0~100→-1.0~1.0 변환). DB: fundamentals 테이블에 foreign_net/inst_net 마이그레이션 컬럼 추가, save_supply_to_db에서 종목코드→.KS/.KQ 티커 매핑 후 UPDATE. composite_score.py: calculate_macro_direction에 Fear & Greed를 5번째 팩터로 통합(없으면 기존 4팩터만 사용, 하위 호환). supply_data.json 출력(fear_greed + krx_supply). run_pipeline.py에서 fetch_fundamentals 다음 단계로 통합. 양쪽 API 실패 시 graceful degradation.
+
+## Iteration 16 — 2026-03-26
+- **Task:** F24 — 마커스 에이전트 설정 — 시니어 펀드매니저 전문 에이전트
+- **변경 파일:** docs/marcus/SOUL.md, docs/marcus/prompt.md, scripts/marcus_analysis.py, config.py, JARVIS_INTEGRATION.md, tests/test_f24_marcus_agent.py
+- **결과:** 성공 (497 tests passed, F24 20개 + 기존 477개)
+- **메모:** docs/marcus/SOUL.md 골드만삭스 15년차 펀드매니저 페르소나 정의(MARCUS Principles: Risk First/Data-Driven/Conviction Level/No Narrative/Position Sizing). docs/marcus/prompt.md 05:30 분석 파이프라인 프롬프트(8개 데이터 소스 순차 읽기 → RISK FIRST → MARKET REGIME → PORTFOLIO REVIEW → OPPORTUNITIES → TODAY'S CALL). scripts/marcus_analysis.py 출력 형식 검증 모듈: extract_sections(## 파싱), extract_confidence_level(★ 패턴+숫자 추출), validate_marcus_output(확신 레벨/필수 섹션 4개/면책 조항 검증). config.py에 MARCUS_CONFIG(output_file/required_sections/soul_path/prompt_path). JARVIS_INTEGRATION.md에 섹션 12 마커스 연동 명세(실행 흐름, 자비스 07:30 모닝 브리핑 연동).
