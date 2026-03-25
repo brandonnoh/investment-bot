@@ -1,8 +1,8 @@
 {
   "summary": {
-    "total": 20,
+    "total": 25,
     "passing": 20,
-    "failing": 0,
+    "failing": 5,
     "last_updated": "2026-03-26"
   },
   "features": [
@@ -324,6 +324,90 @@
         "fetch_opportunities.py가 발굴 전담",
         "기존 테스트 통과 유지",
         "테스트: 뉴스 카테고리 분리 검증"
+      ]
+    },
+    {
+      "id": "F21",
+      "description": "펀더멘탈 데이터 수집 — DART 재무제표 + Yahoo 재무 + fundamentals DB",
+      "status": "failing",
+      "summary": "",
+      "priority": 1,
+      "depends_on": ["F16", "F17"],
+      "acceptance_criteria": [
+        "fundamentals 테이블 생성 (PER/PBR/ROE/부채비율/매출성장률/영업이익률/FCF 등)",
+        "DART OpenAPI 재무제표 수집 함수 (한국 종목)",
+        "Yahoo Finance quoteSummary 재무 데이터 수집 (미국 종목 + 한국 폴백)",
+        "수집 데이터 → fundamentals 테이블 저장 (UPSERT)",
+        "output/intel/fundamentals.json 출력",
+        "run_pipeline.py 통합 (fetch_news 다음)",
+        "Graceful degradation (API 실패 시 기존 데이터 유지)",
+        "테스트: DART 모킹, Yahoo 모킹, DB CRUD, JSON 스키마"
+      ]
+    },
+    {
+      "id": "F22",
+      "description": "퀀트 스코어링 고도화 — 6팩터 복합 점수 (밸류/퀄리티/성장/타이밍/촉매/매크로)",
+      "status": "failing",
+      "summary": "",
+      "priority": 2,
+      "depends_on": ["F21"],
+      "acceptance_criteria": [
+        "composite_score.py 6팩터 확장 (밸류/퀄리티/성장/타이밍/촉매/매크로)",
+        "밸류에이션 점수: PER/PBR 업종평균 대비 Percentile Rank",
+        "퀄리티 점수: ROE/부채비율/FCF 기반",
+        "성장 점수: 매출 성장률/EPS 성장률",
+        "기존 4팩터(타이밍/촉매/매크로) 유지하되 가중치 재조정",
+        "config.py에 6팩터 가중치 설정 추가",
+        "opportunities 테이블에 신규 sub_scores 컬럼 추가",
+        "테스트: 각 팩터 정규화, 가중치 합산, 업종 비교, 극단값"
+      ]
+    },
+    {
+      "id": "F23",
+      "description": "수급 데이터 수집 — KRX 외국인/기관 순매수 + Fear & Greed Index",
+      "status": "failing",
+      "summary": "",
+      "priority": 2,
+      "depends_on": ["F21"],
+      "acceptance_criteria": [
+        "KRX Open API 외국인/기관 순매수 수집 (한국 종목)",
+        "CNN Fear & Greed Index 수집 (시장 심리)",
+        "fundamentals 테이블에 foreign_net/inst_net 저장",
+        "Fear & Greed 값을 매크로 방향 팩터에 반영",
+        "Graceful degradation (KRX API 실패 시 스킵)",
+        "테스트: KRX 모킹, Fear&Greed 모킹, DB 저장"
+      ]
+    },
+    {
+      "id": "F24",
+      "description": "마커스 에이전트 설정 — 시니어 펀드매니저 전문 에이전트",
+      "status": "failing",
+      "summary": "",
+      "priority": 3,
+      "depends_on": ["F22", "F23"],
+      "acceptance_criteria": [
+        "마커스 SOUL.md 작성 (골드만삭스 15년차 펀드매니저 페르소나)",
+        "마커스 전용 프롬프트 작성 (05:30 분석 파이프라인)",
+        "marcus-analysis.md 출력 형식 정의 (확신 레벨, 리스크 우선, 데이터 근거 필수)",
+        "OpenClaw 크론잡 또는 자비스 크론잡 내 서브 에이전트로 설정",
+        "자비스 모닝 브리핑에서 marcus-analysis.md 읽어서 요약 전달",
+        "테스트: 프롬프트 파일 존재, 출력 형식 검증"
+      ]
+    },
+    {
+      "id": "F25",
+      "description": "성과 추적 + 가중치 학습 — outcome 자동 기록, 월간 성적표, 팩터별 적중률",
+      "status": "failing",
+      "summary": "",
+      "priority": 3,
+      "depends_on": ["F22"],
+      "acceptance_criteria": [
+        "outcome_1w/outcome_1m 자동 기록 함수 (발굴 후 1주/1개월 수익률)",
+        "run_pipeline.py에 outcome 업데이트 단계 추가",
+        "월간 성적표 생성 함수 (적중률, 평균 수익률, 팩터별 기여도)",
+        "output/intel/performance_report.json 출력",
+        "마커스가 월간 성적표를 분석하여 가중치 조정 제안",
+        "테스트: outcome 기록, 성적표 생성, 빈 데이터 처리"
       ]
     }
   ]
