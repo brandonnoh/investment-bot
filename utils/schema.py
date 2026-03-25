@@ -144,6 +144,20 @@ SCHEMAS = {
             "discovered_via": str,
         },
     },
+    "fundamentals.json": {
+        "top_level": {
+            "updated_at": str,
+            "count": int,
+            "fundamentals": list,
+        },
+        "items_key": "fundamentals",
+        "item_fields": {
+            "ticker": str,
+            "name": str,
+            "market": str,
+            "data_source": str,
+        },
+    },
     "engine_status.json": {
         "top_level": {
             "updated_at": str,

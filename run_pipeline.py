@@ -59,6 +59,19 @@ def main():
     if news_records:
         record_module_status(engine, "fetch_news", news_records, success_key="title")
 
+    # ── Phase 4.1: 펀더멘탈 수집 ──
+    try:
+        from data.fetch_fundamentals import run as fetch_fundamentals
+
+        fund_results = fetch_fundamentals()
+        if fund_results:
+            record_module_status(
+                engine, "fetch_fundamentals", fund_results, success_key="ticker"
+            )
+        print(f"  펀더멘탈: {len(fund_results)}개 종목")
+    except Exception as e:
+        print(f"  ⚠️ fetch_fundamentals 실패: {e}")
+
     # ── Phase 4: 종목 발굴 ──
     try:
         from data.fetch_opportunities import run as fetch_opportunities

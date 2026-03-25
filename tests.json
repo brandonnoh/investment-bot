@@ -329,8 +329,8 @@
     {
       "id": "F21",
       "description": "펀더멘탈 데이터 수집 — DART 재무제표 + Yahoo 재무 + fundamentals DB",
-      "status": "failing",
-      "summary": "",
+      "status": "passing",
+      "summary": "data/fetch_fundamentals.py 모듈 — fundamentals 테이블 생성, DART OpenAPI 재무제표 수집(매출성장률/영업이익률/ROE/부채비율), Yahoo quoteSummary 수집(PER/PBR/EPS/시가총액/배당수익률/FCF), 한국 종목 DART 우선+Yahoo 보완, 미국 종목 Yahoo 전용, UPSERT DB 저장, fundamentals.json 출력, run_pipeline.py 통합, Graceful degradation (436 tests passed)",
       "priority": 1,
       "depends_on": ["F16", "F17"],
       "acceptance_criteria": [

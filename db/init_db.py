@@ -218,6 +218,33 @@ def init_schema(conn):
         ON opportunities (composite_score DESC)
     """)
 
+    # ── Phase 4.1: 펀더멘탈 데이터 ──
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS fundamentals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticker TEXT NOT NULL,
+            name TEXT,
+            market TEXT,
+            per REAL,
+            pbr REAL,
+            roe REAL,
+            debt_ratio REAL,
+            revenue_growth REAL,
+            operating_margin REAL,
+            fcf REAL,
+            eps REAL,
+            dividend_yield REAL,
+            market_cap REAL,
+            data_source TEXT,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_fundamentals_ticker
+        ON fundamentals (ticker)
+    """)
+
     # ── 마이그레이션: 기존 테이블에 새 컬럼 추가 ──
     _migrate_add_column(cursor, "prices", "data_source", "TEXT")
     _migrate_add_column(cursor, "news", "sentiment", "REAL")
