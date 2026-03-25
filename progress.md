@@ -47,3 +47,9 @@
 - **변경 파일:** analysis/price_analysis.py, tests/test_f07_price_analysis.py, run_pipeline.py
 - **결과:** 성공 (165 tests passed, F07 29개 + 기존 136개)
 - **메모:** 구현+테스트+파이프라인 통합이 이미 완료되어 있음을 확인. MA5/20/60 이동평균, RSI 14일, 52주 고저+현재 위치(%), 30일 변동성(연환산), 추세 판단(uptrend/downtrend/sideways)+지속일수, 지지/저항선 추정. config.py ANALYSIS_PARAMS 중앙 관리. 데이터 부족 시 graceful 처리(None 반환). 모든 acceptance criteria 충족.
+
+## Iteration 7 — 2026-03-25
+- **Task:** F08 — portfolio_history 일별 자산 스냅샷
+- **변경 파일:** analysis/portfolio.py, tests/test_f08_portfolio_history.py
+- **결과:** 성공 (178 tests passed, F08 13개 + 기존 165개)
+- **메모:** save_snapshot() UPSERT로 일별 1행 저장 (ON CONFLICT(date)), load_history() 최근 N일 조회 (날짜 오름차순), _get_db_conn() 테스트 패치용 헬퍼, build_summary()에 history 파라미터 추가, run()에서 DB 스냅샷 자동 저장 + 이력 조회 + portfolio_summary.json에 30일 수익률 추이 포함. holdings_snapshot에 종목별 상세 JSON 저장.

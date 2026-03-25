@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 7,
-    "failing": 8,
+    "passing": 8,
+    "failing": 7,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -125,7 +125,8 @@
     {
       "id": "F08",
       "description": "portfolio_history — 일별 자산 스냅샷",
-      "status": "failing",
+      "status": "passing",
+      "summary": "save_snapshot UPSERT 저장, load_history 최근 N일 조회, build_summary에 history 필드 추가, run()에서 DB 스냅샷 저장+이력 포함, portfolio_summary.json에 30일 수익률 추이 (13 tests, 전체 178 passed)",
       "priority": 3,
       "depends_on": ["F02"],
       "acceptance_criteria": [
