@@ -3,6 +3,10 @@
 # Yahoo Finance API: urllib.request 직접 사용
 # Brave Search API: urllib.request 직접 사용
 
+# 테스트
+pytest>=7.0
+ruff>=0.4.0
+
 # Phase 3 (예정)
 # matplotlib      # 차트 이미지 생성
 # schedule        # 크론 스케줄러

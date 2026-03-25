@@ -1,0 +1,25 @@
+{
+  "prices": [
+    {
+      "name": "삼성전자",
+      "ticker": "005930.KS",
+      "price": 82000,
+      "prev_close": 81500,
+      "change_pct": 0.61,
+      "volume": 15000000,
+      "market": "KR",
+      "timestamp": "2026-03-25T15:30:00+09:00"
+    },
+    {
+      "name": "테슬라",
+      "ticker": "TSLA",
+      "price": 275.50,
+      "prev_close": 270.00,
+      "change_pct": 2.04,
+      "volume": 80000000,
+      "market": "US",
+      "timestamp": "2026-03-25T04:00:00+09:00"
+    }
+  ],
+  "updated_at": "2026-03-25T15:30:00+09:00"
+}

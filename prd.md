@@ -16,7 +16,7 @@
 
 ## 🏗️ 1. 인프라 기반
 
-- [ ] **F01** 테스트 인프라 구축 — pytest 셋업, conftest.py, DB fixture, 전체 모듈 import 테스트
+- [x] **F01** 테스트 인프라 구축 — pytest 셋업, conftest.py, DB fixture, 전체 모듈 import 테스트
 
 ## 📐 2. 저장 계층 (Storage Layer) 고도화
 

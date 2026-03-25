@@ -1,15 +1,16 @@
 {
   "summary": {
     "total": 15,
-    "passing": 0,
-    "failing": 15,
+    "passing": 1,
+    "failing": 14,
     "last_updated": "2026-03-25"
   },
   "features": [
     {
       "id": "F01",
       "description": "테스트 인프라 구축",
-      "status": "failing",
+      "status": "passing",
+      "summary": "conftest.py + DB fixture + 샘플 데이터 fixture + 12개 모듈 import 테스트 (32 tests passed)",
       "priority": 1,
       "depends_on": [],
       "acceptance_criteria": [

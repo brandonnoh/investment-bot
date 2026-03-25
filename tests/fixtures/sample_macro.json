@@ -1,0 +1,29 @@
+{
+  "indicators": [
+    {
+      "name": "코스피",
+      "ticker": "KOSPI",
+      "value": 2650.32,
+      "change_pct": -0.45,
+      "category": "INDEX",
+      "timestamp": "2026-03-25T15:30:00+09:00"
+    },
+    {
+      "name": "원/달러",
+      "ticker": "KRW=X",
+      "value": 1380.50,
+      "change_pct": 0.12,
+      "category": "FX",
+      "timestamp": "2026-03-25T15:30:00+09:00"
+    },
+    {
+      "name": "VIX",
+      "ticker": "^VIX",
+      "value": 18.5,
+      "change_pct": -2.1,
+      "category": "VOLATILITY",
+      "timestamp": "2026-03-25T04:00:00+09:00"
+    }
+  ],
+  "updated_at": "2026-03-25T15:30:00+09:00"
+}
