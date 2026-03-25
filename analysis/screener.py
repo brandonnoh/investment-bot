@@ -52,6 +52,18 @@ SCREENING_TARGETS = {
 }
 
 
+def merge_universe(existing: list, opportunities: list) -> list:
+    """기존 스크리닝 대상 + 발굴 종목 병합 (중복 제거)"""
+    seen = set()
+    merged = []
+    for item in existing + opportunities:
+        ticker = item.get("ticker", "")
+        if ticker and ticker not in seen:
+            seen.add(ticker)
+            merged.append(item)
+    return merged
+
+
 def fetch_yahoo_quote(ticker: str) -> dict:
     """Yahoo Finance에서 단일 종목 시세 조회"""
     url = f"https://query2.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1mo"
@@ -196,6 +208,20 @@ def generate_screener_report(sector_results: dict, highlights: list[dict]) -> st
             lines.append(
                 f"| {i} | {flag} {h['name']} ({h['ticker']}) | {h['sector']} | {price_str} | {month_str} | {day_str} |"
             )
+            # 복합 점수가 있으면 서브 점수도 표시
+            if h.get("composite_score") is not None:
+                score_pct = (
+                    f"{h['composite_score']:.0%}"
+                    if h["composite_score"] <= 1
+                    else str(h["composite_score"])
+                )
+                sub = h.get("sub_scores", {})
+                if sub:
+                    lines.append(
+                        f"|   | ↳ 종합 점수 {score_pct} — 수익률 {sub.get('return', 0):.0%} | RSI {sub.get('rsi', 0):.0%} | 감성 {sub.get('sentiment', 0):.0%} | 매크로 {sub.get('macro', 0):.0%} | |"
+                    )
+                else:
+                    lines.append(f"|   | ↳ 종합 점수 {score_pct} | | | | |")
         lines.append("")
     else:
         lines.append("> 분석 데이터 부족")
@@ -251,6 +277,38 @@ def run():
 
     # 섹터별 분석
     sector_results = screen_sectors()
+
+    # opportunities.json이 있으면 발굴 종목 통합
+    opp_path = OUTPUT_DIR / "opportunities.json"
+    if opp_path.exists():
+        try:
+            with open(opp_path, encoding="utf-8") as f:
+                opp_data = json.load(f)
+            opp_tickers = [
+                {
+                    "ticker": o["ticker"],
+                    "name": o.get("name", ""),
+                    "sector": "발굴",
+                    "market": o.get("market", "KR"),
+                    "discovered_via": o.get("discovered_via", ""),
+                }
+                for o in opp_data.get("opportunities", [])
+            ]
+            # 기존 섹터 종목 리스트 추출
+            existing_tickers = []
+            for data in sector_results.values():
+                existing_tickers.extend(data.get("stocks", []))
+            merged = merge_universe(existing_tickers, opp_tickers)
+            # 발굴 종목 중 기존에 없던 것들을 별도 섹터로 추가
+            new_opps = [t for t in merged if t.get("sector") == "발굴"]
+            if new_opps:
+                sector_results["발굴 종목"] = {
+                    "description": "AI 발굴 신규 종목",
+                    "stocks": new_opps,
+                }
+                print(f"  🆕 발굴 종목 {len(new_opps)}개 통합")
+        except Exception as e:
+            print(f"  ⚠️ opportunities.json 로드 실패: {e}")
 
     # 주목 종목 선별
     highlights = pick_highlights(sector_results)
