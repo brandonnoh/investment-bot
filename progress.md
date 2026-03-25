@@ -107,3 +107,9 @@
 - **변경 파일:** docs/marcus/SOUL.md, docs/marcus/prompt.md, scripts/marcus_analysis.py, config.py, JARVIS_INTEGRATION.md, tests/test_f24_marcus_agent.py
 - **결과:** 성공 (497 tests passed, F24 20개 + 기존 477개)
 - **메모:** docs/marcus/SOUL.md 골드만삭스 15년차 펀드매니저 페르소나 정의(MARCUS Principles: Risk First/Data-Driven/Conviction Level/No Narrative/Position Sizing). docs/marcus/prompt.md 05:30 분석 파이프라인 프롬프트(8개 데이터 소스 순차 읽기 → RISK FIRST → MARKET REGIME → PORTFOLIO REVIEW → OPPORTUNITIES → TODAY'S CALL). scripts/marcus_analysis.py 출력 형식 검증 모듈: extract_sections(## 파싱), extract_confidence_level(★ 패턴+숫자 추출), validate_marcus_output(확신 레벨/필수 섹션 4개/면책 조항 검증). config.py에 MARCUS_CONFIG(output_file/required_sections/soul_path/prompt_path). JARVIS_INTEGRATION.md에 섹션 12 마커스 연동 명세(실행 흐름, 자비스 07:30 모닝 브리핑 연동).
+
+## Iteration 17 — 2026-03-26
+- **Task:** F25 — 성과 추적 + 가중치 학습 — outcome 자동 기록, 월간 성적표, 팩터별 적중률
+- **변경 파일:** analysis/performance.py, tests/test_f25_performance.py, run_pipeline.py, utils/schema.py, tests/test_f11_schema_validation.py
+- **결과:** 성공 (518 tests passed, F25 21개 + 기존 497개)
+- **메모:** analysis/performance.py 신규 모듈: update_outcomes(발굴 후 7일/30일 경과 종목의 수익률 자동 기록, prices_daily 기반 거래일 보정 ±5일 탐색), generate_monthly_report(적중률/평균수익률/팩터별 적중-미적중 점수 차이 분석/TOP3-BOTTOM3 종목), generate_weight_suggestion(팩터 차이 기반 가중치 미세 조정 ±0.05, 정규화하여 합 1.0 보장), save_performance_report(performance_report.json 출력), run() 파이프라인 진입점. run_pipeline.py에서 분석 단계 후 성과 추적 통합. utils/schema.py에 performance_report.json 스키마 추가. Graceful degradation: DB 에러/빈 데이터 시 안전 처리.

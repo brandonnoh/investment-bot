@@ -169,6 +169,14 @@ SCHEMAS = {
             "modules": dict,
         },
     },
+    "performance_report.json": {
+        "top_level": {
+            "updated_at": str,
+            "outcome_summary": dict,
+            "monthly_report": dict,
+            "weight_suggestion": dict,
+        },
+    },
 }
 
 

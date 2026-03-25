@@ -110,6 +110,19 @@ def main():
     run_screener()
     analyze_portfolio()
 
+    # 4.1. 성과 추적 (outcome 업데이트 + 월간 성적표)
+    try:
+        from analysis.performance import run as track_performance
+
+        perf_result = track_performance()
+        outcomes = perf_result.get("outcomes", {})
+        print(
+            f"  성과 추적: 1w={outcomes.get('updated_1w', 0)}건, "
+            f"1m={outcomes.get('updated_1m', 0)}건 업데이트"
+        )
+    except Exception as e:
+        print(f"  ⚠️ 성과 추적 실패: {e}")
+
     # 4.5. JSON 출력 스키마 검증
     validate_all_outputs()
 

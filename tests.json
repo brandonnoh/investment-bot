@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 25,
-    "passing": 23,
-    "failing": 2,
+    "passing": 25,
+    "failing": 0,
     "last_updated": "2026-03-26"
   },
   "features": [
@@ -397,8 +397,8 @@
     {
       "id": "F25",
       "description": "성과 추적 + 가중치 학습 — outcome 자동 기록, 월간 성적표, 팩터별 적중률",
-      "status": "failing",
-      "summary": "",
+      "status": "passing",
+      "summary": "analysis/performance.py 모듈 — update_outcomes(1주/1개월 수익률 자동 기록, 거래일 보정), generate_monthly_report(적중률/평균수익률/팩터별 기여도/최고최저 종목), generate_weight_suggestion(팩터 차이 기반 가중치 조정 제안), performance_report.json 출력, run_pipeline.py 통합, utils/schema.py 스키마 추가 (518 tests passed)",
       "priority": 3,
       "depends_on": ["F22"],
       "acceptance_criteria": [

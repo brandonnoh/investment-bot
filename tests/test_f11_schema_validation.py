@@ -30,6 +30,7 @@ class TestSchemaDefinitions:
             "opportunities.json",
             "fundamentals.json",
             "engine_status.json",
+            "performance_report.json",
         }
         assert expected == set(SCHEMAS.keys())
 
