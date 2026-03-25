@@ -1288,3 +1288,244 @@
 
 ✅ 수집 완료: 성공 8건, 실패 0건
 
+
+📊 주가 수집 시작 — 2026-03-25 14:20 KST
+  ✅ 삼성전자 (005930.KS): 190,900.00 (+0.63%)
+  ✅ 현대차 (005380.KS): 500,000.00 (+1.63%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,415.00 (+5.20%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,590.00 (+0.62%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 220,238.00 (+3.81%)
+  💾 DB 저장 완료: 8건
+  📄 JSON 저장: /Users/jarvis/Projects/investment-bot/output/intel/prices.json
+
+✅ 수집 완료: 성공 8건, 실패 0건
+
+
+📊 주가 수집 시작 — 2026-03-25 14:30 KST
+  ✅ 삼성전자 (005930.KS): 190,400.00 (+0.37%)
+  ✅ 현대차 (005380.KS): 500,000.00 (+1.63%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,430.00 (+5.28%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,590.00 (+0.62%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 219,829.00 (+3.62%)
+  💾 DB 저장 완료: 8건
+  📄 JSON 저장: /Users/jarvis/Projects/investment-bot/output/intel/prices.json
+
+✅ 수집 완료: 성공 8건, 실패 0건
+
+
+📊 주가 수집 시작 — 2026-03-25 14:40 KST
+  ✅ 삼성전자 (005930.KS): 190,700.00 (+0.53%)
+  ✅ 현대차 (005380.KS): 500,000.00 (+1.63%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,485.00 (+5.60%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,585.00 (+0.59%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 219,292.00 (+3.36%)
+  💾 DB 저장 완료: 8건
+  📄 JSON 저장: /Users/jarvis/Projects/investment-bot/output/intel/prices.json
+
+✅ 수집 완료: 성공 8건, 실패 0건
+
+
+📊 주가 수집 시작 — 2026-03-25 14:50 KST
+  ✅ 삼성전자 (005930.KS): 190,500.00 (+0.42%)
+  ✅ 현대차 (005380.KS): 500,000.00 (+1.63%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,505.00 (+5.71%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,587.00 (+0.60%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 219,601.00 (+3.51%)
+Traceback (most recent call last):
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 314, in <module>
+    run()
+    ~~~^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 303, in run
+    save_to_db(records)
+    ~~~~~~~~~~^^^^^^^^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 253, in save_to_db
+    cursor.execute(
+    ~~~~~~~~~~~~~~^
+        """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        ),
+        ^^
+    )
+    ^
+sqlite3.OperationalError: table prices has no column named data_source
+
+📊 주가 수집 시작 — 2026-03-25 15:00 KST
+  ✅ 삼성전자 (005930.KS): 190,200.00 (+0.26%)
+  ✅ 현대차 (005380.KS): 500,000.00 (+1.63%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,495.00 (+5.66%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,580.00 (+0.55%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 219,646.00 (+3.53%)
+Traceback (most recent call last):
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 314, in <module>
+    run()
+    ~~~^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 303, in run
+    save_to_db(records)
+    ~~~~~~~~~~^^^^^^^^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 253, in save_to_db
+    cursor.execute(
+    ~~~~~~~~~~~~~~^
+        """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        ),
+        ^^
+    )
+    ^
+sqlite3.OperationalError: table prices has no column named data_source
+
+📊 주가 수집 시작 — 2026-03-25 15:10 KST
+  ✅ 삼성전자 (005930.KS): 189,800.00 (+0.05%)
+  ✅ 현대차 (005380.KS): 500,500.00 (+1.73%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,505.00 (+5.71%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,585.00 (+0.59%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 219,452.00 (+3.44%)
+Traceback (most recent call last):
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 332, in <module>
+    run()
+    ~~~^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 321, in run
+    save_to_db(records)
+    ~~~~~~~~~~^^^^^^^^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 271, in save_to_db
+    cursor.execute(
+    ~~~~~~~~~~~~~~^
+        """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        ),
+        ^^
+    )
+    ^
+sqlite3.OperationalError: table prices has no column named data_source
+
+📊 주가 수집 시작 — 2026-03-25 15:20 KST
+  ✅ 삼성전자 (005930.KS): 189,900.00 (+0.11%)
+  ✅ 현대차 (005380.KS): 500,000.00 (+1.63%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,520.00 (+5.80%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,590.00 (+0.62%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 218,876.00 (+3.17%)
+Traceback (most recent call last):
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 332, in <module>
+    run()
+    ~~~^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 321, in run
+    save_to_db(records)
+    ~~~~~~~~~~^^^^^^^^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 271, in save_to_db
+    cursor.execute(
+    ~~~~~~~~~~~~~~^
+        """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        ),
+        ^^
+    )
+    ^
+sqlite3.OperationalError: table prices has no column named data_source
+
+📊 주가 수집 시작 — 2026-03-25 15:30 KST
+  ✅ 삼성전자 (005930.KS): 189,900.00 (+0.11%)
+  ✅ 현대차 (005380.KS): 500,000.00 (+1.63%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,520.00 (+5.80%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,590.00 (+0.62%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 219,256.00 (+3.35%)
+Traceback (most recent call last):
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 332, in <module>
+    run()
+    ~~~^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 321, in run
+    save_to_db(records)
+    ~~~~~~~~~~^^^^^^^^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 271, in save_to_db
+    cursor.execute(
+    ~~~~~~~~~~~~~~^
+        """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        ),
+        ^^
+    )
+    ^
+sqlite3.OperationalError: table prices has no column named data_source
+
+📊 주가 수집 시작 — 2026-03-25 15:40 KST
+  ✅ 삼성전자 (005930.KS): 189,000.00 (-0.37%)
+  ✅ 현대차 (005380.KS): 501,000.00 (+1.83%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,520.00 (+5.80%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,585.00 (+0.59%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 219,395.00 (+3.41%)
+Traceback (most recent call last):
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 332, in <module>
+    run()
+    ~~~^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 321, in run
+    save_to_db(records)
+    ~~~~~~~~~~^^^^^^^^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 271, in save_to_db
+    cursor.execute(
+    ~~~~~~~~~~~~~~^
+        """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        ),
+        ^^
+    )
+    ^
+sqlite3.OperationalError: table prices has no column named data_source
+
+📊 주가 수집 시작 — 2026-03-25 15:50 KST
+  ✅ 삼성전자 (005930.KS): 189,000.00 (-0.37%)
+  ✅ 현대차 (005380.KS): 501,000.00 (+1.83%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 18,520.00 (+5.80%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,585.00 (+0.59%)
+  ✅ 테슬라 (TSLA): 383.03 (+0.57%)
+  ✅ 알파벳 (GOOGL): 290.44 (-3.89%)
+  ✅ SPDR S&P Oil (XOP): 180.24 (+3.07%)
+  ✅ 금 현물 (GOLD_KRW_G): 219,162.00 (+3.30%)
+Traceback (most recent call last):
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 332, in <module>
+    run()
+    ~~~^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 321, in run
+    save_to_db(records)
+    ~~~~~~~~~~^^^^^^^^^
+  File "/Users/jarvis/Projects/investment-bot/data/fetch_prices.py", line 271, in save_to_db
+    cursor.execute(
+    ~~~~~~~~~~~~~~^
+        """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+        ),
+        ^^
+    )
+    ^
+sqlite3.OperationalError: table prices has no column named data_source
