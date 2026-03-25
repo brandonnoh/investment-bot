@@ -72,6 +72,18 @@ def main():
     except Exception as e:
         print(f"  ⚠️ fetch_fundamentals 실패: {e}")
 
+    # ── Phase 4.1: 수급 데이터 수집 ──
+    try:
+        from data.fetch_supply import run as fetch_supply
+
+        supply_results = fetch_supply()
+        if supply_results:
+            print(
+                f"  수급: KRX {len(supply_results.get('krx_supply', {}))}개, F&G={supply_results.get('fear_greed', {})}"
+            )
+    except Exception as e:
+        print(f"  ⚠️ fetch_supply 실패: {e}")
+
     # ── Phase 4: 종목 발굴 ──
     try:
         from data.fetch_opportunities import run as fetch_opportunities

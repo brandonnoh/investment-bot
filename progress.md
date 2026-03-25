@@ -95,3 +95,9 @@
 - **변경 파일:** analysis/composite_score.py, config.py, db/init_db.py, tests/test_f22_quant_scoring.py
 - **결과:** 성공 (459 tests passed, F22 23개 + 기존 436개)
 - **메모:** composite_score.py에 6팩터 확장: calculate_value_score(PER/PBR 역순 percentile), calculate_quality_score(ROE/부채비율역순/FCF), calculate_growth_score(매출성장률/EPS성장률), calculate_composite_score_v2 6팩터 가중 합산. 기존 calculate_composite_score 4팩터 하위 호환 유지 (레거시 균등 가중치). config.py에 6팩터 가중치(value 0.20/quality 0.20/growth 0.15/timing 0.20/catalyst 0.10/macro 0.15). db/init_db.py에서 opportunities 테이블에 score_value/score_quality/score_growth 마이그레이션 컬럼 추가. build_universe_stats(펀더멘탈→유니버스 통계), calculate_eps_growth(EPS 성장률) 헬퍼 함수.
+
+## Iteration 15 — 2026-03-26
+- **Task:** F23 — 수급 데이터 수집 — KRX 외국인/기관 순매수 + Fear & Greed Index
+- **변경 파일:** data/fetch_supply.py, analysis/composite_score.py, db/init_db.py, run_pipeline.py, tests/test_f23_supply_data.py
+- **결과:** 성공 (477 tests passed, F23 18개 + 기존 459개)
+- **메모:** data/fetch_supply.py 신규 모듈: KRX 투자자별 매매동향 API(data.krx.co.kr)로 외국인/기관 순매수 수집, parse_krx_response 파싱(콤마 포함 숫자 처리), CNN Fear & Greed Index API 수집(production.dataviz.cnn.io), fear_greed_to_score(0~100→-1.0~1.0 변환). DB: fundamentals 테이블에 foreign_net/inst_net 마이그레이션 컬럼 추가, save_supply_to_db에서 종목코드→.KS/.KQ 티커 매핑 후 UPDATE. composite_score.py: calculate_macro_direction에 Fear & Greed를 5번째 팩터로 통합(없으면 기존 4팩터만 사용, 하위 호환). supply_data.json 출력(fear_greed + krx_supply). run_pipeline.py에서 fetch_fundamentals 다음 단계로 통합. 양쪽 API 실패 시 graceful degradation.

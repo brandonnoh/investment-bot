@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 25,
-    "passing": 21,
-    "failing": 4,
+    "passing": 22,
+    "failing": 3,
     "last_updated": "2026-03-26"
   },
   "features": [
@@ -365,8 +365,8 @@
     {
       "id": "F23",
       "description": "수급 데이터 수집 — KRX 외국인/기관 순매수 + Fear & Greed Index",
-      "status": "failing",
-      "summary": "",
+      "status": "passing",
+      "summary": "data/fetch_supply.py 모듈 — KRX 투자자별 매매동향 외국인/기관 순매수 수집, CNN Fear & Greed Index 수집, fundamentals 테이블 foreign_net/inst_net 컬럼 추가, fear_greed_to_score 변환, calculate_macro_direction에 Fear & Greed 5번째 팩터 통합, supply_data.json 출력, run_pipeline.py 통합, Graceful degradation (477 tests passed)",
       "priority": 2,
       "depends_on": ["F21"],
       "acceptance_criteria": [

@@ -252,6 +252,9 @@ def init_schema(conn):
     _migrate_add_column(cursor, "opportunities", "score_value", "REAL")
     _migrate_add_column(cursor, "opportunities", "score_quality", "REAL")
     _migrate_add_column(cursor, "opportunities", "score_growth", "REAL")
+    # F23: 수급 데이터 컬럼
+    _migrate_add_column(cursor, "fundamentals", "foreign_net", "INTEGER")
+    _migrate_add_column(cursor, "fundamentals", "inst_net", "INTEGER")
 
     # ── 인덱스 생성 — 조회 성능 최적화 ──
 

@@ -29,7 +29,11 @@ def percentile_rank(values: list, value: float) -> float:
 
 
 def calculate_macro_direction(macro: dict) -> float:
-    """매크로 환경을 -1.0~1.0 지수로 변환"""
+    """매크로 환경을 -1.0~1.0 지수로 변환.
+
+    5개 팩터: 코스피, 환율, 유가, VIX, Fear & Greed(선택)
+    Fear & Greed가 없으면 기존 4팩터만 사용.
+    """
     scores = []
 
     # 코스피: 상승 → 긍정
@@ -47,6 +51,13 @@ def calculate_macro_direction(macro: dict) -> float:
     # VIX: 하락 → 긍정
     vix = macro.get("^VIX", {}).get("change_pct", 0) or 0
     scores.append(max(-1, min(1, -vix / 15)))
+
+    # Fear & Greed Index (0~100 → -1.0~1.0)
+    fg_data = macro.get("fear_greed")
+    if fg_data and isinstance(fg_data, dict):
+        fg_score = fg_data.get("score")
+        if fg_score is not None:
+            scores.append(max(-1, min(1, (fg_score - 50) / 50)))
 
     if not scores:
         return 0.0
@@ -148,7 +159,9 @@ def calculate_growth_score(
     return sum(scores) / len(scores)
 
 
-def calculate_eps_growth(current_eps: float | None, previous_eps: float | None) -> float | None:
+def calculate_eps_growth(
+    current_eps: float | None, previous_eps: float | None
+) -> float | None:
     """EPS 성장률 계산.
 
     Args:
@@ -208,20 +221,28 @@ def calculate_composite_score_v2(
 
     # 1. 밸류 (Value)
     score_value = calculate_value_score(
-        candidate.get("per"), candidate.get("pbr"),
-        universe.get("per", []), universe.get("pbr", []),
+        candidate.get("per"),
+        candidate.get("pbr"),
+        universe.get("per", []),
+        universe.get("pbr", []),
     )
 
     # 2. 퀄리티 (Quality)
     score_quality = calculate_quality_score(
-        candidate.get("roe"), candidate.get("debt_ratio"), candidate.get("fcf"),
-        universe.get("roe", []), universe.get("debt_ratio", []), universe.get("fcf", []),
+        candidate.get("roe"),
+        candidate.get("debt_ratio"),
+        candidate.get("fcf"),
+        universe.get("roe", []),
+        universe.get("debt_ratio", []),
+        universe.get("fcf", []),
     )
 
     # 3. 성장 (Growth)
     score_growth = calculate_growth_score(
-        candidate.get("revenue_growth"), candidate.get("eps_growth"),
-        universe.get("revenue_growth", []), universe.get("eps_growth", []),
+        candidate.get("revenue_growth"),
+        candidate.get("eps_growth"),
+        universe.get("revenue_growth", []),
+        universe.get("eps_growth", []),
     )
 
     # 4. 타이밍 (Timing) — 기존 모멘텀 + RSI 로직
@@ -230,9 +251,11 @@ def calculate_composite_score_v2(
     rsi_val = candidate.get("rsi_14") or 50
     rsi_inverted = 100 - rsi_val
     universe_rsi = universe.get("rsi", [])
-    score_rsi = percentile_rank(
-        [100 - r for r in universe_rsi], rsi_inverted
-    ) if universe_rsi else 0.5
+    score_rsi = (
+        percentile_rank([100 - r for r in universe_rsi], rsi_inverted)
+        if universe_rsi
+        else 0.5
+    )
     score_timing = (score_return + score_rsi) / 2.0
 
     # 5. 촉매 (Catalyst) — 감성 점수
