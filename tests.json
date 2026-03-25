@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 11,
-    "failing": 4,
+    "passing": 12,
+    "failing": 3,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -201,7 +201,8 @@
     {
       "id": "F13",
       "description": "뉴스 감성 점수 (키워드 기반, stdlib)",
-      "status": "failing",
+      "status": "passing",
+      "summary": "analysis/sentiment.py 모듈 — 한/영 금융 키워드 사전(각 26+개), calculate_sentiment 점수 계산(-1.0~1.0), analyze_news_sentiment 레코드 처리, save_sentiment_to_db DB 저장, aggregate_sentiment_by_ticker 종목별 집계, fetch_news.py run()에서 파이프라인 통합, news.json에 sentiment+ticker_sentiment 포함 (32 tests, 전체 286 passed)",
       "priority": 5,
       "depends_on": ["F02", "F05"],
       "acceptance_criteria": [

@@ -3,6 +3,7 @@ JSON 출력 스키마 검증 모듈
 output/intel/ 파일의 필수 필드 + 타입 검증
 파이프라인 중단 없이 경고 로그만 기록
 """
+
 import json
 import logging
 from pathlib import Path
@@ -63,6 +64,7 @@ SCHEMAS = {
             "url": str,
             "published_at": str,
             "relevance_score": "number",
+            "sentiment": "number",
             "category": str,
             "tickers": list,
             "timestamp": str,
@@ -160,7 +162,11 @@ def validate_json(filename, data):
         if field not in data:
             warnings.append(f"[{filename}] 필수 필드 '{field}' 누락")
         elif data[field] is not None and not _check_type(data[field], expected_type):
-            type_name = expected_type if isinstance(expected_type, str) else expected_type.__name__
+            type_name = (
+                expected_type
+                if isinstance(expected_type, str)
+                else expected_type.__name__
+            )
             warnings.append(
                 f"[{filename}] 필드 '{field}' 타입 불일치: "
                 f"기대={type_name}, 실제={type(data[field]).__name__}"
@@ -176,7 +182,11 @@ def validate_json(filename, data):
                 elif nested_data[field] is not None and not _check_type(
                     nested_data[field], expected_type
                 ):
-                    type_name = expected_type if isinstance(expected_type, str) else expected_type.__name__
+                    type_name = (
+                        expected_type
+                        if isinstance(expected_type, str)
+                        else expected_type.__name__
+                    )
                     warnings.append(
                         f"[{filename}] {nested_key}.'{field}' 타입 불일치: "
                         f"기대={type_name}, 실제={type(nested_data[field]).__name__}"
@@ -208,17 +218,23 @@ def validate_json(filename, data):
 
         for field, expected_type in schema["item_fields"].items():
             if field not in item:
-                warnings.append(
-                    f"[{filename}] 항목[{idx}] 필수 필드 '{field}' 누락"
-                )
+                warnings.append(f"[{filename}] 항목[{idx}] 필수 필드 '{field}' 누락")
             elif item[field] is None:
-                type_name = expected_type if isinstance(expected_type, str) else expected_type.__name__
+                type_name = (
+                    expected_type
+                    if isinstance(expected_type, str)
+                    else expected_type.__name__
+                )
                 warnings.append(
                     f"[{filename}] 항목[{idx}] 필드 '{field}'이 None "
                     f"(기대 타입: {type_name})"
                 )
             elif not _check_type(item[field], expected_type):
-                type_name = expected_type if isinstance(expected_type, str) else expected_type.__name__
+                type_name = (
+                    expected_type
+                    if isinstance(expected_type, str)
+                    else expected_type.__name__
+                )
                 warnings.append(
                     f"[{filename}] 항목[{idx}] 필드 '{field}' 타입 불일치: "
                     f"기대={type_name}, 실제={type(item[field]).__name__}"
@@ -239,6 +255,7 @@ def validate_all_outputs(output_dir=None):
     """
     if output_dir is None:
         from config import OUTPUT_DIR
+
         output_dir = OUTPUT_DIR
 
     output_dir = Path(output_dir)

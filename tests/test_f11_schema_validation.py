@@ -111,6 +111,7 @@ class TestValidJson:
                     "url": "https://example.com/news/1",
                     "published_at": "2026-03-25",
                     "relevance_score": 0.8,
+                    "sentiment": 0.5,
                     "category": "stock",
                     "tickers": ["005930.KS"],
                     "timestamp": "2026-03-25T10:00:00+09:00",

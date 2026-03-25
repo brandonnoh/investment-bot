@@ -324,8 +324,8 @@ def save_to_db(records: list[dict]):
         skipped = 0
         for r in records:
             cursor.execute(
-                """INSERT OR IGNORE INTO news (title, summary, source, url, published_at, relevance_score, tickers, category)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT OR IGNORE INTO news (title, summary, source, url, published_at, relevance_score, sentiment, tickers, category)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     r["title"],
                     r["summary"],
@@ -333,6 +333,7 @@ def save_to_db(records: list[dict]):
                     r["url"],
                     r["published_at"],
                     r["relevance_score"],
+                    r.get("sentiment"),
                     json.dumps(r["tickers"], ensure_ascii=False),
                     r.get("category", "stock"),
                 ),
@@ -347,8 +348,8 @@ def save_to_db(records: list[dict]):
         conn.close()
 
 
-def save_to_json(records: list[dict]):
-    """뉴스를 JSON 파일로 출력"""
+def save_to_json(records: list[dict], ticker_sentiment: dict | None = None):
+    """뉴스를 JSON 파일로 출력 (감성 집계 포함)"""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_path = OUTPUT_DIR / "news.json"
 
@@ -357,6 +358,8 @@ def save_to_json(records: list[dict]):
         "count": len(records),
         "news": records,
     }
+    if ticker_sentiment:
+        output["ticker_sentiment"] = ticker_sentiment
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"  📄 뉴스 JSON 저장: {output_path}")
@@ -364,6 +367,12 @@ def save_to_json(records: list[dict]):
 
 def run():
     """뉴스 수집 파이프라인 실행"""
+    from analysis.sentiment import (
+        aggregate_sentiment_by_ticker,
+        analyze_news_sentiment,
+        save_sentiment_to_db,
+    )
+
     print(f"\n📰 뉴스 수집 시작 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}")
 
     # DB 초기화 확인
@@ -374,9 +383,31 @@ def run():
     # 뉴스 수집
     records, rss_count, brave_count = collect_news()
 
+    # 감성 분석
+    records = analyze_news_sentiment(records)
+    ticker_sentiment = aggregate_sentiment_by_ticker(records)
+    print(f"  🧠 감성 분석 완료: {len(records)}건, 종목별 {len(ticker_sentiment)}개")
+
     # 저장
     save_to_db(records)
-    save_to_json(records)
+    save_to_json(records, ticker_sentiment)
+
+    # DB에 감성 점수 업데이트 (이미 INSERT된 레코드에 대해)
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        updates = [
+            {
+                "title": r["title"],
+                "source": r["source"],
+                "sentiment": r.get("sentiment"),
+            }
+            for r in records
+            if r.get("sentiment") is not None
+        ]
+        save_sentiment_to_db(conn, updates)
+        conn.close()
+    except Exception as e:
+        print(f"  ⚠️ 감성 점수 DB 업데이트 실패: {e}")
 
     print(
         f"\n✅ 뉴스 수집 완료: RSS {rss_count}건, Brave {brave_count}건 (합계 {len(records)}건)\n"

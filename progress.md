@@ -71,3 +71,9 @@
 - **변경 파일:** utils/schema.py, tests/test_f11_schema_validation.py, run_pipeline.py
 - **결과:** 성공 (254 tests passed, F11 26개 + 기존 228개)
 - **메모:** utils/schema.py에 SCHEMAS 딕셔너리로 6개 JSON 파일(prices/macro/news/portfolio_summary/alerts/price_analysis) 필수 필드+타입 정의. validate_json()으로 최상위 필드, 중첩 딕셔너리(total), 배열/딕셔너리 항목 검증. "number" 타입으로 int/float 모두 허용. error 항목 스킵(graceful degradation). validate_all_outputs()로 파일 시스템에서 JSON 읽어 일괄 검증. run_pipeline.py에서 분석 후 리포트 전 단계에 통합. 경고 로그만 기록, 파이프라인 중단 없음.
+
+## Iteration 11 — 2026-03-25
+- **Task:** F13 — 뉴스 감성 점수 (키워드 기반, stdlib)
+- **변경 파일:** analysis/sentiment.py, data/fetch_news.py, utils/schema.py, tests/test_f13_sentiment.py, tests/test_f11_schema_validation.py
+- **결과:** 성공 (286 tests passed, F13 32개 + 기존 254개)
+- **메모:** 구현+테스트+파이프라인 통합이 이미 완료되어 있음을 확인. analysis/sentiment.py에 한/영 금융 키워드 사전(KO_POSITIVE/KO_NEGATIVE/EN_POSITIVE/EN_NEGATIVE 각 26~31개), calculate_sentiment(-1.0~1.0), analyze_news_sentiment 레코드 처리, save_sentiment_to_db DB 업데이트, aggregate_sentiment_by_ticker 종목별 평균. fetch_news.py run()에서 수집→감성분석→저장→DB업데이트 파이프라인 통합. news.json 스키마에 sentiment 필수 필드 추가로 F11 테스트 데이터 수정 필요했음. ruff 미사용 import 정리.
