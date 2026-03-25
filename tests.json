@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 10,
-    "failing": 5,
+    "passing": 11,
+    "failing": 4,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -172,7 +172,8 @@
     {
       "id": "F11",
       "description": "JSON 출력 스키마 검증",
-      "status": "failing",
+      "status": "passing",
+      "summary": "utils/schema.py 모듈 — 6개 JSON 파일 스키마 정의(prices/macro/news/portfolio_summary/alerts/price_analysis), validate_json 필수 필드+타입 검증, validate_all_outputs 파일 시스템 통합 검증, error 항목 스킵, number 타입(int/float), 중첩 딕셔너리 검증, run_pipeline.py 통합 (26 tests, 전체 254 passed)",
       "priority": 4,
       "depends_on": ["F05"],
       "acceptance_criteria": [

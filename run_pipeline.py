@@ -23,6 +23,7 @@ from analysis.screener import run as run_screener
 from analysis.portfolio import run as analyze_portfolio
 from reports.daily import run as generate_daily
 from reports.weekly import run as generate_weekly
+from utils.schema import validate_all_outputs  # noqa: E402
 
 
 def main():
@@ -56,10 +57,13 @@ def main():
     run_screener()
     analyze_portfolio()
 
-    # 4. 일일 리포트 생성
+    # 4.5. JSON 출력 스키마 검증
+    validate_all_outputs()
+
+    # 5. 일일 리포트 생성
     generate_daily()
 
-    # 5. 주간 리포트 (--weekly 플래그 시)
+    # 6. 주간 리포트 (--weekly 플래그 시)
     if weekly_mode:
         generate_weekly()
 

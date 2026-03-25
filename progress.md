@@ -65,3 +65,9 @@
 - **변경 파일:** utils/http.py, utils/__init__.py, config.py, data/fetch_prices.py, data/fetch_macro.py, data/fetch_news.py, tests/test_f10_error_recovery.py
 - **결과:** 성공 (228 tests passed, F10 32개 + 기존 196개)
 - **메모:** utils/http.py 공통 모듈에 retry_request(지수 백오프 재시도), CircuitBreaker(closed/open/half_open 3상태 관리), validate_price_data(이상값 감지) 구현. 수집 모듈 3개(fetch_prices/macro/news)에서 retry_request와 validate_price_data import 연결. config.py에 HTTP_RETRY_CONFIG(max_retries=3, base_delay=1)와 CIRCUIT_BREAKER_CONFIG(failure_threshold=5, recovery_timeout=300) 중앙 관리. 테스트 32개: 재시도 로직 8개, 서킷 브레이커 8개, 이상값 감지 9개, config 통합 2개, fetch 통합 3개, 로깅 2개.
+
+## Iteration 10 — 2026-03-25
+- **Task:** F11 — JSON 출력 스키마 검증
+- **변경 파일:** utils/schema.py, tests/test_f11_schema_validation.py, run_pipeline.py
+- **결과:** 성공 (254 tests passed, F11 26개 + 기존 228개)
+- **메모:** utils/schema.py에 SCHEMAS 딕셔너리로 6개 JSON 파일(prices/macro/news/portfolio_summary/alerts/price_analysis) 필수 필드+타입 정의. validate_json()으로 최상위 필드, 중첩 딕셔너리(total), 배열/딕셔너리 항목 검증. "number" 타입으로 int/float 모두 허용. error 항목 스킵(graceful degradation). validate_all_outputs()로 파일 시스템에서 JSON 읽어 일괄 검증. run_pipeline.py에서 분석 후 리포트 전 단계에 통합. 경고 로그만 기록, 파이프라인 중단 없음.
