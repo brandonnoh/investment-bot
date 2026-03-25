@@ -152,19 +152,112 @@ python3 scripts/read_news.py
 
 ### alerts.json 구조
 ```json
-[
-  {
-    "level": "RED",              // RED(긴급)/YELLOW(주의)/GREEN(긍정)
-    "event_type": "stock_drop",  // 이벤트 유형
-    "ticker": "005930.KS",
-    "name": "삼성전자",
-    "message": "삼성전자 -5.72% 급락",
-    "value": -5.72,              // 실제 값
-    "threshold": -5.0,           // 임계값
-    "triggered_at": "ISO8601",
-    "notified": false
+{
+  "triggered_at": "ISO8601+09:00",
+  "count": 1,
+  "alerts": [
+    {
+      "level": "RED",
+      "event_type": "stock_drop",
+      "ticker": "005930.KS",
+      "message": "🔴 긴급: 삼성전자 -5.72% 급락 (현재가: 178,000.00)",
+      "value": -5.72,
+      "threshold": -5.0
+    }
+  ]
+}
+```
+> 알림이 없으면 alerts.json 파일 자체가 삭제됨. 파일 존재 = 알림 있음.
+
+### macro.json 구조
+```json
+{
+  "updated_at": "ISO8601+09:00",
+  "count": 8,
+  "indicators": [
+    {
+      "indicator": "코스피",
+      "ticker": "KOSPI",
+      "value": 2650.12,
+      "prev_close": 2638.45,
+      "change_pct": 0.44,
+      "category": "INDEX",
+      "timestamp": "ISO8601"
+    }
+  ]
+}
+```
+
+### news.json 구조
+```json
+{
+  "updated_at": "ISO8601+09:00",
+  "count": 25,
+  "news": [
+    {
+      "title": "삼성전자 반도체 수출 호조",
+      "summary": "",
+      "source": "한국경제",
+      "url": "https://news.example.com/article/123",
+      "published_at": "RFC2822",
+      "relevance_score": 0.8,
+      "sentiment": 0.45,
+      "category": "stock",
+      "tickers": ["005930.KS"],
+      "ticker_name": "삼성전자",
+      "fetch_method": "rss",
+      "timestamp": "ISO8601"
+    }
+  ],
+  "ticker_sentiment": {
+    "005930.KS": {"name": "삼성전자", "avg_sentiment": 0.3, "count": 3}
   }
-]
+}
+```
+
+### portfolio_summary.json 구조
+```json
+{
+  "updated_at": "ISO8601+09:00",
+  "exchange_rate": 1450.0,
+  "total": {
+    "invested_krw": 42000000,
+    "current_value_krw": 45230000,
+    "pnl_krw": 3230000,
+    "pnl_pct": 7.69,
+    "stock_pnl_krw": 3410000,
+    "fx_pnl_krw": -180000
+  },
+  "holdings": [
+    {
+      "ticker": "005930.KS",
+      "name": "삼성전자",
+      "sector": "반도체",
+      "currency": "KRW",
+      "price": 188700,
+      "avg_cost": 203102,
+      "qty": 42,
+      "current_value_krw": 7925400,
+      "invested_krw": 8530284,
+      "pnl_krw": -604884,
+      "pnl_pct": -7.09,
+      "stock_pnl_krw": -604884,
+      "fx_pnl_krw": 0
+    }
+  ],
+  "sectors": [
+    {"sector": "반도체", "weight_pct": 35.2, "value_krw": 7925400, "pnl_pct": -7.09, "stocks": ["삼성전자"]}
+  ],
+  "risk": {
+    "max_drawdown_pct": 4.2,
+    "volatility_daily": 1.8,
+    "worst_performer": {"name": "삼성전자", "pnl_pct": -7.09},
+    "best_performer": {"name": "테슬라", "pnl_pct": 12.3}
+  },
+  "history": [
+    {"date": "2026-02-24", "total_value_krw": 44500000, "total_invested_krw": 42000000, "total_pnl_krw": 2500000, "total_pnl_pct": 5.95, "fx_rate": 1445.0}
+  ]
+}
 ```
 
 ---
@@ -217,22 +310,42 @@ python3 scripts/read_news.py
 
 ## 6. 엔진 상태 확인
 
-### engine_status.json (미래)
+### engine_status.json
 ```json
 {
-  "status": "healthy",
-  "last_collection": {
-    "prices": "2026-03-25T15:30:00+09:00",
-    "macro": "2026-03-25T15:30:00+09:00",
-    "news": "2026-03-25T15:00:00+09:00"
-  },
-  "errors_today": 0,
+  "updated_at": "2026-03-25T15:30:00+09:00",
+  "pipeline_ok": true,
+  "total_errors": 0,
   "db_size_mb": 12.4,
-  "uptime_days": 45
+  "uptime_days": 45,
+  "first_run": "2026-02-08T05:00:00+09:00",
+  "modules": {
+    "fetch_prices": {
+      "success": true,
+      "item_count": 8,
+      "error_count": 0,
+      "last_run": "2026-03-25T15:30:00+09:00"
+    },
+    "fetch_macro": {
+      "success": true,
+      "item_count": 8,
+      "error_count": 0,
+      "last_run": "2026-03-25T15:30:00+09:00"
+    },
+    "fetch_news": {
+      "success": true,
+      "item_count": 25,
+      "error_count": 2,
+      "last_run": "2026-03-25T15:00:00+09:00"
+    }
+  }
 }
 ```
 
-데이터가 오래되었거나 에러가 많으면 사용자에게 알릴 것.
+- `pipeline_ok`: 핵심 모듈(fetch_prices, fetch_macro)이 모두 성공이면 `true`
+- `total_errors`: 전체 모듈의 에러 합계
+- 모듈별 `success`, `item_count`, `error_count`로 상세 진단 가능
+- 데이터가 오래되었거나 에러가 많으면 사용자에게 알릴 것
 
 ---
 
@@ -252,3 +365,46 @@ python3 scripts/read_news.py
 
 이것이 가능하려면 지금의 수집/분석 품질이 높아야 한다.
 **지금 쌓는 데이터의 품질이 미래 자동매매의 정확도를 결정한다.**
+
+---
+
+## 8. opportunities.json (Phase 4 신규)
+
+발굴 종목 후보 + 복합 점수. 자비스 05:30 파이프라인에서 생성.
+
+```json
+{
+  "updated_at": "ISO 8601",
+  "keywords": [{"keyword": "str", "category": "str", "priority": 0}],
+  "opportunities": [
+    {
+      "ticker": "012450.KS",
+      "name": "한화에어로스페이스",
+      "discovered_via": "방산 수주",
+      "source": "brave|naver|code_extract",
+      "composite_score": 0.82,
+      "score_return": 0.8,
+      "score_rsi": 0.7,
+      "score_sentiment": 0.9,
+      "score_macro": 0.85
+    }
+  ],
+  "summary": {"total_keywords": 5, "total_candidates": 12}
+}
+```
+
+### DB 쿼리 예시
+
+```sql
+-- 오늘 발굴 종목 조회
+SELECT ticker, name, composite_score, discovered_via
+FROM opportunities
+WHERE date(discovered_at) = date('now')
+ORDER BY composite_score DESC;
+
+-- 키워드별 발굴 성과
+SELECT k.keyword, COUNT(o.id) as cnt, AVG(o.outcome_1w) as avg_return_1w
+FROM agent_keywords k
+LEFT JOIN opportunities o ON o.discovered_via = k.keyword
+GROUP BY k.keyword;
+```

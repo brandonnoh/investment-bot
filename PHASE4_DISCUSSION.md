@@ -94,3 +94,14 @@ CREATE TABLE opportunity_results (
 - Google Trends API 연동 가능성
 - 자동매매 연동 (Phase 5 이후)
 - Mission Control 대시보드
+
+---
+
+## 구현 완료 (2026-03-26)
+
+F16~F20 Phase 4 종목 발굴 기능 구현 완료:
+- F16: fetch_opportunities.py — Brave Search 기반 종목 발굴
+- F17: screener.py 고도화 — 복합 점수 (수익률 + RSI + 감성 + 매크로)
+- F18: 뉴스 수집 목적 분리 (모니터링 vs 발굴)
+- agent_commands 디렉토리 신설 (자비스 → 엔진 키워드 전달 인터페이스)
+- JARVIS_INTEGRATION.md, AGENT_GUIDE.md 연동 명세 업데이트
