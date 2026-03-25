@@ -5,6 +5,7 @@ DB 보존 정책 + 자동 정리 모듈
 삭제 전 집계 완료 확인 (미집계 원시 데이터 보호)
 VACUUM으로 DB 용량 최적화
 """
+
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
@@ -75,9 +76,7 @@ def purge_old_data(conn, raw_months=None, news_months=None):
 
     if ids_to_delete:
         placeholders = ",".join("?" * len(ids_to_delete))
-        conn.execute(
-            f"DELETE FROM prices WHERE id IN ({placeholders})", ids_to_delete
-        )
+        conn.execute(f"DELETE FROM prices WHERE id IN ({placeholders})", ids_to_delete)
     result["prices_deleted"] = len(ids_to_delete)
     result["prices_skipped_no_agg"] = len(skipped_dates)
 
@@ -103,9 +102,7 @@ def purge_old_data(conn, raw_months=None, news_months=None):
 
     if ids_to_delete:
         placeholders = ",".join("?" * len(ids_to_delete))
-        conn.execute(
-            f"DELETE FROM macro WHERE id IN ({placeholders})", ids_to_delete
-        )
+        conn.execute(f"DELETE FROM macro WHERE id IN ({placeholders})", ids_to_delete)
     result["macro_deleted"] = len(ids_to_delete)
     result["macro_skipped_no_agg"] = len(skipped_dates)
 
@@ -145,12 +142,16 @@ def run(conn=None):
         result = purge_old_data(conn)
         vacuum_db(conn)
 
-        total = result["prices_deleted"] + result["macro_deleted"] + result["news_deleted"]
+        total = (
+            result["prices_deleted"] + result["macro_deleted"] + result["news_deleted"]
+        )
         skipped = result["prices_skipped_no_agg"] + result["macro_skipped_no_agg"]
 
-        print(f"  삭제: prices {result['prices_deleted']}건, "
-              f"macro {result['macro_deleted']}건, "
-              f"news {result['news_deleted']}건")
+        print(
+            f"  삭제: prices {result['prices_deleted']}건, "
+            f"macro {result['macro_deleted']}건, "
+            f"news {result['news_deleted']}건"
+        )
         if skipped:
             print(f"  ⚠️ 집계 미완료로 보존: {skipped}건")
         print(f"  ✅ VACUUM 완료 (총 {total}건 정리)")

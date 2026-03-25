@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-실시간 알림 감지 모듈
-종목 급등/급락, 코스피 폭락, 환율 급등, 유가 급등 등 감지
+알림 감지 모듈 — 공통 감지 로직 + 배치 모드 실행
+종목 급등/급락, 코스피 폭락, 환율 급등, 유가 급등, VIX 급등, 금 급변 감지
 출력: output/intel/alerts.json (알림 있을 때만 생성)
+
+- 이 모듈: 공통 감지/저장 함수 + JSON 기반 배치 실행 (run_pipeline.py용)
+- alerts_watch.py: DB 기반 실시간 실행 + 중복 방지 + 텔레그램 전송
 """
+
 import json
 import sqlite3
 import sys
@@ -16,6 +20,9 @@ from config import ALERT_THRESHOLDS, DB_PATH, OUTPUT_DIR
 from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))
+
+
+# ── 데이터 로드 (JSON 기반, 배치 모드) ──
 
 
 def load_latest_prices() -> list[dict]:
@@ -40,6 +47,9 @@ def load_latest_macro() -> list[dict]:
     return data.get("indicators", [])
 
 
+# ── 공통 감지 로직 (alerts_watch.py에서도 사용) ──
+
+
 def check_stock_alerts(prices: list[dict]) -> list[dict]:
     """종목별 급등/급락 감지"""
     alerts = []
@@ -53,25 +63,29 @@ def check_stock_alerts(prices: list[dict]) -> list[dict]:
 
         # 급락 감지
         if change <= drop_threshold:
-            alerts.append({
-                "level": "RED",
-                "event_type": "stock_drop",
-                "ticker": p["ticker"],
-                "message": f"🔴 긴급: {p['name']} {change:+.2f}% 급락 (현재가: {p['price']:,.2f})",
-                "value": change,
-                "threshold": drop_threshold,
-            })
+            alerts.append(
+                {
+                    "level": "RED",
+                    "event_type": "stock_drop",
+                    "ticker": p["ticker"],
+                    "message": f"🔴 긴급: {p['name']} {change:+.2f}% 급락 (현재가: {p['price']:,.2f})",
+                    "value": change,
+                    "threshold": drop_threshold,
+                }
+            )
 
         # 급등 감지
         elif change >= surge_threshold:
-            alerts.append({
-                "level": "GREEN",
-                "event_type": "stock_surge",
-                "ticker": p["ticker"],
-                "message": f"🟢 알림: {p['name']} {change:+.2f}% 급등 (현재가: {p['price']:,.2f})",
-                "value": change,
-                "threshold": surge_threshold,
-            })
+            alerts.append(
+                {
+                    "level": "GREEN",
+                    "event_type": "stock_surge",
+                    "ticker": p["ticker"],
+                    "message": f"🟢 알림: {p['name']} {change:+.2f}% 급등 (현재가: {p['price']:,.2f})",
+                    "value": change,
+                    "threshold": surge_threshold,
+                }
+            )
 
     return alerts
 
@@ -92,60 +106,83 @@ def check_macro_alerts(macro: list[dict]) -> list[dict]:
         if indicator == "코스피" and change is not None:
             threshold = ALERT_THRESHOLDS["kospi_drop"]["threshold"]
             if change <= threshold:
-                alerts.append({
-                    "level": "RED",
-                    "event_type": "kospi_drop",
-                    "ticker": m["ticker"],
-                    "message": f"🔴 긴급: 코스피 {change:+.2f}% 폭락 (현재: {value:,.2f})",
-                    "value": change,
-                    "threshold": threshold,
-                })
+                alerts.append(
+                    {
+                        "level": "RED",
+                        "event_type": "kospi_drop",
+                        "ticker": m.get("ticker"),
+                        "message": f"🔴 긴급: 코스피 {change:+.2f}% 폭락 (현재: {value:,.2f})",
+                        "value": change,
+                        "threshold": threshold,
+                    }
+                )
 
-        # 환율 급등 (1550원 돌파)
-        if indicator == "원/달러" and value is not None:
+        # 환율 급등 (절대값 기준)
+        if indicator == "원/달러":
             threshold = ALERT_THRESHOLDS["usd_krw_high"]["threshold"]
             if value >= threshold:
-                alerts.append({
-                    "level": "RED",
-                    "event_type": "usd_krw_high",
-                    "ticker": m["ticker"],
-                    "message": f"🔴 긴급: 원/달러 환율 {value:,.2f}원 돌파 (임계값: {threshold:,.0f}원)",
-                    "value": value,
-                    "threshold": threshold,
-                })
+                alerts.append(
+                    {
+                        "level": "RED",
+                        "event_type": "usd_krw_high",
+                        "ticker": m.get("ticker"),
+                        "message": f"🔴 긴급: 원/달러 환율 {value:,.2f}원 돌파 (임계값: {threshold:,.0f}원)",
+                        "value": value,
+                        "threshold": threshold,
+                    }
+                )
 
         # 유가 급등 (WTI)
         if indicator == "WTI 유가" and change is not None:
             threshold = ALERT_THRESHOLDS["oil_surge"]["threshold"]
             if change >= threshold:
-                alerts.append({
-                    "level": "YELLOW",
-                    "event_type": "oil_surge",
-                    "ticker": m["ticker"],
-                    "message": f"🟡 주의: WTI 유가 {change:+.2f}% 급등 (현재: ${value:,.2f})",
-                    "value": change,
-                    "threshold": threshold,
-                })
+                alerts.append(
+                    {
+                        "level": "YELLOW",
+                        "event_type": "oil_surge",
+                        "ticker": m.get("ticker"),
+                        "message": f"🟡 주의: WTI 유가 {change:+.2f}% 급등 (현재: ${value:,.2f})",
+                        "value": change,
+                        "threshold": threshold,
+                    }
+                )
+
+        # VIX 급등 (절대값 기준)
+        if indicator == "VIX" and "vix_high" in ALERT_THRESHOLDS:
+            vix_threshold = ALERT_THRESHOLDS["vix_high"]["threshold"]
+            if value >= vix_threshold:
+                alerts.append(
+                    {
+                        "level": "YELLOW",
+                        "event_type": "vix_high",
+                        "ticker": m.get("ticker"),
+                        "message": f"🟡 주의: VIX {value:.2f} 돌파 (임계값: {vix_threshold})",
+                        "value": value,
+                        "threshold": vix_threshold,
+                    }
+                )
 
         # 금 현물 급변 (±3%)
         if indicator == "금 현물" and change is not None:
             threshold = ALERT_THRESHOLDS["gold_swing"]["threshold"]
             if abs(change) >= threshold:
                 direction = "급등" if change > 0 else "급락"
-                alerts.append({
-                    "level": "YELLOW",
-                    "event_type": "gold_swing",
-                    "ticker": m["ticker"],
-                    "message": f"🟡 주의: 금 현물 {change:+.2f}% {direction} (현재: ${value:,.2f})",
-                    "value": change,
-                    "threshold": threshold,
-                })
+                alerts.append(
+                    {
+                        "level": "YELLOW",
+                        "event_type": "gold_swing",
+                        "ticker": m.get("ticker"),
+                        "message": f"🟡 주의: 금 현물 {change:+.2f}% {direction} (현재: ${value:,.2f})",
+                        "value": change,
+                        "threshold": threshold,
+                    }
+                )
 
     return alerts
 
 
 def check_portfolio_alert(prices: list[dict]) -> list[dict]:
-    """포트폴리오 통화별 손실률 감지 (KRW/USD 분리 계산)"""
+    """포트폴리오 통화별 손실률 감지"""
     alerts = []
     threshold = ALERT_THRESHOLDS["portfolio_loss"]["threshold"]
 
@@ -163,47 +200,83 @@ def check_portfolio_alert(prices: list[dict]) -> list[dict]:
 
     for cur, totals in by_currency.items():
         if totals["invested"] > 0:
-            pnl_pct = (totals["current"] - totals["invested"]) / totals["invested"] * 100
+            pnl_pct = (
+                (totals["current"] - totals["invested"]) / totals["invested"] * 100
+            )
             if pnl_pct <= threshold:
-                alerts.append({
-                    "level": "RED",
-                    "event_type": "portfolio_loss",
-                    "ticker": None,
-                    "message": f"🔴 긴급: 포트폴리오({cur}) {pnl_pct:+.2f}% 손실 (임계값: {threshold}%)",
-                    "value": pnl_pct,
-                    "threshold": threshold,
-                })
+                alerts.append(
+                    {
+                        "level": "RED",
+                        "event_type": "portfolio_loss",
+                        "ticker": cur,
+                        "message": f"🔴 긴급: 포트폴리오({cur}) {pnl_pct:+.2f}% 손실 (임계값: {threshold}%)",
+                        "value": pnl_pct,
+                        "threshold": threshold,
+                    }
+                )
 
     return alerts
 
 
-def save_alerts_to_db(alerts: list[dict]):
-    """알림을 SQLite에 저장"""
+# ── 공통 저장 함수 ──
+
+
+def save_alerts_to_db(alerts: list[dict], conn=None, notified: bool = False):
+    """알림을 SQLite에 저장
+
+    Args:
+        alerts: 알림 리스트
+        conn: DB 연결 (None이면 DB_PATH로 새 연결 생성)
+        notified: True면 notified=1로 저장 (텔레그램 전송 시)
+    """
     if not alerts:
         return
 
-    conn = sqlite3.connect(str(DB_PATH))
+    own_conn = False
+    if conn is None:
+        conn = sqlite3.connect(str(DB_PATH))
+        own_conn = True
+
     try:
         cursor = conn.cursor()
         now = datetime.now(KST).isoformat()
+        notified_val = 1 if notified else 0
 
         for a in alerts:
             cursor.execute(
-                """INSERT INTO alerts (level, event_type, ticker, message, value, threshold, triggered_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (a["level"], a["event_type"], a.get("ticker"), a["message"],
-                 a["value"], a["threshold"], now),
+                """INSERT INTO alerts (level, event_type, ticker, message, value, threshold, triggered_at, notified)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    a["level"],
+                    a["event_type"],
+                    a.get("ticker"),
+                    a["message"],
+                    a["value"],
+                    a["threshold"],
+                    now,
+                    notified_val,
+                ),
             )
 
         conn.commit()
-        print(f"  💾 알림 DB 저장: {len(alerts)}건")
+        flag_msg = " (notified=1)" if notified else ""
+        print(f"  💾 알림 DB 저장: {len(alerts)}건{flag_msg}")
     finally:
-        conn.close()
+        if own_conn:
+            conn.close()
 
 
-def save_alerts_to_json(alerts: list[dict]):
-    """알림을 JSON 파일로 출력 (알림 있을 때만)"""
-    alerts_path = OUTPUT_DIR / "alerts.json"
+def save_alerts_to_json(alerts: list[dict], output_dir=None):
+    """알림을 JSON 파일로 출력 (알림 있을 때만 생성, 없으면 삭제)
+
+    Args:
+        alerts: 알림 리스트
+        output_dir: 출력 디렉토리 (기본: config.OUTPUT_DIR)
+    """
+    if output_dir is None:
+        output_dir = OUTPUT_DIR
+    output_dir = Path(output_dir)
+    alerts_path = output_dir / "alerts.json"
 
     if not alerts:
         # 알림 없으면 기존 파일 제거
@@ -214,7 +287,7 @@ def save_alerts_to_json(alerts: list[dict]):
             print("  🟢 알림 없음")
         return
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     output = {
         "triggered_at": datetime.now(KST).isoformat(),
         "count": len(alerts),
@@ -225,8 +298,11 @@ def save_alerts_to_json(alerts: list[dict]):
     print(f"  🚨 알림 JSON 저장: {alerts_path} ({len(alerts)}건)")
 
 
+# ── 배치 모드 실행 (run_pipeline.py용) ──
+
+
 def run():
-    """알림 감지 파이프라인 실행"""
+    """알림 감지 파이프라인 실행 (JSON 기반 배치 모드)"""
     print(f"\n🚨 알림 감지 시작 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}")
 
     # DB 초기화 확인

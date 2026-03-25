@@ -83,3 +83,9 @@
 - **변경 파일:** utils/engine_status.py, tests/test_f14_engine_status.py, run_pipeline.py, utils/schema.py, tests/test_f11_schema_validation.py
 - **결과:** 성공 (333 tests passed, F14 21개 + 기존 312개)
 - **메모:** utils/engine_status.py에 EngineStatus 클래스(모듈별 success/item_count/error_count/last_run 기록), record_module_status(레코드 리스트 기반 자동 성공/실패 카운트), get_db_size_mb(DB 파일 용량), get_uptime_days(first_run 기반 연속 가동일), build_engine_status(pipeline_ok 판정 — fetch_prices/fetch_macro 핵심 모듈 실패 시 False), save_engine_status(JSON 저장). run_pipeline.py에서 수집 모듈 반환값을 record_module_status로 기록 후 스키마 검증 뒤 engine_status 저장. utils/schema.py에 engine_status.json 스키마 추가. F11 테스트에서 item_fields 없는 스키마(engine_status) 허용하도록 수정.
+
+## Iteration 13 — 2026-03-25
+- **Task:** F15 — 에이전트 가이드 최종 검증 + ERD 문서
+- **변경 파일:** tests/test_f15_agent_guide.py, ARCHITECTURE.md, analysis/alerts.py, analysis/alerts_watch.py, analysis/screener.py, analysis/sentiment.py, data/fetch_gold_krx.py, data/realtime.py, db/aggregate.py, db/init_db.py, db/maintenance.py, reports/closing.py, reports/daily.py, reports/weekly.py, scripts/read_news.py, tests/test_f02_schema.py, tests/test_f09_fx_pnl.py, tests/test_infra.py, utils/engine_status.py, utils/http.py
+- **결과:** 성공 (362 tests passed, F15 29개 + 기존 333개)
+- **메모:** AGENT_GUIDE.md/ARCHITECTURE.md/JARVIS_INTEGRATION.md의 JSON 예시가 실제 utils/schema.py 스키마와 일치하는지 자동 검증(8개 테스트). DB 쿼리 예시가 실제 스키마에서 실행 가능한지 검증(5개). ERD 테이블/컬럼 일치 검증(5개). JARVIS_INTEGRATION.md 동기화 검증(5개). ARCHITECTURE.md 정확성 검증(6개). ARCHITECTURE.md의 portfolio_summary.json 예시를 실제 구조(exchange_rate+total nested 구조, sectors 배열, risk 필드명)에 맞게 수정. ruff 기존 경고 9개 정리(미사용 import 4개, 모호 변수명, lambda→def, 미사용 변수).

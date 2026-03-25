@@ -4,6 +4,7 @@ SQLite 데이터베이스 스키마 초기화
 원시 테이블 (prices, macro, news, alerts) + 집계 테이블 (prices_daily, macro_daily) + 기록 테이블 (portfolio_history)
 마이그레이션 안전: 기존 DB에서 실행해도 데이터 보존
 """
+
 import sqlite3
 import sys
 from pathlib import Path

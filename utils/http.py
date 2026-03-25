@@ -2,6 +2,7 @@
 공통 HTTP 헬퍼 모듈 — 재시도 + 서킷 브레이커 + 이상값 감지
 모든 수집 모듈(fetch_prices, fetch_macro, fetch_news)에서 공통 사용
 """
+
 import time
 import urllib.error
 import urllib.request
@@ -34,14 +35,18 @@ def retry_request(url, headers=None, timeout=10, max_retries=3, base_delay=1):
                 raise
             # 5xx, 429 → 재시도
             if attempt < max_retries - 1:
-                delay = base_delay * (2 ** attempt)
-                print(f"    🔄 HTTP {e.code} 재시도 ({attempt + 1}/{max_retries}), {delay}초 대기")
+                delay = base_delay * (2**attempt)
+                print(
+                    f"    🔄 HTTP {e.code} 재시도 ({attempt + 1}/{max_retries}), {delay}초 대기"
+                )
                 time.sleep(delay)
         except urllib.error.URLError as e:
             last_error = e
             if attempt < max_retries - 1:
-                delay = base_delay * (2 ** attempt)
-                print(f"    🔄 네트워크 오류 재시도 ({attempt + 1}/{max_retries}), {delay}초 대기: {e}")
+                delay = base_delay * (2**attempt)
+                print(
+                    f"    🔄 네트워크 오류 재시도 ({attempt + 1}/{max_retries}), {delay}초 대기: {e}"
+                )
                 time.sleep(delay)
 
     raise last_error
@@ -99,7 +104,9 @@ class CircuitBreaker:
         if info["failures"] >= self.failure_threshold:
             info["state"] = "open"
             info["opened_at"] = time.time()
-            print(f"    ⚡ 서킷 OPEN: {source} (연속 {info['failures']}회 실패, {self.recovery_timeout}초 차단)")
+            print(
+                f"    ⚡ 서킷 OPEN: {source} (연속 {info['failures']}회 실패, {self.recovery_timeout}초 차단)"
+            )
 
     def record_success(self, source):
         """성공 기록 — 카운터 리셋"""

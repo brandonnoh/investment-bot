@@ -4,6 +4,7 @@
 Yahoo Finance API로 섹터별 주요 종목/ETF 분석
 출력: output/intel/screener.md
 """
+
 import json
 import sys
 import urllib.request
@@ -14,7 +15,6 @@ from pathlib import Path
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import OUTPUT_DIR, YAHOO_HEADERS, YAHOO_TIMEOUT
-from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))
 
@@ -90,7 +90,9 @@ def analyze_ticker(ticker_info: dict) -> dict | None:
                 month_return = round((price - first_close) / first_close * 100, 2)
 
         # 전일 대비 변동률
-        day_change = round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+        day_change = (
+            round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+        )
 
         volume = meta.get("regularMarketVolume", 0)
 
@@ -121,8 +123,14 @@ def screen_sectors() -> dict:
             if result:
                 results.append(result)
                 status = "🔺" if (result.get("month_return") or 0) > 0 else "🔻"
-                month_str = f"{result['month_return']:+.2f}%" if result['month_return'] is not None else "N/A"
-                print(f"    {status} {result['name']}: {result['price']:,.2f} (1M: {month_str})")
+                month_str = (
+                    f"{result['month_return']:+.2f}%"
+                    if result["month_return"] is not None
+                    else "N/A"
+                )
+                print(
+                    f"    {status} {result['name']}: {result['price']:,.2f} (1M: {month_str})"
+                )
 
         # 1개월 수익률 기준 정렬
         results.sort(key=lambda x: x.get("month_return") or -999, reverse=True)
@@ -140,16 +148,21 @@ def pick_highlights(sector_results: dict) -> list[dict]:
     for sector_name, data in sector_results.items():
         for stock in data["stocks"]:
             if stock.get("month_return") is not None:
-                candidates.append({
-                    **stock,
-                    "sector": sector_name,
-                })
+                candidates.append(
+                    {
+                        **stock,
+                        "sector": sector_name,
+                    }
+                )
 
     # 1개월 수익률 상위 + 일간 양전환 우선
-    candidates.sort(key=lambda x: (
-        x.get("month_return", -999),
-        x.get("day_change", 0),
-    ), reverse=True)
+    candidates.sort(
+        key=lambda x: (
+            x.get("month_return", -999),
+            x.get("day_change", 0),
+        ),
+        reverse=True,
+    )
 
     return candidates[:5]
 
@@ -172,11 +185,17 @@ def generate_screener_report(sector_results: dict, highlights: list[dict]) -> st
         lines.append("| 순위 | 종목 | 섹터 | 현재가 | 1개월 수익률 | 일간 등락 |")
         lines.append("|------|------|------|--------|-------------|----------|")
         for i, h in enumerate(highlights, 1):
-            price_str = f"${h['price']:,.2f}" if h["market"] == "US" else f"{h['price']:,.0f}원"
-            month_str = f"{h['month_return']:+.2f}%" if h['month_return'] is not None else "N/A"
+            price_str = (
+                f"${h['price']:,.2f}" if h["market"] == "US" else f"{h['price']:,.0f}원"
+            )
+            month_str = (
+                f"{h['month_return']:+.2f}%" if h["month_return"] is not None else "N/A"
+            )
             day_str = f"{h['day_change']:+.2f}%"
             flag = "🔺" if (h.get("month_return") or 0) > 0 else "🔻"
-            lines.append(f"| {i} | {flag} {h['name']} ({h['ticker']}) | {h['sector']} | {price_str} | {month_str} | {day_str} |")
+            lines.append(
+                f"| {i} | {flag} {h['name']} ({h['ticker']}) | {h['sector']} | {price_str} | {month_str} | {day_str} |"
+            )
         lines.append("")
     else:
         lines.append("> 분석 데이터 부족")
@@ -196,12 +215,22 @@ def generate_screener_report(sector_results: dict, highlights: list[dict]) -> st
             lines.append("| 종목 | 현재가 | 전일比 | 1개월 수익률 | 거래량 |")
             lines.append("|------|--------|--------|-------------|--------|")
             for s in stocks:
-                price_str = f"${s['price']:,.2f}" if s["market"] == "US" else f"{s['price']:,.0f}원"
+                price_str = (
+                    f"${s['price']:,.2f}"
+                    if s["market"] == "US"
+                    else f"{s['price']:,.0f}원"
+                )
                 day_str = f"{s['day_change']:+.2f}%"
-                month_str = f"{s['month_return']:+.2f}%" if s['month_return'] is not None else "N/A"
-                vol_str = f"{s['volume']:,.0f}" if s['volume'] else "N/A"
-                flag = "🟢" if s['day_change'] >= 0 else "🔴"
-                lines.append(f"| {flag} {s['name']} | {price_str} | {day_str} | {month_str} | {vol_str} |")
+                month_str = (
+                    f"{s['month_return']:+.2f}%"
+                    if s["month_return"] is not None
+                    else "N/A"
+                )
+                vol_str = f"{s['volume']:,.0f}" if s["volume"] else "N/A"
+                flag = "🟢" if s["day_change"] >= 0 else "🔴"
+                lines.append(
+                    f"| {flag} {s['name']} | {price_str} | {day_str} | {month_str} | {vol_str} |"
+                )
             lines.append("")
         else:
             lines.append("> 데이터 수집 실패")
@@ -216,7 +245,9 @@ def generate_screener_report(sector_results: dict, highlights: list[dict]) -> st
 
 def run():
     """스크리너 파이프라인 실행"""
-    print(f"\n🔍 종목 스크리너 시작 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}")
+    print(
+        f"\n🔍 종목 스크리너 시작 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}"
+    )
 
     # 섹터별 분석
     sector_results = screen_sectors()

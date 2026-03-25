@@ -4,6 +4,7 @@
 포트폴리오 주간 성과, 섹터 로테이션, 신규 주목 종목
 출력: output/intel/weekly_report.md
 """
+
 import json
 import sqlite3
 import sys
@@ -12,7 +13,7 @@ from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import PORTFOLIO, DB_PATH, OUTPUT_DIR
+from config import DB_PATH, OUTPUT_DIR
 from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))
@@ -50,11 +51,13 @@ def get_weekly_price_history() -> dict:
     for ticker, name, price, change_pct, ts in rows:
         if ticker not in history:
             history[ticker] = {"name": name, "records": []}
-        history[ticker]["records"].append({
-            "price": price,
-            "change_pct": change_pct,
-            "timestamp": ts,
-        })
+        history[ticker]["records"].append(
+            {
+                "price": price,
+                "change_pct": change_pct,
+                "timestamp": ts,
+            }
+        )
 
     return history
 
@@ -81,16 +84,18 @@ def calculate_weekly_performance(history: dict) -> list[dict]:
         high = max(prices) if prices else last_price
         low = min(prices) if prices else last_price
 
-        performances.append({
-            "ticker": ticker,
-            "name": data["name"],
-            "start_price": first_price,
-            "end_price": last_price,
-            "weekly_return": weekly_return,
-            "high": high,
-            "low": low,
-            "data_points": len(records),
-        })
+        performances.append(
+            {
+                "ticker": ticker,
+                "name": data["name"],
+                "start_price": first_price,
+                "end_price": last_price,
+                "weekly_return": weekly_return,
+                "high": high,
+                "low": low,
+                "data_points": len(records),
+            }
+        )
 
     performances.sort(key=lambda x: x["weekly_return"], reverse=True)
     return performances
@@ -132,12 +137,14 @@ def get_weekly_macro_history() -> list[dict]:
             change = round((last - first) / first * 100, 2)
         else:
             change = 0.0
-        results.append({
-            "indicator": indicator,
-            "start_value": first,
-            "end_value": last,
-            "weekly_change": change,
-        })
+        results.append(
+            {
+                "indicator": indicator,
+                "start_value": first,
+                "end_value": last,
+                "weekly_change": change,
+            }
+        )
 
     results.sort(key=lambda x: abs(x["weekly_change"]), reverse=True)
     return results
@@ -213,8 +220,12 @@ def format_portfolio_analysis(portfolio_data: dict | None) -> str:
     total = portfolio_data.get("total", {})
     if total.get("pnl_pct") is not None:
         flag = "🟢" if total["pnl_pct"] >= 0 else "🔴"
-        lines.append(f"- {flag} **총 수익률**: {total['pnl_pct']:+.2f}% ({total['pnl_krw']:+,.0f}원)")
-        lines.append(f"- 투자금: {total['invested_krw']:,.0f}원 → 평가액: {total['current_value_krw']:,.0f}원")
+        lines.append(
+            f"- {flag} **총 수익률**: {total['pnl_pct']:+.2f}% ({total['pnl_krw']:+,.0f}원)"
+        )
+        lines.append(
+            f"- 투자금: {total['invested_krw']:,.0f}원 → 평가액: {total['current_value_krw']:,.0f}원"
+        )
     lines.append(f"- 적용 환율: {portfolio_data.get('exchange_rate', 0):,.2f}원/USD")
     lines.append("")
 
@@ -227,7 +238,9 @@ def format_portfolio_analysis(portfolio_data: dict | None) -> str:
         for s in sectors:
             pnl_str = f"{s['pnl_pct']:+.2f}%" if s.get("pnl_pct") is not None else "N/A"
             stocks_str = ", ".join(s.get("stocks", []))
-            lines.append(f"| {s['sector']} | {s['weight_pct']}% | {pnl_str} | {stocks_str} |")
+            lines.append(
+                f"| {s['sector']} | {s['weight_pct']}% | {pnl_str} | {stocks_str} |"
+            )
         lines.append("")
 
     # 리스크 지표

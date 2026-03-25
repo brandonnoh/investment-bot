@@ -14,6 +14,7 @@
     3. Brave Search API → 최신 뉴스/이벤트 수집
     4. 위 3가지를 조합하여 텔레그램 리포트 작성
 """
+
 import json
 import os
 import sqlite3
@@ -25,7 +26,7 @@ from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import PORTFOLIO, MACRO_INDICATORS, DB_PATH, YAHOO_HEADERS, YAHOO_TIMEOUT, get_market
+from config import PORTFOLIO, MACRO_INDICATORS, DB_PATH, YAHOO_HEADERS, YAHOO_TIMEOUT
 
 KST = timezone(timedelta(hours=9))
 
@@ -46,10 +47,10 @@ def _extract_kr_code(ticker: str) -> str:
 def fetch_naver_price(code: str) -> dict:
     """네이버 금융 실시간 주가 조회 (한국 주식 전용)"""
     url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{code}"
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0",
-        "Referer": "https://finance.naver.com"
-    })
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com"},
+    )
     with urllib.request.urlopen(req, timeout=8) as r:
         d = json.load(r)
     data = d["datas"][0]
@@ -75,6 +76,7 @@ def _fetch_kr_stock(code: str) -> dict:
     if os.environ.get("KIWOOM_APPKEY"):
         try:
             from data.fetch_gold_krx import fetch_kiwoom_stock
+
             result = fetch_kiwoom_stock(code)
             return result
         except Exception as e:
@@ -89,10 +91,10 @@ NAVER_INDEX_CODES = {"KOSPI", "KOSDAQ"}
 def fetch_naver_index(code: str) -> dict:
     """네이버 금융 실시간 지수 조회 (코스피/코스닥)"""
     url = f"https://polling.finance.naver.com/api/realtime/domestic/index/{code}"
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0",
-        "Referer": "https://finance.naver.com"
-    })
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com"},
+    )
     with urllib.request.urlopen(req, timeout=8) as r:
         d = json.load(r)
     data = d["datas"][0]
@@ -114,9 +116,17 @@ def fetch_yahoo_quote(ticker: str) -> dict:
         # 장중 고가/저가 추출
         indicators = result[0].get("indicators", {}).get("quote", [{}])[0]
         if indicators.get("high"):
-            meta["_dayHigh"] = max(h for h in indicators["high"] if h is not None) if any(h is not None for h in indicators["high"]) else None
+            meta["_dayHigh"] = (
+                max(h for h in indicators["high"] if h is not None)
+                if any(h is not None for h in indicators["high"])
+                else None
+            )
         if indicators.get("low"):
-            meta["_dayLow"] = min(l for l in indicators["low"] if l is not None) if any(l is not None for l in indicators["low"]) else None
+            meta["_dayLow"] = (
+                min(v for v in indicators["low"] if v is not None)
+                if any(v is not None for v in indicators["low"])
+                else None
+            )
         return meta
 
 
@@ -129,6 +139,7 @@ def fetch_gold_krw_per_gram() -> dict:
     if os.environ.get("KIWOOM_APPKEY"):
         try:
             from data.fetch_gold_krx import fetch_gold_krx
+
             krx = fetch_gold_krx()
             print("  🥇 KRX 금 현물(키움 API) 사용", file=sys.stderr)
             return {
@@ -144,7 +155,9 @@ def fetch_gold_krw_per_gram() -> dict:
     fx_meta = fetch_yahoo_quote("KRW=X")
     gold_usd = gold_meta["regularMarketPrice"]
     usd_krw = fx_meta["regularMarketPrice"]
-    gold_prev = gold_meta.get("chartPreviousClose", gold_meta.get("previousClose", gold_usd))
+    gold_prev = gold_meta.get(
+        "chartPreviousClose", gold_meta.get("previousClose", gold_usd)
+    )
     fx_prev = fx_meta.get("chartPreviousClose", fx_meta.get("previousClose", usd_krw))
 
     price = round(gold_usd * usd_krw / 31.1035, 0)
@@ -214,8 +227,12 @@ def run():
     lines.append("## 💼 포트폴리오 종목")
     lines.append("")
     lines.append("> 오늘등락: 전일 대비 | 매입손익: 평균 매입가 대비\n")
-    lines.append("| 종목 | 현재가 | 오늘등락 | 매입손익 | 오늘 고가 | 오늘 저가 | 오전비 |")
-    lines.append("|------|--------|----------|----------|-----------|-----------|--------|")
+    lines.append(
+        "| 종목 | 현재가 | 오늘등락 | 매입손익 | 오늘 고가 | 오늘 저가 | 오전비 |"
+    )
+    lines.append(
+        "|------|--------|----------|----------|-----------|-----------|--------|"
+    )
 
     for stock in PORTFOLIO:
         ticker = stock["ticker"]
@@ -238,13 +255,19 @@ def run():
             else:
                 meta = fetch_yahoo_quote(ticker)
                 price = meta["regularMarketPrice"]
-                prev_close = meta.get("chartPreviousClose", meta.get("previousClose", price))
+                prev_close = meta.get(
+                    "chartPreviousClose", meta.get("previousClose", price)
+                )
                 day_high = meta.get("_dayHigh")
                 day_low = meta.get("_dayLow")
 
-            change_pct = round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+            change_pct = (
+                round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+            )
             avg_cost = stock["avg_cost"]
-            pnl_pct = round((price - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
+            pnl_pct = (
+                round((price - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
+            )
 
             # DB 이력 비교: 오전 첫 수집 대비 변화
             history = get_today_db_prices(ticker)
@@ -284,8 +307,14 @@ def run():
             else:
                 meta = fetch_yahoo_quote(ticker)
                 value = meta["regularMarketPrice"]
-                prev_close = meta.get("chartPreviousClose", meta.get("previousClose", value))
-                change_pct = round((value - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+                prev_close = meta.get(
+                    "chartPreviousClose", meta.get("previousClose", value)
+                )
+                change_pct = (
+                    round((value - prev_close) / prev_close * 100, 2)
+                    if prev_close
+                    else 0.0
+                )
 
             # DB 이력 비교
             history = get_today_db_macro(name)
@@ -302,7 +331,9 @@ def run():
             else:
                 val_str = f"{value:,.2f}"
 
-            lines.append(f"| {name} | {val_str} | {fmt_change(change_pct)} | {morning_str} |")
+            lines.append(
+                f"| {name} | {val_str} | {fmt_change(change_pct)} | {morning_str} |"
+            )
 
         except Exception as e:
             lines.append(f"| {name} | ❌ 조회실패 | — | — |")

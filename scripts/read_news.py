@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """자비스가 DB 뉴스를 읽기 위한 헬퍼 스크립트"""
+
 import sqlite3
 from pathlib import Path
 

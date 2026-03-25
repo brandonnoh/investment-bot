@@ -4,6 +4,7 @@ F02 테스트 — DB 스키마 재설계
 prices_daily, macro_daily, portfolio_history 테이블,
 data_source/sentiment 컬럼, 인덱스, 마이그레이션 안전 검증
 """
+
 import sqlite3
 import sys
 from pathlib import Path
@@ -69,8 +70,16 @@ class TestSchemaCreation:
         """prices_daily 테이블 컬럼 검증"""
         cols = get_column_names(db_conn, "prices_daily")
         expected = [
-            "id", "ticker", "date", "open", "high", "low", "close",
-            "volume", "change_pct", "data_source",
+            "id",
+            "ticker",
+            "date",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "change_pct",
+            "data_source",
         ]
         for col in expected:
             assert col in cols, f"prices_daily 컬럼 '{col}' 누락"
@@ -79,7 +88,13 @@ class TestSchemaCreation:
         """macro_daily 테이블 컬럼 검증"""
         cols = get_column_names(db_conn, "macro_daily")
         expected = [
-            "id", "indicator", "date", "open", "high", "low", "close",
+            "id",
+            "indicator",
+            "date",
+            "open",
+            "high",
+            "low",
+            "close",
             "change_pct",
         ]
         for col in expected:
@@ -89,8 +104,14 @@ class TestSchemaCreation:
         """portfolio_history 테이블 컬럼 검증"""
         cols = get_column_names(db_conn, "portfolio_history")
         expected = [
-            "id", "date", "total_value_krw", "total_invested_krw",
-            "total_pnl_krw", "total_pnl_pct", "fx_rate", "fx_pnl_krw",
+            "id",
+            "date",
+            "total_value_krw",
+            "total_invested_krw",
+            "total_pnl_krw",
+            "total_pnl_pct",
+            "fx_rate",
+            "fx_pnl_krw",
             "holdings_snapshot",
         ]
         for col in expected:
@@ -173,12 +194,16 @@ class TestCRUD:
     def test_portfolio_history_insert_and_query(self, db_conn):
         """portfolio_history CRUD"""
         import json
+
         holdings = json.dumps([{"ticker": "005930.KS", "value": 3444000}])
-        db_conn.execute("""
+        db_conn.execute(
+            """
             INSERT INTO portfolio_history
             (date, total_value_krw, total_invested_krw, total_pnl_krw, total_pnl_pct, fx_rate, fx_pnl_krw, holdings_snapshot)
             VALUES ('2026-03-25', 50000000, 48000000, 2000000, 4.17, 1380.5, 150000, ?)
-        """, (holdings,))
+        """,
+            (holdings,),
+        )
         db_conn.commit()
         row = db_conn.execute(
             "SELECT * FROM portfolio_history WHERE date='2026-03-25'"
@@ -195,7 +220,9 @@ class TestCRUD:
             VALUES ('TSLA', '테슬라', 275.5, 270.0, 2.04, 80000000, '2026-03-25T04:00:00+09:00', 'US')
         """)
         db_conn.commit()
-        row = db_conn.execute("SELECT data_source FROM prices WHERE ticker='TSLA'").fetchone()
+        row = db_conn.execute(
+            "SELECT data_source FROM prices WHERE ticker='TSLA'"
+        ).fetchone()
         assert row is not None
         assert row["data_source"] is None
 
@@ -206,7 +233,9 @@ class TestCRUD:
             VALUES ('테스트 뉴스', '요약', 'RSS', 'http://test.com', '2026-03-25', 0.5, '[]', 'stock')
         """)
         db_conn.commit()
-        row = db_conn.execute("SELECT sentiment FROM news WHERE title='테스트 뉴스'").fetchone()
+        row = db_conn.execute(
+            "SELECT sentiment FROM news WHERE title='테스트 뉴스'"
+        ).fetchone()
         assert row is not None
         assert row["sentiment"] is None
 
@@ -266,6 +295,7 @@ class TestMigrationSafety:
     def test_migrate_adds_data_source_to_prices(self):
         """기존 prices 테이블에 data_source 컬럼 추가"""
         from db.init_db import init_schema
+
         conn = sqlite3.connect(":memory:")
         conn.row_factory = sqlite3.Row
         # 기존 스키마 (data_source 없음)
@@ -302,6 +332,7 @@ class TestMigrationSafety:
     def test_migrate_adds_sentiment_to_news(self):
         """기존 news 테이블에 sentiment 컬럼 추가"""
         from db.init_db import init_schema
+
         conn = sqlite3.connect(":memory:")
         conn.row_factory = sqlite3.Row
         # 기존 스키마 (sentiment 없음)
@@ -334,11 +365,16 @@ class TestMigrationSafety:
     def test_migrate_creates_new_tables(self):
         """기존 DB에 새 테이블들이 추가됨"""
         from db.init_db import init_schema
+
         conn = sqlite3.connect(":memory:")
         conn.row_factory = sqlite3.Row
         # 기존 테이블만 생성
-        conn.execute("CREATE TABLE prices (id INTEGER PRIMARY KEY, ticker TEXT, name TEXT NOT NULL, price REAL NOT NULL, timestamp TEXT NOT NULL)")
-        conn.execute("CREATE TABLE macro (id INTEGER PRIMARY KEY, indicator TEXT NOT NULL, value REAL NOT NULL, timestamp TEXT NOT NULL)")
+        conn.execute(
+            "CREATE TABLE prices (id INTEGER PRIMARY KEY, ticker TEXT, name TEXT NOT NULL, price REAL NOT NULL, timestamp TEXT NOT NULL)"
+        )
+        conn.execute(
+            "CREATE TABLE macro (id INTEGER PRIMARY KEY, indicator TEXT NOT NULL, value REAL NOT NULL, timestamp TEXT NOT NULL)"
+        )
         conn.commit()
 
         init_schema(conn)
@@ -352,6 +388,7 @@ class TestMigrationSafety:
     def test_idempotent_migration(self):
         """init_schema를 두 번 실행해도 안전"""
         from db.init_db import init_schema
+
         conn = sqlite3.connect(":memory:")
         conn.row_factory = sqlite3.Row
         init_schema(conn)

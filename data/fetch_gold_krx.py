@@ -7,6 +7,7 @@
     python3 data/fetch_gold_krx.py          # 금 현물
     python3 data/fetch_gold_krx.py 005930   # 삼성전자
 """
+
 import json
 import os
 import sys
@@ -54,10 +55,13 @@ def _save_token(token: str, expires_in: int):
     """토큰을 파일에 캐시"""
     expires_at = datetime.now(KST) + timedelta(seconds=expires_in)
     with open(TOKEN_CACHE_PATH, "w") as f:
-        json.dump({
-            "access_token": token,
-            "expires_at": expires_at.isoformat(),
-        }, f)
+        json.dump(
+            {
+                "access_token": token,
+                "expires_at": expires_at.isoformat(),
+            },
+            f,
+        )
 
 
 def get_token() -> str:
@@ -67,11 +71,13 @@ def get_token() -> str:
         return cached
 
     appkey, secret = _get_env()
-    body = json.dumps({
-        "grant_type": "client_credentials",
-        "appkey": appkey,
-        "secretkey": secret,
-    }).encode("utf-8")
+    body = json.dumps(
+        {
+            "grant_type": "client_credentials",
+            "appkey": appkey,
+            "secretkey": secret,
+        }
+    ).encode("utf-8")
 
     req = urllib.request.Request(
         KIWOOM_TOKEN_URL,
@@ -123,11 +129,11 @@ def fetch_gold_krx() -> dict:
 
     # 응답 필드 파싱
     pred_close_raw = data.get("pred_close_pric", "")  # 전일종가
-    pred_pre_raw = data.get("pred_pre", "")            # 전일대비 (부호 포함)
-    flu_rt_raw = data.get("flu_rt", "")                # 등락율 (부호 포함)
-    high_raw = data.get("high_pric", "")               # 고가 (부호 포함)
-    low_raw = data.get("low_pric", "")                 # 저가 (부호 포함)
-    trde_qty_raw = data.get("trde_qty", "")            # 거래량
+    pred_pre_raw = data.get("pred_pre", "")  # 전일대비 (부호 포함)
+    flu_rt_raw = data.get("flu_rt", "")  # 등락율 (부호 포함)
+    high_raw = data.get("high_pric", "")  # 고가 (부호 포함)
+    low_raw = data.get("low_pric", "")  # 저가 (부호 포함)
+    trde_qty_raw = data.get("trde_qty", "")  # 거래량
 
     if not pred_close_raw:
         raise ValueError("장외 시간 — 시세 데이터 없음")
@@ -203,8 +209,10 @@ def fetch_kiwoom_stock(code: str) -> dict:
 
     price = int(_strip_sign(cur_prc))
     prev_close = int(pred_close)
-    change_pct = float(flu_rt.replace("+", "")) if flu_rt else (
-        round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
+    change_pct = (
+        float(flu_rt.replace("+", ""))
+        if flu_rt
+        else (round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0)
     )
     volume = int(trde_qty) if trde_qty else 0
     high = int(_strip_sign(high_pric)) if high_pric else price
@@ -222,6 +230,7 @@ def fetch_kiwoom_stock(code: str) -> dict:
 
 if __name__ == "__main__":
     import sys as _sys
+
     code = _sys.argv[1] if len(_sys.argv) > 1 else None
     try:
         if code:

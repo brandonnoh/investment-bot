@@ -215,7 +215,7 @@ data/
 | `portfolio.py` | portfolio_history 테이블 | 일별 총 자산, 수익률 추이 |
 | `alerts_watch.py` | alerts.json | 임계값 초과 실시간 감지 |
 | `screener.py` | screener.md | 섹터별 종목 스크리닝 |
-| `news_sentiment.py` (신규) | news.json sentiment 필드 | 종목별 뉴스 감성 점수 |
+| `sentiment.py` | news.json sentiment 필드 | 한/영 키워드 기반 종목별 뉴스 감성 점수 |
 
 ### 기술 분석 지표 (price_analysis.json)
 ```json
@@ -245,24 +245,43 @@ data/
 ```json
 {
   "updated_at": "2026-03-25T16:00:00+09:00",
-  "total_value_krw": 45230000,
-  "total_invested_krw": 42000000,
-  "total_pnl_krw": 3230000,
-  "total_pnl_pct": 7.69,
-  "fx_pnl_krw": -180000,
-  "stock_pnl_krw": 3410000,
-  "sector_weights": {
-    "반도체": 35.2, "자동차": 18.1, "에너지": 12.4,
-    "방산": 15.8, "AI인프라": 10.3, "실물자산": 8.2
+  "exchange_rate": 1450.0,
+  "total": {
+    "invested_krw": 42000000,
+    "current_value_krw": 45230000,
+    "pnl_krw": 3230000,
+    "pnl_pct": 7.69,
+    "stock_pnl_krw": 3410000,
+    "fx_pnl_krw": -180000
   },
+  "holdings": [
+    {
+      "ticker": "005930.KS",
+      "name": "삼성전자",
+      "sector": "반도체",
+      "currency": "KRW",
+      "price": 188700,
+      "avg_cost": 203102,
+      "qty": 42,
+      "current_value_krw": 7925400,
+      "invested_krw": 8530284,
+      "pnl_krw": -604884,
+      "pnl_pct": -7.09,
+      "stock_pnl_krw": -604884,
+      "fx_pnl_krw": 0
+    }
+  ],
+  "sectors": [
+    {"sector": "반도체", "weight_pct": 35.2, "value_krw": 7925400, "pnl_pct": -7.09, "stocks": ["삼성전자"]}
+  ],
   "risk": {
-    "max_drawdown_30d": -4.2,
-    "daily_volatility": 1.8,
-    "concentration_top3": 68.5
+    "max_drawdown_pct": 4.2,
+    "volatility_daily": 1.8,
+    "worst_performer": {"name": "삼성전자", "pnl_pct": -7.09},
+    "best_performer": {"name": "테슬라", "pnl_pct": 12.3}
   },
-  "pnl_history_30d": [
-    {"date": "2026-02-24", "pnl_pct": 5.2},
-    {"date": "2026-02-25", "pnl_pct": 5.8}
+  "history": [
+    {"date": "2026-02-24", "total_value_krw": 44500000, "total_invested_krw": 42000000, "total_pnl_krw": 2500000, "total_pnl_pct": 5.95, "fx_rate": 1445.0}
   ]
 }
 ```

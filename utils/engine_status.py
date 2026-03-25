@@ -24,7 +24,9 @@ class EngineStatus:
         """상태 초기화 (테스트용)"""
         self._modules = {}
 
-    def record(self, module_name, *, success, item_count=0, error_count=0, error_msg=None):
+    def record(
+        self, module_name, *, success, item_count=0, error_count=0, error_msg=None
+    ):
         """모듈 실행 결과 기록
 
         Args:
@@ -120,9 +122,11 @@ def build_engine_status(status, *, db_path=None, output_dir=None):
     """
     if db_path is None:
         from config import DB_PATH
+
         db_path = DB_PATH
     if output_dir is None:
         from config import OUTPUT_DIR
+
         output_dir = OUTPUT_DIR
 
     output_dir = Path(output_dir)
@@ -169,6 +173,7 @@ def save_engine_status(data, *, output_dir=None):
     """
     if output_dir is None:
         from config import OUTPUT_DIR
+
         output_dir = OUTPUT_DIR
 
     output_dir = Path(output_dir)
@@ -200,6 +205,8 @@ def run(status=None, *, db_path=None, output_dir=None):
     save_engine_status(data, output_dir=output_dir)
 
     ok_str = "✅" if data["pipeline_ok"] else "⚠️"
-    print(f"\n{ok_str} 엔진 상태: 에러 {data['total_errors']}건, DB {data['db_size_mb']}MB")
+    print(
+        f"\n{ok_str} 엔진 상태: 에러 {data['total_errors']}건, DB {data['db_size_mb']}MB"
+    )
 
     return data

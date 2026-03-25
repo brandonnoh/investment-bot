@@ -1,8 +1,8 @@
 {
   "summary": {
     "total": 15,
-    "passing": 13,
-    "failing": 2,
+    "passing": 15,
+    "failing": 0,
     "last_updated": "2026-03-25"
   },
   "features": [
@@ -235,7 +235,8 @@
     {
       "id": "F15",
       "description": "에이전트 사용 가이드 최종 검증 + ERD 문서",
-      "status": "failing",
+      "status": "passing",
+      "summary": "AGENT_GUIDE.md/ARCHITECTURE.md/JARVIS_INTEGRATION.md JSON 예시-실제 스키마 일치 검증, DB 쿼리 실행 가능 검증, ERD 테이블/컬럼 일치, ARCHITECTURE.md portfolio_summary.json 예시 수정(flat→nested total 구조), ruff 기존 경고 정리 (29 tests, 전체 362 passed)",
       "priority": 6,
       "depends_on": ["F02", "F07", "F08", "F09", "F13", "F14"],
       "acceptance_criteria": [

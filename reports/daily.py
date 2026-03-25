@@ -4,6 +4,7 @@
 포트폴리오 현황, 매크로 요약, 알림 요약을 통합
 출력: output/intel/daily_report.md
 """
+
 import json
 import sys
 from datetime import datetime, timezone, timedelta
@@ -41,7 +42,9 @@ def format_price_section(prices_data: dict | None) -> str:
         lines.append("|------|--------|--------|--------|------|")
         for p in kr_stocks:
             if p.get("price") is None:
-                lines.append(f"| {p['name']} | ❌ 조회실패 | — | — | {p.get('account', '')} |")
+                lines.append(
+                    f"| {p['name']} | ❌ 조회실패 | — | — | {p.get('account', '')} |"
+                )
                 continue
             chg = p.get("change_pct", 0)
             pnl = p.get("pnl_pct")
@@ -60,7 +63,9 @@ def format_price_section(prices_data: dict | None) -> str:
         lines.append("|------|--------|--------|--------|------|")
         for p in us_stocks:
             if p.get("price") is None:
-                lines.append(f"| {p['name']} | ❌ 조회실패 | — | — | {p.get('account', '')} |")
+                lines.append(
+                    f"| {p['name']} | ❌ 조회실패 | — | — | {p.get('account', '')} |"
+                )
                 continue
             chg = p.get("change_pct", 0)
             pnl = p.get("pnl_pct")
@@ -102,11 +107,14 @@ def format_portfolio_summary(prices_data: dict | None) -> str:
         current = totals["current"]
         pnl = current - invested
         pnl_pct = pnl / invested * 100 if invested > 0 else 0
-        symbol = "원" if cur == "KRW" else "$"
         if cur == "KRW":
-            lines.append(f"- **{cur}**: 투자 {invested:,.0f}원 → 현재 {current:,.0f}원 ({pnl_pct:+.2f}%)")
+            lines.append(
+                f"- **{cur}**: 투자 {invested:,.0f}원 → 현재 {current:,.0f}원 ({pnl_pct:+.2f}%)"
+            )
         else:
-            lines.append(f"- **{cur}**: 투자 ${invested:,.2f} → 현재 ${current:,.2f} ({pnl_pct:+.2f}%)")
+            lines.append(
+                f"- **{cur}**: 투자 ${invested:,.2f} → 현재 ${current:,.2f} ({pnl_pct:+.2f}%)"
+            )
 
     lines.append("")
     return "\n".join(lines)
@@ -155,7 +163,9 @@ def format_alerts_section(alerts_data: dict | None) -> str:
     lines = ["## 🚨 알림\n"]
     # 레벨순 정렬: RED > YELLOW > GREEN
     level_order = {"RED": 0, "YELLOW": 1, "GREEN": 2}
-    sorted_alerts = sorted(alerts, key=lambda a: level_order.get(a.get("level", "GREEN"), 3))
+    sorted_alerts = sorted(
+        alerts, key=lambda a: level_order.get(a.get("level", "GREEN"), 3)
+    )
 
     for a in sorted_alerts:
         lines.append(f"- {a['message']}")

@@ -4,7 +4,7 @@
 오늘 수집된 DB 이력으로 시가/고가/저가/종가 + 최종 손익 계산
 출력: output/intel/closing_report.md
 """
-import json
+
 import sqlite3
 import sys
 from datetime import datetime, timezone, timedelta
@@ -139,10 +139,14 @@ def generate_closing_report() -> str:
         prev_close = ohlc["prev_close"]
 
         # 전일 대비 변동률
-        change_pct = round((close - prev_close) / prev_close * 100, 2) if prev_close else None
+        change_pct = (
+            round((close - prev_close) / prev_close * 100, 2) if prev_close else None
+        )
 
         # 평단 대비 손익률
-        pnl_pct = round((close - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
+        pnl_pct = (
+            round((close - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
+        )
 
         # 포트폴리오 손익 집계
         if avg_cost > 0:
@@ -172,14 +176,18 @@ def generate_closing_report() -> str:
         pnl_krw = total_current_krw - total_invested_krw
         pnl_pct_krw = pnl_krw / total_invested_krw * 100
         emoji_krw = "🟢" if pnl_krw >= 0 else "🔴"
-        lines.append(f"- **KRW 포트폴리오**: 투자 {total_invested_krw:,.0f}원 → 현재 {total_current_krw:,.0f}원")
+        lines.append(
+            f"- **KRW 포트폴리오**: 투자 {total_invested_krw:,.0f}원 → 현재 {total_current_krw:,.0f}원"
+        )
         lines.append(f"  - {emoji_krw} 손익: {pnl_krw:+,.0f}원 ({pnl_pct_krw:+.2f}%)")
 
     if total_invested_usd > 0:
         pnl_usd = total_current_usd - total_invested_usd
         pnl_pct_usd = pnl_usd / total_invested_usd * 100
         emoji_usd = "🟢" if pnl_usd >= 0 else "🔴"
-        lines.append(f"- **USD 포트폴리오**: 투자 ${total_invested_usd:,.2f} → 현재 ${total_current_usd:,.2f}")
+        lines.append(
+            f"- **USD 포트폴리오**: 투자 ${total_invested_usd:,.2f} → 현재 ${total_current_usd:,.2f}"
+        )
         lines.append(f"  - {emoji_usd} 손익: ${pnl_usd:+,.2f} ({pnl_pct_usd:+.2f}%)")
 
     if total_invested_krw == 0 and total_invested_usd == 0:
@@ -204,10 +212,10 @@ def generate_closing_report() -> str:
             continue
 
         # 환율은 원 단위 표시
-        if ind["name"] == "원/달러":
-            fmt = lambda v: f"{v:,.2f}원" if v else "—"
-        else:
-            fmt = lambda v: f"{v:,.2f}" if v else "—"
+        def fmt(v, is_fx=ind["name"] == "원/달러"):
+            if not v:
+                return "—"
+            return f"{v:,.2f}원" if is_fx else f"{v:,.2f}"
 
         lines.append(
             f"| {ind['name']} | {fmt(ohlc['open'])} "
@@ -256,11 +264,13 @@ def get_today_alerts() -> list[dict]:
                 time_str = ts.strftime("%H:%M")
             except (ValueError, TypeError):
                 time_str = "??:??"
-            results.append({
-                "level": r[0],
-                "message": r[1],
-                "time": time_str,
-            })
+            results.append(
+                {
+                    "level": r[0],
+                    "message": r[1],
+                    "time": time_str,
+                }
+            )
         return results
     finally:
         conn.close()
@@ -268,7 +278,9 @@ def get_today_alerts() -> list[dict]:
 
 def run():
     """장 마감 리포트 생성 파이프라인"""
-    print(f"\n📈 장 마감 리포트 생성 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}")
+    print(
+        f"\n📈 장 마감 리포트 생성 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}"
+    )
 
     # DB 초기화 확인
     if not DB_PATH.exists():

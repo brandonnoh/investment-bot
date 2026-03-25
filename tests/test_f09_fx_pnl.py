@@ -254,8 +254,7 @@ class TestBuildSummaryFxPnl:
         summary = build_summary(holdings, [], {}, exchange_rate)
 
         expected_fx = sum(
-            h.get("fx_pnl_krw", 0) for h in holdings
-            if h.get("pnl_label") is None
+            h.get("fx_pnl_krw", 0) for h in holdings if h.get("pnl_label") is None
         )
         assert summary["total"]["fx_pnl_krw"] == expected_fx
 
@@ -297,7 +296,9 @@ class TestSnapshotFxPnl:
         save_snapshot(db_conn, summary, "2026-03-25")
 
         cursor = db_conn.cursor()
-        cursor.execute("SELECT fx_pnl_krw FROM portfolio_history WHERE date = '2026-03-25'")
+        cursor.execute(
+            "SELECT fx_pnl_krw FROM portfolio_history WHERE date = '2026-03-25'"
+        )
         row = cursor.fetchone()
         assert row["fx_pnl_krw"] == 150000
 
@@ -319,7 +320,9 @@ class TestSnapshotFxPnl:
         save_snapshot(db_conn, summary, "2026-03-25")
 
         cursor = db_conn.cursor()
-        cursor.execute("SELECT fx_pnl_krw FROM portfolio_history WHERE date = '2026-03-25'")
+        cursor.execute(
+            "SELECT fx_pnl_krw FROM portfolio_history WHERE date = '2026-03-25'"
+        )
         row = cursor.fetchone()
         # fx_pnl_krw가 없으면 None 저장
         assert row["fx_pnl_krw"] is None
@@ -380,7 +383,12 @@ class TestRunFxPnlIntegration:
         }
         macro_data = {
             "indicators": [
-                {"name": "원/달러", "indicator": "원/달러", "value": 1450.0, "change_pct": 0.5},
+                {
+                    "name": "원/달러",
+                    "indicator": "원/달러",
+                    "value": 1450.0,
+                    "change_pct": 0.5,
+                },
             ],
             "updated_at": "2026-03-25T15:30:00+09:00",
         }
@@ -448,7 +456,12 @@ class TestRunFxPnlIntegration:
         }
         macro_data = {
             "indicators": [
-                {"name": "원/달러", "indicator": "원/달러", "value": 1450.0, "change_pct": 0.5},
+                {
+                    "name": "원/달러",
+                    "indicator": "원/달러",
+                    "value": 1450.0,
+                    "change_pct": 0.5,
+                },
             ],
         }
 

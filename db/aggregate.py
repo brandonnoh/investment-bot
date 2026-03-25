@@ -4,6 +4,7 @@
 prices/macro 원시 데이터(10분 해상도) → OHLCV 일봉 집계
 중복 집계 방지 (UPSERT 패턴)
 """
+
 import sqlite3
 import sys
 from pathlib import Path
@@ -185,7 +186,9 @@ def run(conn=None, target_date=None):
     else:
         result = aggregate_daily(conn, target_date)
 
-    print(f"  ✅ prices_daily: {result['prices_daily']}건, macro_daily: {result['macro_daily']}건")
+    print(
+        f"  ✅ prices_daily: {result['prices_daily']}건, macro_daily: {result['macro_daily']}건"
+    )
     return result
 
 
