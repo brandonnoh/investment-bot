@@ -5,6 +5,7 @@
 출력: output/intel/closing_report.md
 """
 
+import json
 import sqlite3
 import sys
 from datetime import datetime, timezone, timedelta
@@ -16,6 +17,54 @@ from config import PORTFOLIO, MACRO_INDICATORS, DB_PATH, OUTPUT_DIR
 from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))
+
+
+def save_portfolio_snapshot(conn: sqlite3.Connection, portfolio_summary: dict):
+    """portfolio_summary.json 데이터를 portfolio_history 테이블에 저장.
+
+    같은 날짜 데이터가 있으면 UPDATE, 없으면 INSERT.
+    """
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    total = portfolio_summary.get("total", {})
+
+    total_value_krw = total.get("current_value_krw")
+    total_invested_krw = total.get("invested_krw")
+    total_pnl_krw = total.get("pnl_krw")
+    total_pnl_pct = total.get("pnl_pct")
+    fx_rate = portfolio_summary.get("exchange_rate")
+    fx_pnl_krw = total.get("fx_pnl_krw")
+    holdings_snapshot = json.dumps(
+        portfolio_summary.get("holdings", []), ensure_ascii=False
+    )
+
+    conn.execute(
+        """INSERT INTO portfolio_history
+           (date, total_value_krw, total_invested_krw, total_pnl_krw, total_pnl_pct,
+            fx_rate, fx_pnl_krw, holdings_snapshot)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(date) DO UPDATE SET
+               total_value_krw = excluded.total_value_krw,
+               total_invested_krw = excluded.total_invested_krw,
+               total_pnl_krw = excluded.total_pnl_krw,
+               total_pnl_pct = excluded.total_pnl_pct,
+               fx_rate = excluded.fx_rate,
+               fx_pnl_krw = excluded.fx_pnl_krw,
+               holdings_snapshot = excluded.holdings_snapshot""",
+        (
+            today,
+            total_value_krw,
+            total_invested_krw,
+            total_pnl_krw,
+            total_pnl_pct,
+            fx_rate,
+            fx_pnl_krw,
+            holdings_snapshot,
+        ),
+    )
+    conn.commit()
+
+    value_man = round((total_value_krw or 0) / 10000)
+    print(f"  ✅ 포트폴리오 스냅샷 저장: {today} 총 {value_man:,}만원")
 
 
 def get_today_ohlc(ticker: str) -> dict | None:
@@ -296,8 +345,24 @@ def run():
 
     print(f"  📄 마감 리포트 저장: {output_path}")
     print(f"  📏 크기: {len(report):,} bytes")
-    print()
 
+    # 포트폴리오 스냅샷 DB 저장
+    portfolio_path = OUTPUT_DIR / "portfolio_summary.json"
+    if portfolio_path.exists():
+        try:
+            with open(portfolio_path, encoding="utf-8") as f:
+                portfolio_summary = json.load(f)
+            conn = sqlite3.connect(str(DB_PATH))
+            try:
+                save_portfolio_snapshot(conn, portfolio_summary)
+            finally:
+                conn.close()
+        except Exception as e:
+            print(f"  ⚠️ 포트폴리오 스냅샷 저장 실패: {e}")
+    else:
+        print("  ⚠️ portfolio_summary.json 없음, 스냅샷 저장 건너뜀")
+
+    print()
     return report
 
 
