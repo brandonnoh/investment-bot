@@ -98,6 +98,14 @@ def main():
         print(f"  ⚠️ fetch_opportunities 실패: {e}")
         opp_results = []
 
+    # 2.5. 시장 레짐 분류 (매크로 수집 후, 분석 전)
+    try:
+        from analysis.regime_classifier import run as classify_regime
+
+        classify_regime()
+    except Exception as e:
+        print(f"  ⚠️ 레짐 분류 실패: {e}")
+
     # 3. 일봉 집계 (수집 후, 분석 전)
     aggregate_daily()
 

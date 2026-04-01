@@ -16,6 +16,56 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import config
 
 
+def calculate_12_1_momentum(ticker: str, conn) -> float | None:
+    """12-1 모멘텀 팩터 계산.
+
+    DB의 prices 테이블에서 해당 종목의 가격 이력을 조회하여
+    중기 모멘텀(12개월 전 대비 수익률에서 1개월 전 대비 수익률을 차감)을 산출.
+
+    Args:
+        ticker: 종목 코드
+        conn: sqlite3.Connection 객체
+
+    Returns:
+        0~100 사이 모멘텀 점수. 데이터 부족(21행 미만)이면 None.
+    """
+    cursor = conn.cursor()
+
+    # 해당 종목의 가격 이력을 시간순으로 조회
+    cursor.execute(
+        "SELECT price FROM prices WHERE ticker = ? ORDER BY timestamp ASC",
+        (ticker,),
+    )
+    rows = cursor.fetchall()
+
+    # 최소 21행(약 1개월) 미만이면 None 반환
+    if len(rows) < 21:
+        return None
+
+    prices = [row[0] for row in rows]
+    current_price = prices[-1]
+
+    # 1개월 전(약 21거래일): 인덱스 -21 (21번째 마지막 행)
+    price_1m = prices[-21]
+
+    # 12개월 전(약 252거래일): 데이터가 252개 이상이면 252번째, 아니면 가장 오래된 값 사용
+    price_12m_idx = max(0, len(prices) - 252)
+    price_12m = prices[price_12m_idx]
+
+    # 0으로 나누기 방지
+    if price_12m == 0 or price_1m == 0:
+        return None
+
+    # 12-1 모멘텀: 장기 수익률 - 단기 수익률
+    momentum_raw = (current_price / price_12m) - (current_price / price_1m)
+
+    # [-0.5, 0.5] 범위로 클램핑 후 [0, 100]으로 정규화
+    clamped = max(-0.5, min(0.5, momentum_raw))
+    score = (clamped + 0.5) * 100.0
+
+    return round(score, 2)
+
+
 def percentile_rank(values: list, value: float) -> float:
     """0~1 사이 백분위 순위. 이상치에 강건."""
     if not values:
@@ -245,7 +295,7 @@ def calculate_composite_score_v2(
         universe.get("eps_growth", []),
     )
 
-    # 4. 타이밍 (Timing) — 기존 모멘텀 + RSI 로직
+    # 4. 타이밍 (Timing) — 기존 모멘텀 + RSI + 12-1 모멘텀(선택)
     ret_val = candidate.get("month_return") or 0
     score_return = percentile_rank(universe.get("returns", []), ret_val)
     rsi_val = candidate.get("rsi_14") or 50
@@ -256,7 +306,14 @@ def calculate_composite_score_v2(
         if universe_rsi
         else 0.5
     )
-    score_timing = (score_return + score_rsi) / 2.0
+
+    # 12-1 모멘텀 팩터 (선택적 — None이면 기존 2팩터 평균 유지)
+    momentum_12_1 = candidate.get("momentum_12_1")
+    if momentum_12_1 is not None:
+        score_momentum = momentum_12_1 / 100.0  # 0~100 → 0~1 정규화
+        score_timing = (score_return + score_rsi + score_momentum) / 3.0
+    else:
+        score_timing = (score_return + score_rsi) / 2.0
 
     # 5. 촉매 (Catalyst) — 감성 점수
     sentiment_val = candidate.get("sentiment") or 0
