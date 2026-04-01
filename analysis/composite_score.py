@@ -1,3 +1,4 @@
+from __future__ import annotations
 """복합 점수 계산 엔진 — 6팩터 Percentile Rank 기반 스코어링
 
 팩터 구성:

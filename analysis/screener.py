@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 종목 스크리너 — 오늘의 주목 섹터 + 신규 종목 발굴
 Yahoo Finance API로 섹터별 주요 종목/ETF 분석

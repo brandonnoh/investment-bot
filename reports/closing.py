@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 장 마감 리포트 생성 모듈 (Phase 2.5)
 오늘 수집된 DB 이력으로 시가/고가/저가/종가 + 최종 손익 계산
