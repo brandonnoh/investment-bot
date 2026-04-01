@@ -96,6 +96,39 @@ MACRO_INDICATORS = [
     {"name": "VIX", "ticker": "^VIX", "category": "VOLATILITY"},
 ]
 
+# ── 동적 알림 임계값 (VIX 레짐별) ──
+# VIX 수준에 따라 임계값 자동 조정 — 공포 장에서 알림 과다 발동 방지
+DYNAMIC_THRESHOLDS = {
+    "calm": {"vix_max": 20, "stock_drop": -5.0, "stock_surge": 5.0, "kospi_drop": -3.0},
+    "normal": {
+        "vix_max": 25,
+        "stock_drop": -5.0,
+        "stock_surge": 5.0,
+        "kospi_drop": -3.0,
+    },
+    "fear": {"vix_max": 30, "stock_drop": -7.0, "stock_surge": 7.0, "kospi_drop": -4.0},
+    "panic": {
+        "vix_max": 999,
+        "stock_drop": -10.0,
+        "stock_surge": 10.0,
+        "kospi_drop": -5.0,
+    },
+}
+
+
+def get_dynamic_thresholds(vix: float) -> dict:
+    """현재 VIX 값에 따라 적절한 임계값 반환.
+
+    Returns:
+        레짐 이름 포함 임계값 딕셔너리 {"regime": ..., "stock_drop": ..., ...}
+    """
+    for regime_name, values in DYNAMIC_THRESHOLDS.items():
+        if vix <= values["vix_max"]:
+            return {**values, "regime": regime_name}
+    # 방어 코드 — panic 레짐 반환
+    return {**DYNAMIC_THRESHOLDS["panic"], "regime": "panic"}
+
+
 # ── 알림 임계값 ──
 ALERT_THRESHOLDS = {
     # 종목 개별 변동

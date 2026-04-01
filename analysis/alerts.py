@@ -5,7 +5,7 @@
 출력: output/intel/alerts.json (알림 있을 때만 생성)
 
 - 이 모듈: 공통 감지/저장 함수 + JSON 기반 배치 실행 (run_pipeline.py용)
-- alerts_watch.py: DB 기반 실시간 실행 + 중복 방지 + 텔레그램 전송
+- alerts_watch.py: DB 기반 실시간 실행 + 중복 방지 + Discord 전송
 """
 
 import json
@@ -16,10 +16,14 @@ from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import config as _config
 from config import ALERT_THRESHOLDS, DB_PATH, OUTPUT_DIR
 from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))
+
+# 동적 임계값 함수 참조 (모듈 레벨에서 미리 바인딩해 린터 제거 방지)
+_get_dynamic_thresholds = _config.get_dynamic_thresholds
 
 
 # ── 데이터 로드 (JSON 기반, 배치 모드) ──
@@ -47,14 +51,37 @@ def load_latest_macro() -> list[dict]:
     return data.get("indicators", [])
 
 
+def get_current_vix(macro: list[dict]) -> float | None:
+    """매크로 지표 리스트에서 현재 VIX 값 추출"""
+    for m in macro:
+        if m.get("indicator") == "VIX":
+            return m.get("value")
+    return None
+
+
 # ── 공통 감지 로직 (alerts_watch.py에서도 사용) ──
 
 
-def check_stock_alerts(prices: list[dict]) -> list[dict]:
-    """종목별 급등/급락 감지"""
+def check_stock_alerts(
+    prices: list[dict], thresholds: dict | None = None
+) -> list[dict]:
+    """종목별 급등/급락 감지.
+
+    Args:
+        prices: 주가 데이터 리스트
+        thresholds: VIX 기반 동적 임계값 (None이면 고정 기본값 사용)
+    """
     alerts = []
-    drop_threshold = ALERT_THRESHOLDS["stock_drop"]["threshold"]
-    surge_threshold = ALERT_THRESHOLDS["stock_surge"]["threshold"]
+    if thresholds is not None:
+        drop_threshold = thresholds.get(
+            "stock_drop", ALERT_THRESHOLDS["stock_drop"]["threshold"]
+        )
+        surge_threshold = thresholds.get(
+            "stock_surge", ALERT_THRESHOLDS["stock_surge"]["threshold"]
+        )
+    else:
+        drop_threshold = ALERT_THRESHOLDS["stock_drop"]["threshold"]
+        surge_threshold = ALERT_THRESHOLDS["stock_surge"]["threshold"]
 
     for p in prices:
         change = p.get("change_pct")
@@ -90,8 +117,13 @@ def check_stock_alerts(prices: list[dict]) -> list[dict]:
     return alerts
 
 
-def check_macro_alerts(macro: list[dict]) -> list[dict]:
-    """매크로 지표 알림 감지"""
+def check_macro_alerts(macro: list[dict], thresholds: dict | None = None) -> list[dict]:
+    """매크로 지표 알림 감지.
+
+    Args:
+        macro: 매크로 지표 리스트
+        thresholds: VIX 기반 동적 임계값 (None이면 고정 기본값 사용)
+    """
     alerts = []
 
     for m in macro:
@@ -104,7 +136,13 @@ def check_macro_alerts(macro: list[dict]) -> list[dict]:
 
         # 코스피 폭락
         if indicator == "코스피" and change is not None:
-            threshold = ALERT_THRESHOLDS["kospi_drop"]["threshold"]
+            threshold = (
+                thresholds.get(
+                    "kospi_drop", ALERT_THRESHOLDS["kospi_drop"]["threshold"]
+                )
+                if thresholds is not None
+                else ALERT_THRESHOLDS["kospi_drop"]["threshold"]
+            )
             if change <= threshold:
                 alerts.append(
                     {
@@ -227,7 +265,7 @@ def save_alerts_to_db(alerts: list[dict], conn=None, notified: bool = False):
     Args:
         alerts: 알림 리스트
         conn: DB 연결 (None이면 DB_PATH로 새 연결 생성)
-        notified: True면 notified=1로 저장 (텔레그램 전송 시)
+        notified: True면 notified=1로 저장 (Discord 전송 시)
     """
     if not alerts:
         return
@@ -313,10 +351,22 @@ def run():
     prices = load_latest_prices()
     macro = load_latest_macro()
 
+    # VIX 기반 동적 임계값 결정
+    vix = get_current_vix(macro)
+    if vix is not None:
+        dynamic = _get_dynamic_thresholds(vix)
+        regime = dynamic["regime"]
+        print(
+            f"  📊 현재 레짐: {regime} (VIX {vix:.2f}) — 임계값 {dynamic['stock_drop']}% 적용"
+        )
+        thresholds = dynamic
+    else:
+        thresholds = None
+
     # 알림 감지
     all_alerts = []
-    all_alerts.extend(check_stock_alerts(prices))
-    all_alerts.extend(check_macro_alerts(macro))
+    all_alerts.extend(check_stock_alerts(prices, thresholds))
+    all_alerts.extend(check_macro_alerts(macro, thresholds))
     all_alerts.extend(check_portfolio_alert(prices))
 
     # 결과 출력
