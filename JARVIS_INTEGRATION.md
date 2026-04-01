@@ -16,7 +16,7 @@ investment-bot (Python 프로그램)
 자비스 (OpenClaw AI 에이전트)
   → 데이터 해석 / 판단 / 전략 / 대화
   → investment-bot이 만든 파일을 읽고 분석
-  → 텔레그램으로 브리핑/알림 전송
+  → Discord으로 브리핑/알림 전송
 ```
 
 ---
@@ -59,7 +59,7 @@ investment-bot (Python 프로그램)
 
 > 알림이 없으면 alerts.json 파일 자체가 삭제됨. 파일 존재 = 알림 있음.
 
-**자비스 동작:** alerts_watch.py가 `openclaw cron add --at 1m` 으로 즉시 텔레그램 전송 크론잡 생성
+**자비스 동작:** alerts_watch.py가 `openclaw cron add --at 1m` 으로 즉시 Discord 전송 크론잡 생성
 
 ---
 
@@ -82,9 +82,9 @@ investment-bot (Python 프로그램)
 | 시간 (KST) | 크론잡 이름 | 읽는 파일 | 실행 스크립트 | 출력 |
 |-----------|-----------|---------|------------|------|
 | 05:30 | 투자팀 분석 파이프라인 | daily_report.md, news.json | realtime.py, read_news.py | cio-briefing.md 저장 |
-| 07:30 | 모닝 브리핑 | cio-briefing.md | realtime.py | 텔레그램 전송 |
-| 16:00 | 장 마감 리포트 | closing_report.md | realtime.py | 텔레그램 전송 |
-| 즉시 | 긴급 알림 | (alerts_watch.py가 직접 트리거) | — | 텔레그램 전송 |
+| 07:30 | 모닝 브리핑 | cio-briefing.md | realtime.py | Discord 비서실 전송 |
+| 16:00 | 장 마감 리포트 | closing_report.md | realtime.py | Discord 비서실 전송 |
+| 즉시 | 긴급 알림 | (alerts_watch.py가 직접 트리거) | — | Discord 비서실 전송 |
 
 ---
 
@@ -168,7 +168,7 @@ ALERT_THRESHOLDS = {
 │   └── fetch_gold_krx.py  ← fetch_prices에서 import
 ├── analysis/
 │   ├── alerts.py          ← 공통 감지 로직 + 배치 모드
-│   ├── alerts_watch.py    ← 임계값 감지 + 텔레그램 즉시 알림
+│   ├── alerts_watch.py    ← 임계값 감지 + Discord 즉시 알림
 │   ├── portfolio.py       ← 포트폴리오 손익 계산 + 이력 저장
 │   ├── price_analysis.py  ← 기술 분석 (MA, RSI, 추세)
 │   ├── screener.py        ← 종목 발굴
@@ -253,7 +253,7 @@ python3 /Users/jarvis/Projects/investment-bot/data/fetch_opportunities.py
        └─ output/intel/marcus-analysis.md 저장
 07:30  자비스 모닝 브리핑
        ├─ marcus-analysis.md 읽기
-       └─ 확신 레벨 + 핵심 리스크 + TODAY'S CALL 요약 → 텔레그램 전송
+       └─ 확신 레벨 + 핵심 리스크 + TODAY'S CALL 요약 → Discord 비서실 전송
 ```
 
 ### 자비스 모닝 브리핑 연동

@@ -108,9 +108,9 @@ KIWOOM_APPKEY=xxx        # 키움증권 REST API (선택)
 KIWOOM_SECRETKEY=xxx     # 키움증권 REST API (선택)
 ```
 
-## ⚠️ 텔레그램 전송 필수 규칙
-- OpenClaw 크론잡에서 텔레그램 전송 시 **반드시 `--to 2111337920` 명시**
-- `--announce --channel telegram --to 2111337920` 세트로 항상 같이 써야 함
+## ⚠️ Discord 전송 필수 규칙
+- 긴급 투자 알림 → Discord 비서실: `--channel discord --to channel:1486905937225846956`
+- 뉴스/일반 알림 → Discord 재테크 알림: `--channel discord --to channel:1486921732874047629`
 - `--to` 빠지면 전송 실패 → 절대 빠뜨리지 말 것
 
 ## 주의사항

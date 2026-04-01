@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 실시간 알림 감시 모듈 (Phase 2.5 핵심)
-DB 최신 데이터 기반 임계값 체크 + 중복 방지 + OpenClaw cron 즉시 텔레그램 전송
+DB 최신 데이터 기반 임계값 체크 + 중복 방지 + OpenClaw cron 즉시 Discord 전송
 
-- 알림 발생 시: DB 저장 → alerts.json 생성 → openclaw cron add로 텔레그램 즉시 전송
+- 알림 발생 시: DB 저장 → alerts.json 생성 → openclaw cron add로 Discord 즉시 전송
 - 알림 없을 시: 조용히 종료 (system event 실행 금지 — 토큰 낭비 방지)
 - 중복 방지: 같은 종목+같은 방향 알림은 1시간 내 재발송 금지
 
@@ -170,17 +170,13 @@ def _filter_duplicates(alerts: list[dict]) -> list[dict]:
     return filtered
 
 
-# ── 텔레그램 전송 (실시간 모드 전용) ──
+# ── Discord 전송 (실시간 모드 전용) ──
 
 
-def fire_telegram_alert(alerts: list[dict]):
-    """openclaw cron add로 즉시 실행되는 one-shot 크론잡 생성 — 1분 내 텔레그램 직접 전송"""
+def fire_discord_alert(alerts: list[dict]):
+    """openclaw message send로 Discord 비서실 직접 전송 (중복 없이 단건)"""
     if not alerts:
-        # 알림 없으면 절대 실행 금지 (토큰 낭비 방지)
         return
-
-    now_kst = datetime.now(KST)
-    time_str = now_kst.strftime("%H:%M")
 
     # 알림 목록 생성
     alert_lines = []
@@ -189,50 +185,35 @@ def fire_telegram_alert(alerts: list[dict]):
         alert_lines.append(f"{level_emoji} {a['message']}")
 
     alerts_text = "\n".join(alert_lines)
-    message = (
-        f"🚨 긴급 투자 알림 — {time_str} KST\n\n"
-        f"{alerts_text}\n\n"
-        f"python3 /Users/jarvis/Projects/investment-bot/data/realtime.py 실행해서\n"
-        f"현재 주가 확인 후 한줄 판단 추가해서 전송"
-    )
+    message = f"🚨 {alerts_text}"
 
     try:
         result = subprocess.run(
             [
                 "/opt/homebrew/bin/openclaw",
-                "cron",
-                "add",
-                "--name",
-                "긴급알림",
-                "--at",
-                "1m",
-                "--session",
-                "isolated",
+                "message",
+                "send",
+                "--channel",
+                "discord",
+                "--target",
+                "channel:1486905937225846956",
                 "--message",
                 message,
-                "--announce",
-                "--channel",
-                "telegram",
-                "--to",
-                "2111337920",
-                "--delete-after-run",
             ],
             capture_output=True,
             text=True,
             timeout=30,
         )
         if result.returncode == 0:
-            print(
-                f"  📡 긴급알림 크론잡 생성 완료 — 1분 내 텔레그램 전송 ({len(alerts)}건)"
-            )
+            print(f"  📡 긴급알림 Discord 전송 완료 ({len(alerts)}건)")
         else:
-            print(f"  ⚠️  크론잡 생성 실패: {result.stderr.strip()}")
+            print(f"  ⚠️  전송 실패: {result.stderr.strip()}")
     except FileNotFoundError:
         print("  ⚠️  openclaw 명령어를 찾을 수 없음 — 알림 전송 건너뜀")
     except subprocess.TimeoutExpired:
-        print("  ⚠️  크론잡 생성 타임아웃 (30초)")
+        print("  ⚠️  전송 타임아웃 (30초)")
     except Exception as e:
-        print(f"  ⚠️  크론잡 생성 오류: {e}")
+        print(f"  ⚠️  전송 오류: {e}")
 
 
 # ── 실시간 모드 실행 ──
@@ -274,12 +255,12 @@ def run():
     else:
         print("\n  ✅ 이상 없음 (또는 중복 알림 필터됨)")
 
-    # 저장 (notified=True — 텔레그램 전송 표시)
+    # 저장 (notified=True — Discord 전송 표시)
     save_alerts_to_db(all_alerts, notified=True)
     save_alerts_to_json(all_alerts)
 
-    # 텔레그램 즉시 전송 — 알림 있을 때만!
-    fire_telegram_alert(all_alerts)
+    # Discord 즉시 전송 — 알림 있을 때만!
+    fire_discord_alert(all_alerts)
 
     print()
     return all_alerts

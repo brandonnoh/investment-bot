@@ -41,7 +41,7 @@
                          ↓
               자비스(OpenClaw)가 읽고 해석
                          ↓
-                   텔레그램 보고
+                   Discord 보고
 ```
 
 ---
@@ -117,7 +117,7 @@ PORTFOLIO = [
 | 포트폴리오 전체 손실 | -10% 초과 | 🔴 긴급 |
 
 - **출력:** `output/intel/alerts.json` (알림 있을 때만 생성)
-- **자비스 연동:** 알림 파일 존재 시 자비스가 텔레그램 즉시 전송
+- **자비스 연동:** 알림 파일 존재 시 자비스가 Discord 비서실 즉시 전송
 
 ### 4-5. `analysis/screener.py` — 신규 종목 발굴
 - **스크리닝 기준:**
@@ -247,7 +247,7 @@ investment-bot 출력 파일들
 - **데이터:** Yahoo Finance (yfinance 라이브러리), Brave Search API
 - **DB:** SQLite (로컬, 별도 서버 불필요)
 - **스케줄링:** OpenClaw 크론 or crontab
-- **알림:** OpenClaw → 텔레그램
+- **알림:** OpenClaw → Discord
 - **실행 환경:** 맥미니 (상시 가동)
 
 ---
@@ -268,7 +268,7 @@ investment-bot 출력 파일들
 
 ### Phase 3 (심화)
 - [ ] 백테스트 모듈
-- [ ] 수익률 차트 이미지 생성 → 텔레그램 전송
+- [ ] 수익률 차트 이미지 생성 → Discord 전송
 - [ ] 자동 매매 연동 (증권사 API)
 
 ---

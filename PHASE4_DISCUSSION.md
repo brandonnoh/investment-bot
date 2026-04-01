@@ -18,7 +18,7 @@
   → Brave Search로 뉴스 검색
   → 후보 종목 DB 저장 (opportunity_results 테이블)
   → screener.py 기술 분석으로 최종 선별
-  → 자비스 종합 판단 → 텔레그램
+  → 자비스 종합 판단 → Discord
 ```
 
 ---

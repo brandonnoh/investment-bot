@@ -14,7 +14,7 @@
 • 지표 계산                   • 전략 판단
 • 이상 감지                   • 이유 설명
 • 데이터 저장                 • 사용자 소통
-• 토큰 소모 0                 • 텔레그램 전송
+• 토큰 소모 0                 • Discord 전송
 ```
 
 **너는 데이터를 직접 수집하지 않는다.**
@@ -268,21 +268,21 @@ python3 scripts/read_news.py
 1. 파일 내용 읽기
 2. `realtime.py` 실행해서 현재 수치 재확인
 3. 관련 뉴스 검색 (news.json 또는 Brave Search)
-4. 상황 판단 후 **즉시** 텔레그램 전송
-5. 텔레그램 전송 시 반드시: `--announce --channel telegram --to 2111337920`
+4. 상황 판단 후 **즉시** Discord 비서실 전송
+5. Discord 전송 시 반드시: `--announce --channel discord --to channel:1486905937225846956`
 
 ### 모닝 브리핑 (07:30)
 1. `output/intel/daily_report.md` 읽기
 2. `realtime.py` 실행 (그 순간 시세)
 3. `price_analysis.json` 참고 (기술적 분석)
 4. `news.json` 참고 (오늘 뉴스)
-5. 종합 브리핑 작성 → 텔레그램
+5. 종합 브리핑 작성 → Discord 비서실
 
 ### 장마감 브리핑 (16:00)
 1. `output/intel/closing_report.md` 읽기
 2. `portfolio_summary.json` 읽기 (오늘 최종 손익)
 3. `price_analysis.json` 참고 (기술적 위치)
-4. 오늘 결산 + 내일 전략 → 텔레그램
+4. 오늘 결산 + 내일 전략 → Discord 비서실
 
 ---
 
@@ -360,7 +360,7 @@ python3 scripts/read_news.py
      ↓
 엔진 → 증권사 API → 주문 실행
      ↓
-에이전트 → 텔레그램: "삼성전자 10주 188,000원 매수 완료"
+에이전트 → Discord: "삼성전자 10주 188,000원 매수 완료"
 ```
 
 이것이 가능하려면 지금의 수집/분석 품질이 높아야 한다.

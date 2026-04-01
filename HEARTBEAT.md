@@ -9,8 +9,8 @@
 | 시간 (KST) | 이름 | 역할 | 세션 |
 |-------------|------|------|------|
 | 05:30 | 투자팀 분석 파이프라인 | 전략/CIO 보고서 생성 | isolated |
-| 07:30 | 모닝 브리핑 | 종합 브리핑 텔레그램 전송 | isolated |
-| 16:00 (평일) | 장 마감 리포트 | 오늘 결산 + 내일 전략 텔레그램 전송 | isolated |
+| 07:30 | 모닝 브리핑 | 종합 브리핑 Discord 비서실 전송 | isolated |
+| 16:00 (평일) | 장 마감 리포트 | 오늘 결산 + 내일 전략 Discord 비서실 전송 | isolated |
 
 ```bash
 # 크론잡 확인
@@ -23,7 +23,7 @@ openclaw cron list
 
 `alerts_watch.py`가 임계값 초과 감지 시 자동 실행:
 ```
-openclaw system event --text "🚨 투자 알림: [내용]" --mode now
+openclaw cron add --name "긴급알림" --at 1m ... (Discord 비서실 전송)
 ```
 
 ### 자비스 동작 순서
@@ -31,9 +31,9 @@ openclaw system event --text "🚨 투자 알림: [내용]" --mode now
 2. `output/intel/alerts.json` 읽기
 3. `python3 data/realtime.py` 실행 (현재 수치 재확인)
 4. Brave 검색 (관련 뉴스)
-5. 텔레그램 즉시 전송
+5. Discord 비서실 즉시 전송
 
-### 알림 텔레그램 형식
+### 알림 Discord 형식
 ```
 🚨 긴급 알림 — [시간] KST
 

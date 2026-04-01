@@ -1,0 +1,185 @@
+Yahoo Finance 호출 실패 (000660.KS): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (005380.KS): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (005930.KS): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (0117V0.KS): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (012450.KS): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (261220.KS): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (458730.KS): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (AVGO): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (GOOGL): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (ITA): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (LMT): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (NVDA): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (RTX): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (SMH): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (TSLA): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (USO): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (XLE): HTTP Error 401: Unauthorized
+Yahoo Finance 호출 실패 (XOP): HTTP Error 401: Unauthorized
+KRX 수급 데이터 수집 실패: HTTP Error 400: Bad Request
+Fear & Greed Index 수집 실패: HTTP Error 418: Unknown Error
+Brave 검색 실패: 'utf-8' codec can't decode byte 0x8b in position 1: invalid start byte
+Brave 검색 실패: 'utf-8' codec can't decode byte 0x8b in position 1: invalid start byte
+Brave 검색 실패: 'utf-8' codec can't decode byte 0x8b in position 1: invalid start byte
+Brave 검색 실패: 'utf-8' codec can't decode byte 0x8b in position 1: invalid start byte
+Brave 검색 실패: 'utf-8' codec can't decode byte 0x8b in position 1: invalid start byte
+[price_analysis.json] 항목[GOLD_KRW_G] 필드 'current'이 None (기대 타입: number)
+[price_analysis.json] 항목[GOLD_KRW_G] 필드 'rsi_14'이 None (기대 타입: number)
+[price_analysis.json] 항목[GOLD_KRW_G] 필드 'trend'이 None (기대 타입: str)
+[opportunities.json] 필수 필드 'summary' 누락
+============================================================
+🏦 투자 인텔리전스 봇 — 전체 파이프라인 (주간 포함)
+============================================================
+✅ 데이터베이스 초기화 완료: /Users/jarvis/Projects/investment-bot/db/history.db
+
+📊 주가 수집 시작 — 2026-03-30 04:00 KST
+  ✅ 삼성전자 (005930.KS): 179,700.00 (-0.22%)
+  ✅ 현대차 (005380.KS): 495,000.00 (+1.02%)
+  ✅ TIGER 코리아AI전력기 (0117V0.KS): 17,260.00 (-4.35%)
+  ✅ TIGER 미국방산TOP10 (458730.KS): 14,780.00 (+1.23%)
+  ✅ 테슬라 (TSLA): 361.83 (-2.76%)
+  ✅ 알파벳 (GOOGL): 274.34 (-2.36%)
+  ✅ SPDR S&P Oil (XOP): 188.18 (+1.54%)
+  ✅ 금 현물 (GOLD_KRW_G): 219,362.00 (+2.66%)
+  💾 DB 저장 완료: 8건
+  📄 JSON 저장: /Users/jarvis/Projects/investment-bot/output/intel/prices.json
+
+✅ 수집 완료: 성공 8건, 실패 0건
+
+
+🌍 매크로 지표 수집 시작 — 2026-03-30 04:00 KST
+  ✅ 코스피: 5,438.87 (-0.40%)
+  ✅ 코스닥: 1,141.51 (+0.43%)
+  ✅ 원/달러: 1,508.06원 (+0.26%)
+  ✅ WTI 유가: 99.64 (+7.89%)
+  ✅ 브렌트유: 105.32 (+0.79%)
+  ✅ 금 현물: 4,524.30 (+2.84%)
+  ✅ 달러 인덱스: 100.19 (+0.77%)
+  ✅ VIX: 31.05 (+18.74%)
+  💾 DB 저장 완료: 8건
+  📄 JSON 저장: /Users/jarvis/Projects/investment-bot/output/intel/macro.json
+
+✅ 매크로 수집 완료: 성공 8건, 실패 0건
+
+
+📰 뉴스 수집 시작 — 2026-03-30 04:00 KST
+  ✅ [RSS] 삼성전자: 3건
+  ✅ [RSS] 현대차: 3건
+  ✅ [RSS] TIGER 코리아AI전력기: 3건
+  ✅ [RSS] TIGER 미국방산TOP10: 3건
+  ✅ [RSS] 테슬라: 3건
+  ✅ [RSS] 알파벳: 3건
+  ✅ [RSS] SPDR S&P Oil: 3건
+  ✅ [RSS] geopolitics [이란 전쟁]: 3건
+  ✅ [RSS] macro [코스피]: 3건
+  ✅ [RSS] macro [원달러 환율]: 3건
+  ✅ [RSS] macro [WTI 유가]: 3건
+  ✅ [RSS] macro [연준 금리]: 3건
+  🧠 감성 분석 완료: 36건, 종목별 7개
+  💾 뉴스 DB 저장: 5건 (중복 31건 스킵)
+  📄 뉴스 JSON 저장: /Users/jarvis/Projects/investment-bot/output/intel/news.json
+
+✅ 뉴스 수집 완료: RSS 36건, Brave 0건 (합계 36건)
+
+  ✅ 펀더멘탈 수집 완료: 0개 수집, 총 0개
+  펀더멘탈: 0개 종목
+  ⚠️ KRX 수급 데이터 없음 (스킵)
+  ⚠️ Fear & Greed 수집 실패 (스킵)
+  수급: KRX 0개, F&G=None
+  ✅ 종목 발굴 완료: 0건 → /Users/jarvis/Projects/investment-bot/output/intel/opportunities.json
+  종목 발굴: 0개 후보
+📊 일봉 집계 시작...
+  ✅ prices_daily: 65건, macro_daily: 64건
+🧹 DB 유지보수 시작...
+  삭제: prices 0건, macro 0건, news 0건
+  ✅ VACUUM 완료 (총 0건 정리)
+📈 기술 분석 시작...
+  📡 005930.KS: DB 8일 < 15일, Yahoo에서 보충 중...
+  ✅ 005930.KS: yahoo_history에서 59일치 확보
+  📡 005380.KS: DB 8일 < 15일, Yahoo에서 보충 중...
+  ✅ 005380.KS: yahoo_history에서 59일치 확보
+  📡 0117V0.KS: DB 8일 < 15일, Yahoo에서 보충 중...
+  ✅ 0117V0.KS: yahoo_history에서 59일치 확보
+  📡 458730.KS: DB 8일 < 15일, Yahoo에서 보충 중...
+  ✅ 458730.KS: yahoo_history에서 59일치 확보
+  📡 TSLA: DB 8일 < 15일, Yahoo에서 보충 중...
+  ✅ TSLA: yahoo_history에서 62일치 확보
+  📡 GOOGL: DB 8일 < 15일, Yahoo에서 보충 중...
+  ✅ GOOGL: yahoo_history에서 62일치 확보
+  📡 XOP: DB 8일 < 15일, Yahoo에서 보충 중...
+  ✅ XOP: yahoo_history에서 62일치 확보
+  ⚠️ GOLD_KRW_G: DB 8일, 외부 소스 미지원 → 부분 분석
+  ✅ 8개 종목 분석 완료 → /Users/jarvis/Projects/investment-bot/output/intel/price_analysis.json
+
+🚨 알림 감지 시작 — 2026-03-30 04:00 KST
+
+  ⚠️  2건 알림 감지:
+    🟡 주의: WTI 유가 +7.89% 급등 (현재: $99.64)
+    🟡 주의: VIX 31.05 돌파 (임계값: 30.0)
+  💾 알림 DB 저장: 2건
+  🚨 알림 JSON 저장: /Users/jarvis/Projects/investment-bot/output/intel/alerts.json (2건)
+
+
+🔍 종목 스크리너 시작 — 2026-03-30 04:00 KST
+
+  📊 에너지 섹터 분석 중...
+    🔺 Energy Select SPDR: 62.56 (1M: +9.68%)
+    🔺 SPDR S&P Oil & Gas: 188.18 (1M: +17.94%)
+    🔺 US Oil Fund: 124.20 (1M: +42.45%)
+    🔺 KODEX WTI원유선물: 22,665.00 (1M: +47.75%)
+
+  📊 방산 섹터 분석 중...
+    🔻 iShares US Aerospace & Defense: 216.04 (1M: -13.78%)
+    🔻 Lockheed Martin: 615.84 (1M: -8.99%)
+    🔻 RTX Corp: 189.71 (1M: -10.58%)
+    🔺 TIGER 미국방산TOP10: 14,780.00 (1M: +3.47%)
+    🔺 한화에어로스페이스: 1,335,000.00 (1M: +11.72%)
+
+  📊 AI 인프라 섹터 분석 중...
+    🔻 NVIDIA: 167.52 (1M: -8.20%)
+    🔻 VanEck Semiconductor: 374.25 (1M: -7.91%)
+    🔻 Broadcom: 300.68 (1M: -5.69%)
+    🔻 삼성전자: 179,700.00 (1M: -17.00%)
+    🔻 SK하이닉스: 922,000.00 (1M: -13.10%)
+
+  📄 스크리너 저장: /Users/jarvis/Projects/investment-bot/output/intel/screener.md
+  ⭐ 주목 종목: 5개
+
+
+💼 포트폴리오 분석 시작 — 2026-03-30 04:00 KST
+  💱 적용 환율: 1,508.06원/USD
+  📊 분석 종목: 8개
+    원자재(금): 64.2%
+    반도체: 17.3%
+    자동차: 10.2%
+    AI/전력: 2.4%
+    방산: 2.2%
+    빅테크: 1.9%
+    전기차/AI: 1.2%
+    에너지: 0.6%
+  📉 일간 변동성: 1.4%
+  📉 MDD: -4.38%
+  💾 일별 스냅샷 저장: 2026-03-30
+
+  🔴 총 포트폴리오: -1,985,791원 (-4.34%)
+    📈 주식 손익: -2,133,581원
+    💱 환율 손익: +147,790원
+  📈 수익률 추이: 최근 5일
+  📄 포트폴리오 요약 저장: /Users/jarvis/Projects/investment-bot/output/intel/portfolio_summary.json
+
+  성과 추적: 1w=0건, 1m=0건 업데이트
+
+✅ 엔진 상태: 에러 0건, DB 0.82MB
+
+📝 일일 리포트 생성 — 2026-03-30 04:00 KST
+  📄 리포트 저장: /Users/jarvis/Projects/investment-bot/output/intel/daily_report.md
+  📏 크기: 1,200 bytes
+
+
+📊 주간 리포트 생성 — 2026-03-30 04:00 KST
+  📄 주간 리포트 저장: /Users/jarvis/Projects/investment-bot/output/intel/weekly_report.md
+  📏 크기: 2,275 bytes
+
+============================================================
+✅ 파이프라인 완료
+============================================================

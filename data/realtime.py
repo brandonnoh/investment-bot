@@ -12,7 +12,7 @@
     1. DB 히스토리 읽기 → 최근 N일 추세 파악 (prices, macro 테이블)
     2. python3 data/realtime.py 실행 → 현재 실시간 수치 확보
     3. Brave Search API → 최신 뉴스/이벤트 수집
-    4. 위 3가지를 조합하여 텔레그램 리포트 작성
+    4. 위 3가지를 조합하여 Discord 리포트 작성
 """
 
 import json
