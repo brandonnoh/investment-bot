@@ -1,7 +1,5 @@
 # tests/test_f26_fallback_keywords.py
 import json
-import pytest
-from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
 
@@ -57,7 +55,7 @@ def test_generate_fallback_high_vix(tmp_path):
     regime.write_text(json.dumps({"regime": "RISK_OFF"}))
     keywords = generate_fallback_keywords(macro, regime)
     kwds = [k["keyword"] for k in keywords]
-    assert any("저변동성" in kw or "방어" in kw for kw in kwds)
+    assert "저변동성 방어주 배당" in kwds
 
 
 def test_generate_fallback_high_usdkrw(tmp_path):
