@@ -62,3 +62,13 @@
 - [x] **F23** 수급 데이터 수집 — KRX 외국인/기관 순매수 + Fear & Greed Index
 - [x] **F24** 마커스 에이전트 설정 — 시니어 펀드매니저 전문 에이전트
 - [x] **F25** 성과 추적 + 가중치 학습 — outcome 자동 기록, 월간 성적표, 팩터별 적중률
+
+## Phase 5 — 자율 진화 완성 (Phase 2-3-4 완성)
+
+- [x] **F26** Discovery Keywords Fallback — regime 기반 자동 fallback, is_keywords_fresh, ensure_fresh_keywords
+- [x] **F27** 문맥 기반 감성 분석 — relevance_score 가중 평균 (aggregate_sentiment_by_ticker_weighted)
+- [x] **F28** 자기 교정 시스템 — correction_notes.json 자동 생성
+- [x] **F29** 포트폴리오 시뮬레이션 — simulation_report.json (가상 손익 계산)
+- [x] **F30** 시장 국면 고도화 — confidence score + panic_signal 추가
+- [x] **F31** 능동적 알림 — proactive_alerts.json (익절/손절 액션 알림)
+- [x] **F32** 동적 종목 관리 — holdings_proposal.json (추가/제거 제안)

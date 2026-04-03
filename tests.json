@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total": 25,
-    "passing": 25,
+    "total": 32,
+    "passing": 32,
     "failing": 0,
-    "last_updated": "2026-03-26"
+    "last_updated": "2026-04-03"
   },
   "features": [
     {
@@ -409,6 +409,13 @@
         "마커스가 월간 성적표를 분석하여 가중치 조정 제안",
         "테스트: outcome 기록, 성적표 생성, 빈 데이터 처리"
       ]
-    }
+    },
+    {"id": "F26", "description": "Discovery Keywords Fallback", "status": "passing", "priority": 1, "depends_on": ["F17"]},
+    {"id": "F27", "description": "문맥 기반 감성 분석 — relevance_score 가중 평균", "status": "passing", "priority": 1, "depends_on": ["F12"]},
+    {"id": "F28", "description": "자기 교정 시스템 — correction_notes.json", "status": "passing", "priority": 1, "depends_on": ["F25"]},
+    {"id": "F29", "description": "포트폴리오 시뮬레이션 — simulation_report.json", "status": "passing", "priority": 1, "depends_on": ["F25"]},
+    {"id": "F30", "description": "시장 국면 고도화 — confidence + panic_signal", "status": "passing", "priority": 1, "depends_on": []},
+    {"id": "F31", "description": "능동적 알림 — proactive_alerts.json", "status": "passing", "priority": 1, "depends_on": ["F28", "F30"]},
+    {"id": "F32", "description": "동적 종목 관리 — holdings_proposal.json", "status": "passing", "priority": 1, "depends_on": ["F26", "F28"]}
   ]
 }
