@@ -456,6 +456,19 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
     except Exception as e:
         logger.warning(f"복합 점수 계산 실패: {e}")
 
+    # 6.9 price_at_discovery 수집 — Yahoo Finance 현재가
+    try:
+        from data.fetch_prices import fetch_yahoo_quote as _fetch_quote
+        for opp in all_opportunities:
+            if opp.get("price_at_discovery") is None:
+                try:
+                    meta = _fetch_quote(opp["ticker"])
+                    opp["price_at_discovery"] = meta.get("regularMarketPrice")
+                except Exception:
+                    pass  # 가격 조회 실패 시 None 유지
+    except ImportError:
+        pass
+
     # 7. DB 저장
     if all_opportunities:
         try:

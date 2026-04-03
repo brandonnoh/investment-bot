@@ -160,17 +160,20 @@ def search_brave_news(query: str, count: int = 2) -> list[dict]:
     url = f"{BRAVE_SEARCH_URL}?{params}"
 
     try:
-        body = retry_request(
+        import gzip as _gzip
+        req = urllib.request.Request(
             url,
             headers={
                 "Accept": "application/json",
+                "Accept-Encoding": "gzip",
                 "X-Subscription-Token": BRAVE_API_KEY,
             },
-            timeout=15,
-            max_retries=HTTP_RETRY_CONFIG["max_retries"],
-            base_delay=HTTP_RETRY_CONFIG["base_delay"],
         )
-        data = json.loads(body)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read()
+            if resp.headers.get("Content-Encoding") == "gzip" or raw[:2] == b"\x1f\x8b":
+                raw = _gzip.decompress(raw)
+        data = json.loads(raw)
         return data.get("results", [])
     except urllib.error.URLError as e:
         raise ConnectionError(f"Brave Search 네트워크 오류: {e}")
