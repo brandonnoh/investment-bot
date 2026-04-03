@@ -72,7 +72,7 @@ def test_run_generates_output(tmp_path):
     from analysis.simulation import run
     conn = sqlite3.connect(":memory:")
     init_schema(conn)
-    result = run(conn=conn, output_dir=tmp_path)
+    run(conn=conn, output_dir=tmp_path)
     out = tmp_path / "simulation_report.json"
     assert out.exists()
     data = json.loads(out.read_text())
