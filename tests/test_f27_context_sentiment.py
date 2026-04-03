@@ -43,6 +43,17 @@ def test_weighted_sentiment_zero_relevance():
     assert result["GOOGL"]["avg_sentiment"] == pytest.approx(1.0)
 
 
+def test_weighted_sentiment_negative_relevance():
+    """relevance_score<0인 뉴스는 무시된다."""
+    news = [
+        {"tickers": ["TSLA"], "sentiment": 1.0, "relevance_score": 0.8},
+        {"tickers": ["TSLA"], "sentiment": -1.0, "relevance_score": -0.5},
+    ]
+    result = aggregate_sentiment_by_ticker_weighted(news)
+    assert result["TSLA"]["avg_sentiment"] == pytest.approx(1.0)
+    assert result["TSLA"]["count"] == 1
+
+
 def test_weighted_sentiment_missing_relevance():
     """relevance_score 없으면 0.5로 기본값 처리."""
     news = [
