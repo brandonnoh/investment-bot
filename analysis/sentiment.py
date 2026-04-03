@@ -277,3 +277,49 @@ def aggregate_sentiment_by_ticker(records: list[dict]) -> dict:
         }
 
     return result
+
+
+def aggregate_sentiment_by_ticker_weighted(news_records: list[dict]) -> dict:
+    """relevance_score 가중 평균으로 종목별 감성 집계.
+
+    Args:
+        news_records: {"tickers": [...], "sentiment": float, "relevance_score": float} 리스트
+
+    Returns:
+        {"ticker": {"avg_sentiment": float, "count": int}} dict
+    """
+    import json as _json
+
+    weighted_sum: dict = {}
+    weight_total: dict = {}
+    counts: dict = {}
+
+    for record in news_records:
+        sentiment = record.get("sentiment")
+        if sentiment is None:
+            continue
+        relevance = record.get("relevance_score", 0.5)
+        if relevance <= 0:
+            continue
+        tickers = record.get("tickers") or []
+        if isinstance(tickers, str):
+            try:
+                tickers = _json.loads(tickers)
+            except Exception:
+                tickers = [tickers]
+
+        for ticker in tickers:
+            if not ticker:
+                continue
+            weighted_sum[ticker] = weighted_sum.get(ticker, 0.0) + sentiment * relevance
+            weight_total[ticker] = weight_total.get(ticker, 0.0) + relevance
+            counts[ticker] = counts.get(ticker, 0) + 1
+
+    result = {}
+    for ticker in weighted_sum:
+        total_w = weight_total[ticker]
+        result[ticker] = {
+            "avg_sentiment": round(weighted_sum[ticker] / total_w, 4) if total_w > 0 else 0.0,
+            "count": counts[ticker],
+        }
+    return result

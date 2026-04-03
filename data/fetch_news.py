@@ -16,10 +16,11 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from typing import Optional, Union, List, Dict, Tuple
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import PORTFOLIO, DB_PATH, OUTPUT_DIR, HTTP_RETRY_CONFIG
+from config import PORTFOLIO_LEGACY as PORTFOLIO, DB_PATH, OUTPUT_DIR, HTTP_RETRY_CONFIG
 from db.init_db import init_db
 from utils.http import retry_request
 
@@ -29,14 +30,14 @@ BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/news/search"
 
 # ── RSS로 수집할 종목 키워드 ──
 TICKER_KEYWORDS = {
-    "005930.KS": ["삼성전자 주가"],
-    "005380.KS": ["현대차 주가"],
-    "0117V0.KS": ["TIGER AI전력"],
-    "458730.KS": ["방산ETF"],
-    "TSLA": ["테슬라"],
-    "GOOGL": ["알파벳 구글"],
-    "XOP": ["XOP"],
-    "GC=F": ["금현물"],
+    "005930.KS": ["삼성전자 주가", "삼성전자 실적", "삼성전자 HBM"],
+    "005380.KS": ["현대차 주가", "현대차 실적", "현대자동차 전기차"],
+    "0117V0.KS": ["TIGER AI전력", "국내 AI전력 ETF", "한국 전력 AI"],
+    "458730.KS": ["방산ETF", "한국 방위산업 주가", "방산주"],
+    "TSLA": ["테슬라 주가", "테슬라 실적"],
+    "GOOGL": ["알파벳 구글 주가", "구글 AI"],
+    "XOP": ["XOP ETF", "미국 에너지 ETF", "유가 ETF"],
+    "GOLD_KRW_G": ["금 현물 시세", "금값 전망", "골드 투자"],
 }
 
 # ── 매크로 키워드 — 카테고리별 수집 방식 ──
@@ -47,6 +48,8 @@ MACRO_KEYWORDS = {
         "method": "rss",
         "keywords": [
             "이란 전쟁",
+            "미중 무역전쟁",
+            "트럼프 관세",
         ],
     },
     "macro": {
@@ -54,14 +57,54 @@ MACRO_KEYWORDS = {
         "method": "rss",
         "keywords": [
             "코스피",
+            "코스닥",
             "원달러 환율",
             "WTI 유가",
             "연준 금리",
+            "한국 경제",
+            "미국 증시",
         ],
     },
-    # NOTE: opportunity 카테고리는 fetch_opportunities.py로 이관됨 (F20)
-    # Brave Search 기반 종목 발굴은 fetch_opportunities가 전담
-}
+    # 국내 정정닸스 — 재테크에 직접 영향을 주는 정책/정세
+    "kr_policy": {
+        "relevance": 0.85,
+        "method": "rss",
+        "keywords": [
+            "한국은행 금리",
+            "기준금리 결정",
+            "정부 예산 지출",
+            "부동산 정책",
+            "추경예산",
+        ],
+    },
+    # 국내 정치 정세 — 시장 심리에 영향
+    "kr_politics": {
+        "relevance": 0.75,
+        "method": "rss",
+        "keywords": [
+            "탄핵 선거",
+            "대통령 선거",
+            "국회 정급",
+            "에코 시장",
+        ],
+    },
+}  # end MACRO_KEYWORDS
+
+# discovery_keywords.json 연동 함수
+def load_discovery_keywords() -> list[dict]:
+    """fetch_opportunities가 생성한 discovery_keywords.json 로드.
+    기존 파일이 없으면 빈 리스트 반환."""
+    keywords_path = OUTPUT_DIR / "agent_commands" / "discovery_keywords.json"
+    if not keywords_path.exists():
+        return []
+    try:
+        with open(keywords_path, encoding="utf-8") as f:
+            data = json.load(f)
+        kws = data.get("keywords", [])
+        kws.sort(key=lambda k: k.get("priority", 99))
+        return kws
+    except Exception:
+        return []
 
 
 # ── Google News RSS (무료) ──
@@ -265,6 +308,39 @@ def collect_news() -> tuple[list[dict], int, int]:
             except Exception as e:
                 print(f"  ❌ [{method.upper()}] {category} [{kw}]: {e}")
 
+    # 3. discovery_keywords.json 연동 — 종목 발굴 키워드도 뉴스 수집
+    discovery_kws = load_discovery_keywords()
+    for kw_item in discovery_kws[:5]:  # 상위 5개만
+        kw = kw_item.get("keyword", "")
+        category = kw_item.get("category", "opportunity")
+        if not kw:
+            continue
+        try:
+            results = fetch_google_news_rss(kw, count=3)
+            for article in results:
+                url = article.get("url", "")
+                if url in seen_urls:
+                    continue
+                seen_urls.add(url)
+                news_item = {
+                    "title": article["title"],
+                    "summary": "",
+                    "source": article["source"],
+                    "url": url,
+                    "published_at": article["published_at"],
+                    "relevance_score": 0.7,
+                    "category": f"discovery_{category}",
+                    "tickers": [],
+                    "ticker_name": kw,
+                    "fetch_method": "rss",
+                    "timestamp": now,
+                }
+                all_news.append(news_item)
+                rss_count += 1
+            print(f"  ✅ [RSS] discovery [{kw[:20]}]: {len(results)}건")
+        except Exception as e:
+            print(f"  ❌ [RSS] discovery [{kw[:20]}]: {e}")
+
     # 관련도 높은 순으로 정렬
     all_news.sort(key=lambda x: x["relevance_score"], reverse=True)
 
@@ -339,7 +415,7 @@ def save_to_db(records: list[dict]):
         conn.close()
 
 
-def save_to_json(records: list[dict], ticker_sentiment: dict | None = None):
+def save_to_json(records: list[dict], ticker_sentiment: Optional[dict] = None):
     """뉴스를 JSON 파일로 출력 (감성 집계 포함)"""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_path = OUTPUT_DIR / "news.json"
@@ -359,7 +435,7 @@ def save_to_json(records: list[dict], ticker_sentiment: dict | None = None):
 def run():
     """뉴스 수집 파이프라인 실행"""
     from analysis.sentiment import (
-        aggregate_sentiment_by_ticker,
+        aggregate_sentiment_by_ticker_weighted,
         analyze_news_sentiment,
         save_sentiment_to_db,
     )
@@ -376,7 +452,7 @@ def run():
 
     # 감성 분석
     records = analyze_news_sentiment(records)
-    ticker_sentiment = aggregate_sentiment_by_ticker(records)
+    ticker_sentiment = aggregate_sentiment_by_ticker_weighted(records)
     print(f"  🧠 감성 분석 완료: {len(records)}건, 종목별 {len(ticker_sentiment)}개")
 
     # 저장
