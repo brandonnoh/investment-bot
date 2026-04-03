@@ -63,10 +63,10 @@ def test_generate_fallback_high_usdkrw(tmp_path):
     macro = tmp_path / "macro.json"
     regime = tmp_path / "regime.json"
     macro.write_text(json.dumps({"indicators": [{"indicator": "원/달러", "value": 1500, "change_pct": 0}]}))
-    regime.write_text(json.dumps({"regime": "INFLATIONARY"}))
+    regime.write_text(json.dumps({"regime": "RISK_ON"}))
     keywords = generate_fallback_keywords(macro, regime)
     kwds = [k["keyword"] for k in keywords]
-    assert any("수출" in kw or "달러" in kw for kw in kwds)
+    assert "수출 선도기업 환율 수혜" in kwds
 
 
 def test_save_fallback_keywords(tmp_path):

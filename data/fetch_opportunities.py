@@ -39,6 +39,11 @@ try:
 except ImportError:
     pass
 
+try:
+    from analysis.fallback_keywords import ensure_fresh_keywords
+except ImportError:
+    ensure_fresh_keywords = None
+
 KST = timezone(timedelta(hours=9))
 logger = logging.getLogger(__name__)
 
@@ -291,7 +296,7 @@ def save_opportunities_to_db(conn, opportunities: list):
                 opp.get("discovered_via", ""),
                 opp.get("source", ""),
                 opp.get("composite_score"),
-                opp.get("score_catalyst"),  # DB 컬럼명은 score_sentiment
+                opp.get("score_sentiment"),
                 opp.get("score_macro"),
                 opp.get("price_at_discovery"),
             ),
@@ -339,8 +344,8 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
     out_dir = Path(output_dir) if output_dir else OUTPUT_DIR
 
     # 1. 키워드 freshness 확인 (없거나 25h 경과 시 fallback 자동 생성)
-    from analysis.fallback_keywords import ensure_fresh_keywords
-    ensure_fresh_keywords(kw_path, out_dir)
+    if ensure_fresh_keywords is not None:
+        ensure_fresh_keywords(kw_path, out_dir)
 
     if not kw_path.exists():
         logger.warning("Fallback 키워드 생성 실패 — 종목 발굴 건너뜀")
@@ -445,7 +450,7 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
             sentiment_score = (sentiment + 1.0) / 2.0
             macro_score = (macro_direction + 1.0) / 2.0
             opp["composite_score"] = round(sentiment_score * 0.5 + macro_score * 0.5, 4)
-            opp["score_catalyst"] = round(sentiment_score, 4)
+            opp["score_sentiment"] = round(sentiment_score, 4)
             opp["score_macro"] = round(macro_score, 4)
         logger.info(f"복합 점수 계산 완료: {len(all_opportunities)}건 (macro={macro_direction:.2f})")
     except Exception as e:
