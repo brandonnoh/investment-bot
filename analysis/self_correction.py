@@ -56,9 +56,11 @@ def generate_correction_notes(performance_data: dict) -> dict:
     ]
 
     # 성과 판정
-    if hit_rate >= 60 or hit_rate >= 0.6:
+    # Normalize: if >1 assume 0-100 scale
+    normalized_rate = hit_rate / 100 if hit_rate > 1 else hit_rate
+    if normalized_rate >= 0.6:
         performance_verdict = "양호"
-    elif hit_rate >= 40 or hit_rate >= 0.4:
+    elif normalized_rate >= 0.4:
         performance_verdict = "보통"
     else:
         performance_verdict = "부진"
