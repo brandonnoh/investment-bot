@@ -15,6 +15,7 @@ import urllib.request
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from typing import Optional, Union, List, Dict, Tuple
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -68,14 +69,25 @@ def parse_krx_response(data: dict) -> dict:
     return result
 
 
+def _latest_trading_date() -> str:
+    """가장 최근 거래일 (주말 제외) 반환. 형식: YYYYMMDD"""
+    from datetime import date, timedelta
+    d = date.today()
+    # 토요일(5) → 금요일, 일요일(6) → 금요일
+    if d.weekday() == 5:
+        d -= timedelta(days=1)
+    elif d.weekday() == 6:
+        d -= timedelta(days=2)
+    return d.strftime("%Y%m%d")
+
+
 def fetch_krx_supply() -> dict:
     """KRX Open API로 외국인/기관 순매수 수집.
 
     Returns:
         {종목코드: {"foreign_net": int, "inst_net": int}} 또는 빈 딕셔너리
     """
-    now = datetime.now(KST)
-    trd_date = now.strftime("%Y%m%d")
+    trd_date = _latest_trading_date()
 
     # KRX 정보데이터시스템 — 투자자별 매매동향 (전체)
     url = (
@@ -105,47 +117,51 @@ def fetch_krx_supply() -> dict:
             data = json.loads(raw)
         return parse_krx_response(data)
     except Exception as e:
-        logger.warning(f"KRX 수급 데이터 수집 실패: {e}")
+        err_str = str(e)
+        if "400" in err_str:
+            logger.info(f"KRX 수급 데이터 없음 (비거래일): {trd_date}")
+        else:
+            logger.warning(f"KRX 수급 데이터 수집 실패: {e}")
         return {}
 
 
-def fetch_fear_greed() -> dict | None:
-    """CNN Fear & Greed Index 수집.
+def fetch_fear_greed() -> Optional[dict]:
+    """Alternative.me Fear & Greed Index 수집 (CNN 대체).
 
     Returns:
-        {"score": float, "rating": str, "previous_close": float} 또는 None
+        {"score": float, "rating": str} 또는 None
     """
-    url = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata"
+    url = "https://api.alternative.me/fng/?limit=1"
 
     try:
         req = urllib.request.Request(
             url,
-            headers={
-                "User-Agent": "Mozilla/5.0",
-                "Accept": "application/json",
-            },
+            headers={"User-Agent": "Mozilla/5.0"},
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             raw = resp.read()
             data = json.loads(raw)
 
-        fg = data.get("fear_and_greed", {})
-        score = fg.get("score")
-        if score is None:
-            logger.warning("Fear & Greed 점수 누락")
+        items = data.get("data", [])
+        if not items:
+            logger.warning("Fear & Greed 데이터 없음")
             return None
 
+        item = items[0]
+        score = float(item.get("value", 0))
+        rating = item.get("value_classification", "")
+
         return {
-            "score": float(score),
-            "rating": fg.get("rating", ""),
-            "previous_close": float(fg.get("previous_close", 0)),
+            "score": score,
+            "rating": rating,
+            "previous_close": None,
         }
     except Exception as e:
         logger.warning(f"Fear & Greed Index 수집 실패: {e}")
         return None
 
 
-def fear_greed_to_score(score: float | None) -> float:
+def fear_greed_to_score(score: Optional[float]) -> float:
     """Fear & Greed 점수(0~100)를 매크로 방향 점수(-1.0~1.0)로 변환.
 
     0 = 극도의 공포 → -1.0
@@ -192,7 +208,7 @@ def save_supply_to_db(conn: sqlite3.Connection, supply_data: dict):
     conn.commit()
 
 
-def _save_json(out_dir: Path, krx_supply: dict, fear_greed: dict | None):
+def _save_json(out_dir: Path, krx_supply: dict, fear_greed: Optional[dict]):
     """supply_data.json 파일 저장"""
     out_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now(KST).isoformat()
