@@ -131,6 +131,21 @@ def main():
     except Exception as e:
         print(f"  ⚠️ 성과 추적 실패: {e}")
 
+    # 4.2. 자기 교정 (성과 분석 → correction_notes.json)
+    try:
+        from analysis.self_correction import run as run_self_correction
+
+        correction = run_self_correction()
+        if correction:
+            print(
+                f"  자기 교정: 약한 팩터={correction.get('weak_factors', [])}, "
+                f"강한 팩터={correction.get('strong_factors', [])}"
+            )
+        else:
+            print("  자기 교정: 성과 보고서 없음 — 건너뜀")
+    except Exception as e:
+        print(f"  ⚠️ 자기 교정 실패: {e}")
+
     # 4.5. JSON 출력 스키마 검증
     validate_all_outputs()
 
