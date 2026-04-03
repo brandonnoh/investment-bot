@@ -146,6 +146,19 @@ def main():
     except Exception as e:
         print(f"  ⚠️ 자기 교정 실패: {e}")
 
+    # 4.3. 포트폴리오 시뮬레이션 (발굴 종목 가상 손익 → simulation_report.json)
+    try:
+        from analysis.simulation import run as run_simulation
+
+        sim_result = run_simulation()
+        summary = sim_result.get("summary", {})
+        print(
+            f"  시뮬레이션: {summary.get('total', 0)}건, "
+            f"평균 수익률 {summary.get('avg_return_pct', 0.0):.1f}%"
+        )
+    except Exception as e:
+        print(f"  ⚠️ 포트폴리오 시뮬레이션 실패: {e}")
+
     # 4.5. JSON 출력 스키마 검증
     validate_all_outputs()
 
