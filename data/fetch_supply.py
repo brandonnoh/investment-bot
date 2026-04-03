@@ -87,22 +87,27 @@ def fetch_krx_supply() -> dict:
     Returns:
         {종목코드: {"foreign_net": int, "inst_net": int}} 또는 빈 딕셔너리
     """
+    import http.cookiejar
     trd_date = _latest_trading_date()
 
-    # KRX 정보데이터시스템 — 투자자별 매매동향 (전체)
-    url = (
-        "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
-    )
+    url = "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
     params = {
         "bld": "dbms/MDC/STAT/standard/MDCSTAT02301",
         "locale": "ko_KR",
-        "mktId": "STK",  # 코스피
+        "mktId": "STK",
         "trdDd": trd_date,
         "share": "1",
         "csvxls_isNo": "false",
     }
 
     try:
+        # 1. 세션 쿠키 획득
+        cj = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+        opener.addheaders = [("User-Agent", "Mozilla/5.0")]
+        opener.open("http://data.krx.co.kr/", timeout=10)
+
+        # 2. 데이터 요청 (쿠키 포함)
         post_data = urllib.parse.urlencode(params).encode("utf-8")
         req = urllib.request.Request(
             url,
@@ -110,16 +115,17 @@ def fetch_krx_supply() -> dict:
             headers={
                 "User-Agent": "Mozilla/5.0",
                 "Referer": "http://data.krx.co.kr/contents/MDC/MDI/mdiLoader",
+                "Content-Type": "application/x-www-form-urlencoded",
             },
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with opener.open(req, timeout=15) as resp:
             raw = resp.read()
             data = json.loads(raw)
         return parse_krx_response(data)
     except Exception as e:
         err_str = str(e)
-        if "400" in err_str:
-            logger.info(f"KRX 수급 데이터 없음 (비거래일): {trd_date}")
+        if "400" in err_str or "LOGOUT" in err_str:
+            logger.info(f"KRX 수급 데이터 없음 (비거래일 또는 세션 오류): {trd_date}")
         else:
             logger.warning(f"KRX 수급 데이터 수집 실패: {e}")
         return {}

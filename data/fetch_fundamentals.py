@@ -170,6 +170,38 @@ def fetch_dart_financials(stock_code: str) -> Optional[dict]:
     return result
 
 
+def fetch_naver_per_pbr(stock_code: str) -> dict:
+    """네이버 금융 API로 국내 종목 PER/PBR 수집.
+
+    Args:
+        stock_code: 종목코드 6자리 (예: '005930')
+
+    Returns:
+        {"per": float|None, "pbr": float|None}
+    """
+    url = f"https://m.stock.naver.com/api/stock/{stock_code}/integration"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+
+        result = {"per": None, "pbr": None}
+        for item in data.get("totalInfos", []):
+            code = item.get("code", "")
+            value_str = item.get("value", "")
+            if code in ("per", "pbr") and value_str:
+                # "28.37배" → 28.37
+                cleaned = value_str.replace("배", "").replace(",", "").strip()
+                try:
+                    result[code] = float(cleaned)
+                except ValueError:
+                    pass
+        return result
+    except Exception as e:
+        logger.debug(f"네이버 PER/PBR 수집 실패 ({stock_code}): {e}")
+        return {"per": None, "pbr": None}
+
+
 def _safe_raw(obj: dict, key: str, default=None):
     """Yahoo JSON에서 {key: {raw: value}} 패턴 안전 추출"""
     if not isinstance(obj, dict):
@@ -370,6 +402,14 @@ def _collect_for_ticker(ticker_info: dict) -> Optional[dict]:
                 result["data_source"] = "yahoo"
             elif result["data_source"] == "dart":
                 result["data_source"] = "dart+yahoo"
+
+        # 국내 종목 PER/PBR 네이버에서 보완
+        if market == "KR" and stock_code:
+            naver_ratios = fetch_naver_per_pbr(stock_code)
+            if result.get("per") is None:
+                result["per"] = naver_ratios["per"]
+            if result.get("pbr") is None:
+                result["pbr"] = naver_ratios["pbr"]
 
     # 미국 종목: Yahoo 전용
     elif market == "US" or not ticker.endswith((".KS", ".KQ")):
