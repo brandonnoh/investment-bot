@@ -155,6 +155,19 @@ def main():
     except Exception as e:
         print(f"  ⚠️ 능동적 알림 실패: {e}")
 
+    # 4.26. 동적 종목 관리 (추가/제거 후보 제안 → holdings_proposal.json)
+    try:
+        from analysis.dynamic_holdings import run as run_dynamic_holdings
+
+        dh_result = run_dynamic_holdings()
+        summary = dh_result.get("summary", {})
+        print(
+            f"  동적 종목 관리: 추가 후보 {summary.get('add_count', 0)}개, "
+            f"제거 후보 {summary.get('remove_count', 0)}개"
+        )
+    except Exception as e:
+        print(f"  ⚠️ 동적 종목 관리 실패: {e}")
+
     # 4.3. 포트폴리오 시뮬레이션 (발굴 종목 가상 손익 → simulation_report.json)
     try:
         from analysis.simulation import run as run_simulation
