@@ -1,6 +1,6 @@
 # Phase 1 + Phase 2: 표준 라이브러리만 사용 (urllib, json, sqlite3, math)
 # 추가 의존성 없음
-# Yahoo Finance API: urllib.request 직접 사용
+yfinance>=0.2
 # Brave Search API: urllib.request 직접 사용
 
 # 테스트

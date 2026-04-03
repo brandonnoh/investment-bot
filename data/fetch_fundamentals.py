@@ -14,6 +14,7 @@ import urllib.request
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from typing import Optional, Union, List, Dict, Tuple
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -55,7 +56,7 @@ def _parse_dart_amount(amount_str: str) -> float:
         return 0.0
 
 
-def fetch_dart_financials(stock_code: str) -> dict | None:
+def fetch_dart_financials(stock_code: str) -> Optional[dict]:
     """DART OpenAPI로 한국 종목 재무제표 수집.
 
     Args:
@@ -111,12 +112,19 @@ def fetch_dart_financials(stock_code: str) -> dict | None:
         frmtrm = _parse_dart_amount(item.get("frmtrm_amount", ""))
         accounts[account_nm] = {"current": thstrm, "previous": frmtrm}
 
-    # 재무 지표 계산
-    revenue = accounts.get("매출액", {})
-    operating_profit = accounts.get("영업이익", {})
-    net_income = accounts.get("당기순이익", {})
-    total_debt = accounts.get("부채총계", {})
-    total_equity = accounts.get("자본총계", {})
+    def _get_account(*names):
+        """여러 후보 계정과목명 중 존재하는 첫 번째 반환"""
+        for name in names:
+            if name in accounts:
+                return accounts[name]
+        return {}
+
+    # 재무 지표 계산 (연결재무제표 계정과목명 다양성 대응)
+    revenue = _get_account("매출액", "매출", "수익(매출액)")
+    operating_profit = _get_account("영업이익", "영업이익(손실)")
+    net_income = _get_account("당기순이익", "당기순이익(손실)", "연결당기순이익", "당기순손익")
+    total_debt = _get_account("부채총계", "부채 총계")
+    total_equity = _get_account("자본총계", "자본 총계", "지배기업 소유주지분")
 
     rev_current = revenue.get("current", 0)
     rev_previous = revenue.get("previous", 0)
@@ -151,6 +159,14 @@ def fetch_dart_financials(stock_code: str) -> dict | None:
     if equity_current and equity_current != 0:
         result["debt_ratio"] = round(debt_current / equity_current * 100, 2)
 
+    # 비정상값 필터링
+    if result.get("roe") is not None and abs(result["roe"]) > 200:
+        logger.warning(f"DART ROE 비정상값 필터링: {stock_code} ROE={result['roe']:.1f}%")
+        result["roe"] = None
+    if result.get("debt_ratio") is not None and result["debt_ratio"] > 2000:
+        logger.warning(f"DART 부채비율 비정상값 필터링: {stock_code} 부채비율={result['debt_ratio']:.1f}%")
+        result["debt_ratio"] = None
+
     return result
 
 
@@ -164,8 +180,8 @@ def _safe_raw(obj: dict, key: str, default=None):
     return default
 
 
-def fetch_yahoo_financials(ticker: str) -> dict | None:
-    """Yahoo Finance quoteSummary로 재무 데이터 수집.
+def fetch_yahoo_financials(ticker: str) -> Optional[dict]:
+    """yfinance로 재무 데이터 수집 (Yahoo Finance quoteSummary 대체).
 
     Args:
         ticker: Yahoo 티커 (예: 'TSLA', '005930.KS')
@@ -173,71 +189,50 @@ def fetch_yahoo_financials(ticker: str) -> dict | None:
     Returns:
         재무 지표 딕셔너리 또는 None (실패 시)
     """
-    modules = "defaultKeyStatistics,financialData,summaryDetail"
-    encoded_ticker = urllib.parse.quote(ticker)
-    url = (
-        f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{encoded_ticker}"
-        f"?modules={modules}"
-    )
-
     try:
-        req = urllib.request.Request(url, headers=config.YAHOO_HEADERS)
-        resp = urllib.request.urlopen(req, timeout=config.YAHOO_TIMEOUT)
-        raw = resp.read()
-        data = json.loads(raw)
+        import yfinance as yf
+        t = yf.Ticker(ticker)
+        info = t.info
+        if not info or info.get("regularMarketPrice") is None and info.get("currentPrice") is None:
+            logger.info(f"yfinance 데이터 없음: {ticker}")
+            return None
+
+        def _safe(key, multiplier=1):
+            val = info.get(key)
+            if val is None or val == "Infinity":
+                return None
+            try:
+                return round(float(val) * multiplier, 2)
+            except (TypeError, ValueError):
+                return None
+
+        roe_raw = info.get("returnOnEquity")
+        roe = round(float(roe_raw) * 100, 2) if roe_raw is not None else None
+
+        rev_growth_raw = info.get("revenueGrowth")
+        revenue_growth = round(float(rev_growth_raw) * 100, 2) if rev_growth_raw is not None else None
+
+        op_margin_raw = info.get("operatingMargins")
+        operating_margin = round(float(op_margin_raw) * 100, 2) if op_margin_raw is not None else None
+
+        div_yield_raw = info.get("dividendYield")
+        dividend_yield = round(float(div_yield_raw) * 100, 2) if div_yield_raw is not None else None
+
+        return {
+            "per": _safe("trailingPE"),
+            "pbr": _safe("priceToBook"),
+            "roe": roe,
+            "debt_ratio": _safe("debtToEquity"),
+            "revenue_growth": revenue_growth,
+            "operating_margin": operating_margin,
+            "fcf": _safe("freeCashflow"),
+            "eps": _safe("trailingEps"),
+            "dividend_yield": dividend_yield,
+            "market_cap": _safe("marketCap"),
+        }
     except Exception as e:
-        logger.error(f"Yahoo Finance 호출 실패 ({ticker}): {e}")
+        logger.error(f"yfinance 호출 실패 ({ticker}): {e}")
         return None
-
-    results = data.get("quoteSummary", {}).get("result", [])
-    if not results:
-        logger.info(f"Yahoo Finance 데이터 없음: {ticker}")
-        return None
-
-    info = results[0]
-    key_stats = info.get("defaultKeyStatistics", {})
-    fin_data = info.get("financialData", {})
-    summary = info.get("summaryDetail", {})
-
-    per = _safe_raw(key_stats, "trailingPE") or _safe_raw(summary, "trailingPE")
-    pbr = _safe_raw(key_stats, "priceToBook")
-    roe_raw = _safe_raw(fin_data, "returnOnEquity") or _safe_raw(
-        key_stats, "returnOnEquity"
-    )
-    roe = round(roe_raw * 100, 2) if roe_raw is not None else None
-
-    rev_growth_raw = _safe_raw(fin_data, "revenueGrowth")
-    revenue_growth = (
-        round(rev_growth_raw * 100, 2) if rev_growth_raw is not None else None
-    )
-
-    op_margin_raw = _safe_raw(fin_data, "operatingMargins")
-    operating_margin = (
-        round(op_margin_raw * 100, 2) if op_margin_raw is not None else None
-    )
-
-    debt_ratio = _safe_raw(fin_data, "debtToEquity")
-    fcf = _safe_raw(fin_data, "freeCashflow")
-    eps = _safe_raw(key_stats, "trailingEps")
-    market_cap = _safe_raw(summary, "marketCap")
-
-    div_yield_raw = _safe_raw(summary, "dividendYield")
-    dividend_yield = (
-        round(div_yield_raw * 100, 2) if div_yield_raw is not None else None
-    )
-
-    return {
-        "per": per,
-        "pbr": pbr,
-        "roe": roe,
-        "debt_ratio": debt_ratio,
-        "revenue_growth": revenue_growth,
-        "operating_margin": operating_margin,
-        "fcf": fcf,
-        "eps": eps,
-        "dividend_yield": dividend_yield,
-        "market_cap": market_cap,
-    }
 
 
 def save_fundamentals_to_db(conn: sqlite3.Connection, records: list):
@@ -313,7 +308,7 @@ def generate_json(records: list) -> dict:
     }
 
 
-def _collect_for_ticker(ticker_info: dict) -> dict | None:
+def _collect_for_ticker(ticker_info: dict) -> Optional[dict]:
     """개별 종목의 펀더멘탈 데이터 수집.
 
     한국 종목: DART 우선 → Yahoo 보완
