@@ -21,29 +21,28 @@
 
 ---
 
-### ✅ ISSUE-02. DART 국내 펀더멘탈 파싱 오류 — 해결 (2026-04-03)
+### ✅ ISSUE-02. DART 국내 펀더멘탈 파싱 오류 — 완전 해결 (2026-04-03)
 
 | 항목 | 내용 |
 |------|------|
 | **영향 범위** | 삼성전자, 현대차, SK하이닉스 |
-| **증상** | 삼성전자 ROE=1005%, 부채비율=2966% (비정상값), PER/PBR=None |
-| **결과** | composite_score의 value/quality 팩터 왜곡 |
-| **원인** | 연결재무제표 계정과목명 불일치 ("당기순이익" vs "당기순이익(손실)" 등) |
-| **해결** | `_get_account(*names)` 다중 후보 fallback + 비정상값(ROE>200%, 부채비율>2000%) 필터링 |
-| **커밋** | `ff948d5` |
+| **증상** | ROE=1005%, 부채비율=2966% 비정상값 + PER/PBR=None |
+| **해결 1** | `_get_account(*names)` 계정과목명 fallback + 비정상값 필터링 (`ff948d5`) |
+| **해결 2** | `fetch_naver_per_pbr()` 추가 — 네이버금융 API로 PER/PBR 보완 (`87ce088`) |
+| **검증** | 삼성전자 PER=28.39, PBR=2.91 ✅ / 현대차 PER=13.3, PBR=1.07 ✅ |
 
 ---
 
-### ✅ ISSUE-03. KRX 수급 데이터 400 Bad Request — 해결 (2026-04-03)
+### ✅ ISSUE-03. KRX 수급 데이터 400 Bad Request — 완전 해결 (2026-04-03)
 
 | 항목 | 내용 |
 |------|------|
 | **영향 범위** | 전 보유 종목 외국인/기관 순매수 |
-| **증상** | `KRX 수급 데이터 수집 실패: HTTP Error 400: Bad Request` |
-| **결과** | supply_data.json krx_supply = `{}` → 수급 팩터 미반영 |
-| **원인** | 주말/공휴일 당일 날짜로 요청 시 KRX가 400 반환 |
-| **해결** | `_latest_trading_date()` 헬퍼 추가 — 주말이면 직전 금요일로 자동 보정. 400은 INFO 레벨로 처리 |
-| **커밋** | `fbd2df6` |
+| **증상** | `HTTP Error 400: Bad Request` → 응답 본문 `LOGOUT` |
+| **원인 1** | 주말/공휴일에 당일 날짜로 요청 |
+| **원인 2** | KRX 사이트 세션 쿠키 미포함 (로그인 필요) |
+| **해결 1** | `_latest_trading_date()` — 주말 → 직전 금요일 자동 보정 (`fbd2df6`) |
+| **해결 2** | `CookieJar` + `build_opener` — 세션 쿠키 자동 획득 후 요청 (`87ce088`) |
 
 ---
 
@@ -60,15 +59,17 @@
 
 ---
 
-### ✅ ISSUE-05. Brave Search 뉴스 0건 — 해결 (2026-04-03)
+### ✅ ISSUE-05. Brave Search 뉴스 0건 — 완전 해결 (2026-04-03)
 
 | 항목 | 내용 |
 |------|------|
 | **영향 범위** | fetch_news.py Brave 뉴스 수집 |
 | **증상** | `뉴스 수집 완료: RSS 91건, Brave 0건` |
-| **원인** | `retry_request()`가 gzip 압축 응답 미처리 → `json.loads` 실패 |
-| **해결** | `Accept-Encoding: gzip` 헤더 추가 + gzip 자동 감지/압축해제 (fetch_opportunities.py 패턴 동일 적용) |
-| **커밋** | `e740d2f` |
+| **원인 1** | `retry_request()`가 gzip 압축 응답 미처리 |
+| **원인 2** | MACRO_KEYWORDS 전부 `method: "rss"` → Brave가 코드상 호출 자체가 안됨 |
+| **해결 1** | `search_brave_news()` gzip 처리 추가 (`e740d2f`) |
+| **해결 2** | `geopolitics`, `kr_politics` 키워드 그룹을 `method: "brave"` 로 전환 (`4f49c50`) |
+| **검증** | "트럼프 관세" Brave 검색 2건 정상 수신 ✅ |
 
 ---
 
