@@ -263,16 +263,23 @@ class TestYahooFetch:
             }
         }
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
-    def test_fetch_yahoo_success(self, mock_urlopen):
-        """Yahoo Finance 정상 응답 시 재무 데이터 파싱"""
+    @patch("yfinance.Ticker")
+    def test_fetch_yahoo_success(self, MockTicker):
+        """yfinance로 재무 데이터 파싱"""
         from data.fetch_fundamentals import fetch_yahoo_financials
 
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps(self._make_yahoo_response()).encode()
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_resp
+        mock_t = MagicMock()
+        mock_t.info = {
+            "regularMarketPrice": 200.0,
+            "trailingPE": 25.3,
+            "priceToBook": 3.2,
+            "returnOnEquity": 0.285,
+            "revenueGrowth": 0.12,
+            "operatingMargins": 0.185,
+            "debtToEquity": 45.2,
+            "marketCap": 850000000000,
+        }
+        MockTicker.return_value = mock_t
 
         result = fetch_yahoo_financials("TSLA")
         assert result is not None
@@ -283,16 +290,18 @@ class TestYahooFetch:
         assert abs(result["operating_margin"] - 18.5) < 0.1
         assert result["debt_ratio"] == 45.2
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
-    def test_fetch_yahoo_market_cap(self, mock_urlopen):
+    @patch("yfinance.Ticker")
+    def test_fetch_yahoo_market_cap(self, MockTicker):
         """시가총액 파싱"""
         from data.fetch_fundamentals import fetch_yahoo_financials
 
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps(self._make_yahoo_response()).encode()
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_resp
+        mock_t = MagicMock()
+        mock_t.info = {
+            "regularMarketPrice": 200.0,
+            "trailingPE": 25.3,
+            "marketCap": 850000000000,
+        }
+        MockTicker.return_value = mock_t
 
         result = fetch_yahoo_financials("TSLA")
         assert result["market_cap"] == 850000000000
@@ -322,30 +331,17 @@ class TestYahooFetch:
         result = fetch_yahoo_financials("INVALID")
         assert result is None
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
-    def test_fetch_yahoo_partial_data(self, mock_urlopen):
-        """Yahoo API 일부 필드 누락 시 graceful 처리"""
+    @patch("yfinance.Ticker")
+    def test_fetch_yahoo_partial_data(self, MockTicker):
+        """yfinance 일부 필드 누락 시 graceful 처리"""
         from data.fetch_fundamentals import fetch_yahoo_financials
 
-        partial_response = {
-            "quoteSummary": {
-                "result": [
-                    {
-                        "defaultKeyStatistics": {
-                            "trailingPE": {"raw": 15.0},
-                        },
-                        "financialData": {},
-                        "summaryDetail": {},
-                    }
-                ],
-                "error": None,
-            }
+        mock_t = MagicMock()
+        mock_t.info = {
+            "regularMarketPrice": 200.0,
+            "trailingPE": 15.0,
         }
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps(partial_response).encode()
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_resp
+        MockTicker.return_value = mock_t
 
         result = fetch_yahoo_financials("TSLA")
         assert result is not None
@@ -604,10 +600,11 @@ class TestFundamentalsRun:
         json_path = tmp_output_dir / "fundamentals.json"
         assert json_path.exists()
 
+    @patch("data.fetch_fundamentals.fetch_naver_per_pbr")
     @patch("data.fetch_fundamentals.fetch_dart_financials")
     @patch("data.fetch_fundamentals.fetch_yahoo_financials")
     def test_run_graceful_degradation(
-        self, mock_yahoo, mock_dart, db_conn, tmp_output_dir
+        self, mock_yahoo, mock_dart, mock_naver, db_conn, tmp_output_dir
     ):
         """모든 API 실패 시에도 기존 데이터 유지"""
         from data.fetch_fundamentals import run, save_fundamentals_to_db
@@ -638,6 +635,7 @@ class TestFundamentalsRun:
         # 모든 API 실패
         mock_dart.return_value = None
         mock_yahoo.return_value = None
+        mock_naver.return_value = {"per": None, "pbr": None}
 
         run(conn=db_conn, output_dir=str(tmp_output_dir))
 

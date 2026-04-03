@@ -68,9 +68,9 @@ class TestFetchKrxSupply:
         assert result["005930"]["foreign_net"] == 1500000
         assert result["005930"]["inst_net"] == -800000
 
-    @patch("data.fetch_supply.urllib.request.urlopen")
-    def test_fetch_krx_supply_success(self, mock_urlopen):
-        """KRX API 호출 성공"""
+    @patch("data.fetch_supply.urllib.request.build_opener")
+    def test_fetch_krx_supply_success(self, mock_build_opener):
+        """KRX API 호출 성공 (세션 쿠키 포함)"""
         from data.fetch_supply import fetch_krx_supply
 
         response_data = {
@@ -87,18 +87,24 @@ class TestFetchKrxSupply:
         mock_resp.read.return_value = json.dumps(response_data).encode("utf-8")
         mock_resp.__enter__ = lambda s: s
         mock_resp.__exit__ = MagicMock(return_value=False)
-        mock_urlopen.return_value = mock_resp
+
+        mock_opener = MagicMock()
+        mock_opener.open.return_value = mock_resp
+        mock_build_opener.return_value = mock_opener
 
         result = fetch_krx_supply()
         assert "005930" in result
         assert result["005930"]["foreign_net"] == 1000000
 
-    @patch("data.fetch_supply.urllib.request.urlopen")
-    def test_fetch_krx_supply_failure_graceful(self, mock_urlopen):
+    @patch("data.fetch_supply.urllib.request.build_opener")
+    def test_fetch_krx_supply_failure_graceful(self, mock_build_opener):
         """KRX API 실패 시 빈 딕셔너리 반환 (graceful degradation)"""
         from data.fetch_supply import fetch_krx_supply
 
-        mock_urlopen.side_effect = Exception("Connection refused")
+        mock_opener = MagicMock()
+        mock_opener.open.side_effect = Exception("Connection refused")
+        mock_build_opener.return_value = mock_opener
+
         result = fetch_krx_supply()
         assert result == {}
 
@@ -111,15 +117,16 @@ class TestFetchFearGreed:
 
     @patch("data.fetch_supply.urllib.request.urlopen")
     def test_fetch_fear_greed_success(self, mock_urlopen):
-        """Fear & Greed Index 수집 성공"""
+        """Fear & Greed Index 수집 성공 (Alternative.me 포맷)"""
         from data.fetch_supply import fetch_fear_greed
 
         response_data = {
-            "fear_and_greed": {
-                "score": 35.0,
-                "rating": "fear",
-                "previous_close": 38.0,
-            }
+            "data": [
+                {
+                    "value": "35",
+                    "value_classification": "Fear",
+                }
+            ]
         }
         mock_resp = MagicMock()
         mock_resp.read.return_value = json.dumps(response_data).encode("utf-8")
@@ -130,7 +137,7 @@ class TestFetchFearGreed:
         result = fetch_fear_greed()
         assert result is not None
         assert result["score"] == 35.0
-        assert result["rating"] == "fear"
+        assert result["rating"] == "Fear"
 
     @patch("data.fetch_supply.urllib.request.urlopen")
     def test_fetch_fear_greed_failure_graceful(self, mock_urlopen):

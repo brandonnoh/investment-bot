@@ -42,10 +42,9 @@ TICKER_KEYWORDS = {
 
 # ── 매크로 키워드 — 카테고리별 수집 방식 ──
 MACRO_KEYWORDS = {
-    # Brave로 수집 — 지정학 이슈는 시의성 높은 정확한 결과 필요
     "geopolitics": {
         "relevance": 0.9,
-        "method": "brave",
+        "method": "rss",
         "keywords": [
             "이란 전쟁",
             "미중 무역전쟁",
@@ -77,10 +76,9 @@ MACRO_KEYWORDS = {
             "추경예산",
         ],
     },
-    # 국내 정치 정세 — 시장 심리에 영향 (Brave로 품질 개선)
     "kr_politics": {
         "relevance": 0.75,
-        "method": "brave",
+        "method": "rss",
         "keywords": [
             "탄핵 선거",
             "대통령 선거",
