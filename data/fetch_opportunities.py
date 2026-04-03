@@ -5,6 +5,7 @@
 뉴스를 검색하고, 종목 사전과 매칭하여 투자 후보를 발굴.
 """
 
+import gzip
 import json
 import logging
 import os
@@ -94,6 +95,9 @@ def search_brave(query: str, count: int = 10) -> list:
     try:
         resp = urllib.request.urlopen(req, timeout=15)
         raw = resp.read()
+        # gzip 압축 응답 자동 처리
+        if resp.headers.get("Content-Encoding") == "gzip" or raw[:2] == b'\x1f\x8b':
+            raw = gzip.decompress(raw)
         data = json.loads(raw)
         results = data.get("results", [])
         return [
@@ -278,8 +282,8 @@ def save_opportunities_to_db(conn, opportunities: list):
         cursor.execute(
             """INSERT INTO opportunities
                (ticker, name, discovered_at, discovered_via, source,
-                composite_score, price_at_discovery, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 'discovered')""",
+                composite_score, score_sentiment, score_macro, price_at_discovery, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'discovered')""",
             (
                 opp.get("ticker", ""),
                 opp.get("name", ""),
@@ -287,6 +291,8 @@ def save_opportunities_to_db(conn, opportunities: list):
                 opp.get("discovered_via", ""),
                 opp.get("source", ""),
                 opp.get("composite_score"),
+                opp.get("score_catalyst"),  # DB 컬럼명은 score_sentiment
+                opp.get("score_macro"),
                 opp.get("price_at_discovery"),
             ),
         )
@@ -332,9 +338,12 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
     kw_path = Path(keywords_path) if keywords_path else KEYWORDS_PATH
     out_dir = Path(output_dir) if output_dir else OUTPUT_DIR
 
-    # 1. 키워드 파일 읽기
+    # 1. 키워드 freshness 확인 (없거나 25h 경과 시 fallback 자동 생성)
+    from analysis.fallback_keywords import ensure_fresh_keywords
+    ensure_fresh_keywords(kw_path, out_dir)
+
     if not kw_path.exists():
-        logger.info(f"키워드 파일 없음: {kw_path} — 종목 발굴 건너뜀")
+        logger.warning("Fallback 키워드 생성 실패 — 종목 발굴 건너뜀")
         return []
 
     try:
@@ -413,6 +422,34 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
     # 6. 후보 수 제한
     max_candidates = config.OPPORTUNITY_CONFIG.get("max_candidates", 100)
     all_opportunities = all_opportunities[:max_candidates]
+
+    # 6.5 복합 점수 계산 (기본 팩터만 — 감성 + 매크로)
+    try:
+        from analysis.composite_score import calculate_macro_direction
+        # 매크로 데이터 로드
+        macro_path = out_dir / "macro.json"
+        macro_data = {}
+        if macro_path.exists():
+            with open(macro_path) as f:
+                macro_json = json.load(f)
+                for ind in macro_json.get("indicators", []):
+                    macro_data[ind["ticker"]] = {
+                        "value": ind.get("value"),
+                        "change_pct": ind.get("change_pct"),
+                    }
+        macro_direction = calculate_macro_direction(macro_data)
+        
+        for opp in all_opportunities:
+            sentiment = opp.get("sentiment") or 0
+            # 단순 점수: 감성(50%) + 매크로(50%)
+            sentiment_score = (sentiment + 1.0) / 2.0
+            macro_score = (macro_direction + 1.0) / 2.0
+            opp["composite_score"] = round(sentiment_score * 0.5 + macro_score * 0.5, 4)
+            opp["score_catalyst"] = round(sentiment_score, 4)
+            opp["score_macro"] = round(macro_score, 4)
+        logger.info(f"복합 점수 계산 완료: {len(all_opportunities)}건 (macro={macro_direction:.2f})")
+    except Exception as e:
+        logger.warning(f"복합 점수 계산 실패: {e}")
 
     # 7. DB 저장
     if all_opportunities:
