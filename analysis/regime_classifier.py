@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-from __future__ import annotations
 """
 시장 레짐 분류기 — 매크로 데이터 기반 현재 시장 환경 분류
 4가지 레짐: RISK_ON, RISK_OFF, INFLATIONARY, STAGFLATION
 출력: output/intel/regime.json
 """
+from __future__ import annotations
 
 import json
 import sys
