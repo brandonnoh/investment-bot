@@ -146,6 +146,15 @@ def main():
     except Exception as e:
         print(f"  ⚠️ 자기 교정 실패: {e}")
 
+    # 4.25. 능동적 알림 (포트폴리오 P&L + regime + 교정 → proactive_alerts.json)
+    try:
+        from analysis.proactive_alerts import run as run_proactive_alerts
+
+        alert_result = run_proactive_alerts()
+        print(f"  능동적 알림: {alert_result.get('count', 0)}건 생성")
+    except Exception as e:
+        print(f"  ⚠️ 능동적 알림 실패: {e}")
+
     # 4.3. 포트폴리오 시뮬레이션 (발굴 종목 가상 손익 → simulation_report.json)
     try:
         from analysis.simulation import run as run_simulation
