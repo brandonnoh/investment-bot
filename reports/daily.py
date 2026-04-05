@@ -9,6 +9,7 @@ import json
 import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -17,7 +18,7 @@ from config import OUTPUT_DIR
 KST = timezone(timedelta(hours=9))
 
 
-def load_json(filename: str) -> dict | None:
+def load_json(filename: str) -> Optional[dict]:
     """output/intel/ 에서 JSON 파일 로드"""
     path = OUTPUT_DIR / filename
     if not path.exists():
@@ -26,7 +27,7 @@ def load_json(filename: str) -> dict | None:
         return json.load(f)
 
 
-def format_price_section(prices_data: dict | None) -> str:
+def format_price_section(prices_data: Optional[dict]) -> str:
     """포트폴리오 현황 섹션 생성"""
     if not prices_data:
         return "## 📊 포트폴리오 현황\n\n> 데이터 없음 — fetch_prices.py 실행 필요\n"
@@ -79,7 +80,7 @@ def format_price_section(prices_data: dict | None) -> str:
     return "\n".join(lines)
 
 
-def format_portfolio_summary(prices_data: dict | None) -> str:
+def format_portfolio_summary(prices_data: Optional[dict]) -> str:
     """포트폴리오 통화별 요약 (KRW/USD 분리 계산)"""
     if not prices_data:
         return ""
@@ -120,7 +121,7 @@ def format_portfolio_summary(prices_data: dict | None) -> str:
     return "\n".join(lines)
 
 
-def format_macro_section(macro_data: dict | None) -> str:
+def format_macro_section(macro_data: Optional[dict]) -> str:
     """매크로 지표 요약 섹션"""
     if not macro_data:
         return "## 🌍 매크로 지표\n\n> 데이터 없음 — fetch_macro.py 실행 필요\n"
@@ -151,7 +152,7 @@ def format_macro_section(macro_data: dict | None) -> str:
     return "\n".join(lines)
 
 
-def format_alerts_section(alerts_data: dict | None) -> str:
+def format_alerts_section(alerts_data: Optional[dict]) -> str:
     """알림 요약 섹션"""
     if not alerts_data:
         return "## 🚨 알림\n\n✅ 현재 발생한 알림 없음\n"

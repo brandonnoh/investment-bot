@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ralph v2 Plan",
+  "type": "object",
+  "required": ["iteration", "selected_tasks", "parallel_groups"],
+  "properties": {
+    "iteration": { "type": "number" },
+    "selected_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "affected_packages", "estimated_effort"],
+        "properties": {
+          "id": { "type": "string" },
+          "affected_packages": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "estimated_effort": {
+            "type": "string",
+            "enum": ["XS", "S", "M", "L", "XL"]
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "parallel_groups": {
+      "type": "array",
+      "description": "각 그룹은 동시에 실행 가능한 task ID 배열",
+      "items": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "cross_package_notes": { "type": "string" }
+  }
+}

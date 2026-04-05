@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mission Control — Investment Bot</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <script src="/static/app.js"></script>
+</head>
+<body x-data x-init="$store.mc.init()">
+
+<!-- 헤더 -->
+<header class="header">
+  <div class="header-brand">⚡ Mission Control</div>
+
+  <div class="header-actions">
+    <button class="btn btn-primary"
+            :disabled="$store.mc.pipelineRunning"
+            @click="$store.mc.runPipeline()">
+      <span x-show="!$store.mc.pipelineRunning">▶ 파이프라인 실행</span>
+      <span x-show="$store.mc.pipelineRunning" style="display:flex;align-items:center;gap:6px">
+        <span class="spinner"></span> 실행 중...
+      </span>
+    </button>
+
+    <button class="btn"
+            :disabled="$store.mc.marcusRunning"
+            @click="$store.mc.runMarcus()">
+      <span x-show="!$store.mc.marcusRunning">🧠 Marcus 분석</span>
+      <span x-show="$store.mc.marcusRunning" style="display:flex;align-items:center;gap:6px">
+        <span class="spinner"></span> 분석 중...
+      </span>
+    </button>
+
+    <span class="header-meta" x-text="$store.mc.lastUpdated ? '업데이트: ' + $store.mc.lastUpdated : '로딩 중...'"></span>
+
+    <span class="status-dot"
+          :class="$store.mc.sseStatus === 'connected' ? 'green' : 'red'"
+          :title="$store.mc.sseStatus === 'connected' ? '실시간 연결됨' : '연결 끊김'"></span>
+  </div>
+</header>
+
+<!-- 탭 -->
+<nav class="tabs">
+  <template x-for="t in [
+    {id:'overview', label:'📊 개요'},
+    {id:'portfolio', label:'💼 포트폴리오'},
+    {id:'marcus', label:'🧠 마커스'},
+    {id:'discovery', label:'🔍 발굴'},
+    {id:'alerts', label:'🔔 알림/뉴스'},
+    {id:'system', label:'⚙️ 시스템'}
+  ]" :key="t.id">
+    <button class="tab"
+            :class="$store.mc.tab === t.id ? 'active' : ''"
+            @click="$store.mc.tab = t.id; $nextTick(() => $store.mc.renderCharts($store.mc.data))"
+            x-text="t.label">
+    </button>
+  </template>
+</nav>
+
+<!-- 메인 콘텐츠 -->
+<main class="main">
+
+  <!-- ===== 탭1: 개요 ===== -->
+  <div x-show="$store.mc.tab === 'overview'">
+    <!-- KPI 카드 -->
+    <div class="kpi-grid">
+      <!-- 포트폴리오 손익 -->
+      <div class="kpi-card">
+        <div class="kpi-label">포트폴리오 손익</div>
+        <div class="kpi-value"
+             :class="$store.mc.pctClass($store.mc.portfolio?.total?.pnl_pct)"
+             x-text="$store.mc.fmtPct($store.mc.portfolio?.total?.pnl_pct)">
+        </div>
+        <div class="kpi-sub"
+             x-text="$store.mc.fmtKrw($store.mc.portfolio?.total?.pnl_krw)">
+        </div>
+      </div>
+
+      <!-- 평균 일변동 -->
+      <div class="kpi-card">
+        <div class="kpi-label">오늘 변동 (평균)</div>
+        <template x-if="$store.mc.prices.length > 0">
+          <div>
+            <div class="kpi-value"
+                 :class="$store.mc.pctClass(
+                   $store.mc.prices.reduce((a,p) => a + (p.change_pct||0), 0) / $store.mc.prices.length
+                 )"
+                 x-text="$store.mc.fmtPct(
+                   $store.mc.prices.reduce((a,p) => a + (p.change_pct||0), 0) / $store.mc.prices.length
+                 )">
+            </div>
+            <div class="kpi-sub" x-text="$store.mc.prices.length + '개 종목'"></div>
+          </div>
+        </template>
+        <template x-if="$store.mc.prices.length === 0">
+          <div class="kpi-value muted">-</div>
+        </template>
+      </div>
+
+      <!-- 시장 국면 -->
+      <div class="kpi-card">
+        <div class="kpi-label">시장 국면</div>
+        <div class="kpi-value"
+             :class="$store.mc.regimeColor($store.mc.regime?.regime)"
+             x-text="$store.mc.regime?.regime ?? '-'">
+        </div>
+        <div class="kpi-sub"
+             x-text="$store.mc.regime?.strategy?.stance ? '전략: ' + $store.mc.regime.strategy.stance : ''">
+        </div>
+      </div>
+
+      <!-- 알림 수 -->
+      <div class="kpi-card">
+        <div class="kpi-label">활성 알림</div>
+        <div class="kpi-value"
+             :class="$store.mc.alerts.length > 0 ? 'yellow' : 'green'"
+             x-text="$store.mc.alerts.length">
+        </div>
+        <div class="kpi-sub">
+          <span x-show="$store.mc.regime?.panic_signal" class="red">⚠ PANIC SIGNAL</span>
+          <span x-show="!$store.mc.regime?.panic_signal" class="muted">정상</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 알림 배너 -->
+    <div class="section" x-show="$store.mc.alerts.length > 0">
+      <template x-for="a in $store.mc.alerts" :key="a.message">
+        <div class="alert-banner" :class="a.level">
+          <span x-text="a.level === 'RED' ? '🔴' : a.level === 'YELLOW' ? '🟡' : '🟢'"></span>
+          <span x-text="a.message"></span>
+        </div>
+      </template>
+    </div>
+
+    <!-- 종목 테이블 -->
+    <div class="section">
+      <div class="section-title">보유 종목</div>
+      <div class="card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>종목</th>
+              <th>현재가</th>
+              <th>등락</th>
+              <th>평균단가</th>
+              <th>평가손익</th>
+              <th>섹터</th>
+              <th>통화</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="p in $store.mc.prices" :key="p.ticker">
+              <tr>
+                <td>
+                  <div x-text="p.name"></div>
+                  <div class="muted" style="font-size:10px" x-text="p.ticker"></div>
+                </td>
+                <td x-text="p.currency === 'USD' ? '$' + p.price?.toFixed(2) : p.price?.toLocaleString('ko-KR')"></td>
+                <td :class="$store.mc.pctClass(p.change_pct)" x-text="$store.mc.fmtPct(p.change_pct)"></td>
+                <td x-text="p.avg_cost ? (p.currency === 'USD' ? '$' + p.avg_cost?.toFixed(2) : p.avg_cost?.toLocaleString('ko-KR')) : '-'"></td>
+                <td :class="$store.mc.pctClass(p.pnl_pct)" x-text="$store.mc.fmtPct(p.pnl_pct)"></td>
+                <td class="muted" x-text="p.sector || '-'"></td>
+                <td class="muted" x-text="p.currency"></td>
+              </tr>
+            </template>
+            <tr x-show="$store.mc.prices.length === 0">
+              <td colspan="7" class="empty">데이터 없음</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 매크로 카드 -->
+    <div class="section">
+      <div class="section-title">매크로 지표</div>
+      <div class="grid-3">
+        <template x-for="m in $store.mc.macro" :key="m.indicator">
+          <div class="card">
+            <div class="kpi-label" x-text="m.indicator"></div>
+            <div class="kpi-value" style="font-size:18px" x-text="$store.mc.fmtNum(m.value)"></div>
+            <div :class="$store.mc.pctClass(m.change_pct)"
+                 style="font-size:12px;margin-top:4px"
+                 x-text="$store.mc.fmtPct(m.change_pct)">
+            </div>
+          </div>
+        </template>
+        <div x-show="$store.mc.macro.length === 0" class="empty">데이터 없음</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 탭2: 포트폴리오 ===== -->
+  <div x-show="$store.mc.tab === 'portfolio'">
+    <!-- 요약 KPI -->
+    <div class="kpi-grid" style="grid-template-columns: repeat(3,1fr)">
+      <div class="kpi-card">
+        <div class="kpi-label">투자원금</div>
+        <div class="kpi-value blue" x-text="$store.mc.fmtKrw($store.mc.portfolio?.total?.invested_krw)"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">주식 손익</div>
+        <div class="kpi-value"
+             :class="$store.mc.pctClass($store.mc.portfolio?.total?.stock_pnl_krw)"
+             x-text="$store.mc.fmtKrw($store.mc.portfolio?.total?.stock_pnl_krw)">
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">환율 손익</div>
+        <div class="kpi-value"
+             :class="$store.mc.pctClass($store.mc.portfolio?.total?.fx_pnl_krw)"
+             x-text="$store.mc.fmtKrw($store.mc.portfolio?.total?.fx_pnl_krw)">
+        </div>
+        <div class="kpi-sub" x-text="$store.mc.portfolio?.exchange_rate ? '환율: ₩' + $store.mc.portfolio.exchange_rate?.toFixed(0) : ''"></div>
+      </div>
+    </div>
+
+    <!-- 차트 -->
+    <div class="grid-2 section">
+      <div class="card">
+        <div class="section-title">수익률 추이</div>
+        <div class="chart-container">
+          <canvas id="chart-portfolio"></canvas>
+        </div>
+        <div x-show="($store.mc.portfolio?.history ?? []).length === 0" class="empty" style="margin-top:-180px">이력 데이터 없음</div>
+      </div>
+      <div class="card">
+        <div class="section-title">섹터 비중</div>
+        <div class="chart-container">
+          <canvas id="chart-sector"></canvas>
+        </div>
+        <div x-show="($store.mc.portfolio?.holdings ?? []).length === 0" class="empty" style="margin-top:-180px">보유 종목 없음</div>
+      </div>
+    </div>
+
+    <!-- 보유 종목 상세 -->
+    <div class="section">
+      <div class="section-title">보유 종목 상세</div>
+      <div class="card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>종목</th>
+              <th>섹터</th>
+              <th>수량</th>
+              <th>평균단가</th>
+              <th>현재가</th>
+              <th>평가금액(원)</th>
+              <th>투자금액(원)</th>
+              <th>손익(원)</th>
+              <th>손익(%)</th>
+              <th>환율손익</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="h in ($store.mc.portfolio?.holdings ?? [])" :key="h.ticker">
+              <tr>
+                <td>
+                  <div x-text="h.name"></div>
+                  <div class="muted" style="font-size:10px" x-text="h.ticker"></div>
+                </td>
+                <td class="muted" x-text="h.sector || '-'"></td>
+                <td x-text="h.qty"></td>
+                <td x-text="h.currency === 'USD' ? '$' + (h.avg_cost ?? 0).toFixed(2) : (h.avg_cost ?? 0).toLocaleString('ko-KR')"></td>
+                <td x-text="h.currency === 'USD' ? '$' + (h.price ?? 0).toFixed(2) : (h.price ?? 0).toLocaleString('ko-KR')"></td>
+                <td x-text="(h.current_value_krw ?? 0).toLocaleString('ko-KR')"></td>
+                <td x-text="(h.invested_krw ?? 0).toLocaleString('ko-KR')"></td>
+                <td :class="$store.mc.pctClass(h.pnl_krw)" x-text="(h.pnl_krw ?? 0).toLocaleString('ko-KR')"></td>
+                <td :class="$store.mc.pctClass(h.pnl_pct)" x-text="$store.mc.fmtPct(h.pnl_pct)"></td>
+                <td :class="$store.mc.pctClass(h.fx_pnl_krw)"
+                    x-text="h.fx_pnl_krw ? (h.fx_pnl_krw).toLocaleString('ko-KR') : '-'">
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 추가/제거 후보 -->
+    <div class="grid-2 section">
+      <div class="card">
+        <div class="section-title">추가 후보</div>
+        <template x-for="c in ($store.mc.holdingsProposal?.add_candidates ?? [])" :key="c.ticker">
+          <div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+            <span x-text="c.name ?? c.ticker"></span>
+            <span class="green" x-text="c.reason ?? ''"></span>
+          </div>
+        </template>
+        <div x-show="($store.mc.holdingsProposal?.add_candidates ?? []).length === 0" class="empty">없음</div>
+      </div>
+      <div class="card">
+        <div class="section-title">제거 후보</div>
+        <template x-for="c in ($store.mc.holdingsProposal?.remove_candidates ?? [])" :key="c.ticker">
+          <div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+            <span x-text="c.name ?? c.ticker"></span>
+            <span class="red" x-text="c.reason ?? ''"></span>
+          </div>
+        </template>
+        <div x-show="($store.mc.holdingsProposal?.remove_candidates ?? []).length === 0" class="empty">없음</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 탭3: 마커스 ===== -->
+  <div x-show="$store.mc.tab === 'marcus'">
+    <!-- 마커스 분석 -->
+    <div class="section">
+      <div class="section-title">마커스 분석 (marcus-analysis.md)</div>
+      <div class="card">
+        <template x-if="$store.mc.marcusMd">
+          <div class="markdown-body" x-html="$store.mc.renderMarkdown($store.mc.marcusMd)"></div>
+        </template>
+        <div x-show="!$store.mc.marcusMd" class="empty">분석 데이터 없음 — Marcus 분석을 실행하세요</div>
+      </div>
+    </div>
+
+    <!-- CIO 브리핑 아코디언 -->
+    <div class="section" x-show="$store.mc.cioBriefingMd">
+      <div class="card">
+        <div class="accordion-header" @click="$el.parentElement.querySelector('.accordion-body').classList.toggle('hidden')">
+          <span>CIO 브리핑 (cio-briefing.md)</span>
+          <span>▼</span>
+        </div>
+        <div class="accordion-body">
+          <div class="markdown-body" x-html="$store.mc.renderMarkdown($store.mc.cioBriefingMd)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 일일 리포트 아코디언 -->
+    <div class="section" x-show="$store.mc.dailyReportMd">
+      <div class="card">
+        <div class="accordion-header" @click="$el.parentElement.querySelector('.accordion-body').classList.toggle('hidden')">
+          <span>일일 리포트 (daily_report.md)</span>
+          <span>▼</span>
+        </div>
+        <div class="accordion-body">
+          <div class="markdown-body" x-html="$store.mc.renderMarkdown($store.mc.dailyReportMd)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 탭4: 발굴 ===== -->
+  <div x-show="$store.mc.tab === 'discovery'">
+    <!-- 기회 바 차트 -->
+    <div class="section">
+      <div class="section-title">발굴 종목 종합 점수</div>
+      <div class="card">
+        <div style="height:220px;position:relative">
+          <canvas id="chart-opportunity"></canvas>
+        </div>
+        <div x-show="$store.mc.opportunities.length === 0" class="empty" style="margin-top:-160px">발굴 데이터 없음</div>
+      </div>
+    </div>
+
+    <!-- 발굴 종목 테이블 -->
+    <div class="section">
+      <div class="section-title">발굴 종목 상세</div>
+      <div class="card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>종목</th>
+              <th>발굴 키워드</th>
+              <th>종합 점수</th>
+              <th>감성</th>
+              <th>매크로</th>
+              <th>발굴 시 가격</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="o in $store.mc.opportunities" :key="o.ticker + o.discovered_via">
+              <tr>
+                <td>
+                  <div x-text="o.name ?? o.ticker"></div>
+                  <div class="muted" style="font-size:10px" x-text="o.ticker"></div>
+                </td>
+                <td class="muted" x-text="o.discovered_via"></td>
+                <td>
+                  <span :class="(o.composite_score ?? 0) >= 0.8 ? 'green' : (o.composite_score ?? 0) >= 0.6 ? 'blue' : 'yellow'"
+                        x-text="((o.composite_score ?? 0) * 100).toFixed(1) + '/100'">
+                  </span>
+                </td>
+                <td :class="$store.mc.pctClass(o.score_sentiment - 0.5)" x-text="$store.mc.fmtNum(o.score_sentiment, 2)"></td>
+                <td :class="$store.mc.pctClass(o.score_macro - 0.5)" x-text="$store.mc.fmtNum(o.score_macro, 2)"></td>
+                <td x-text="o.price_at_discovery ? o.price_at_discovery?.toLocaleString('ko-KR') : '-'"></td>
+              </tr>
+            </template>
+            <tr x-show="$store.mc.opportunities.length === 0">
+              <td colspan="6" class="empty">발굴 종목 없음</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 스크리너 top10 -->
+    <div class="grid-2 section">
+      <div class="card">
+        <div class="section-title">KOSPI200 Top 10</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>종목</th><th>점수</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="(s, i) in ($store.mc.screener?.kospi200_top10 ?? [])" :key="s.ticker">
+                <tr>
+                  <td class="muted" x-text="i+1"></td>
+                  <td>
+                    <div x-text="s.name ?? s.ticker"></div>
+                    <div class="muted" style="font-size:10px" x-text="s.ticker"></div>
+                  </td>
+                  <td class="blue" x-text="$store.mc.fmtNum(s.score ?? s.composite_score, 2)"></td>
+                </tr>
+              </template>
+              <tr x-show="($store.mc.screener?.kospi200_top10 ?? []).length === 0">
+                <td colspan="3" class="empty">데이터 없음</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">S&P100 Top 10</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>종목</th><th>점수</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="(s, i) in ($store.mc.screener?.sp100_top10 ?? [])" :key="s.ticker">
+                <tr>
+                  <td class="muted" x-text="i+1"></td>
+                  <td>
+                    <div x-text="s.name ?? s.ticker"></div>
+                    <div class="muted" style="font-size:10px" x-text="s.ticker"></div>
+                  </td>
+                  <td class="blue" x-text="$store.mc.fmtNum(s.score ?? s.composite_score, 2)"></td>
+                </tr>
+              </template>
+              <tr x-show="($store.mc.screener?.sp100_top10 ?? []).length === 0">
+                <td colspan="3" class="empty">데이터 없음</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MA/RSI 신호 카드 -->
+    <div class="section">
+      <div class="section-title">기술 분석 신호 (MA / RSI)</div>
+      <div class="grid-3">
+        <template x-for="[ticker, analysis] in Object.entries($store.mc.priceAnalysis)" :key="ticker">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <div>
+                <div style="font-weight:600" x-text="analysis.name ?? ticker"></div>
+                <div class="muted" style="font-size:10px" x-text="ticker"></div>
+              </div>
+              <span class="badge"
+                    :class="analysis.trend === 'up' ? 'badge-green' : analysis.trend === 'down' ? 'badge-red' : 'badge-blue'"
+                    x-text="analysis.trend ?? '-'">
+              </span>
+            </div>
+            <div style="display:flex;gap:16px;font-size:12px">
+              <div>
+                <span class="muted">MA: </span>
+                <span :class="$store.mc.maColor(analysis.ma_signal)"
+                      x-text="analysis.ma_signal ?? '-'">
+                </span>
+              </div>
+              <div>
+                <span class="muted">RSI: </span>
+                <span :class="$store.mc.rsiColor(analysis.rsi_signal)"
+                      x-text="analysis.rsi_14 ? analysis.rsi_14.toFixed(1) : '-'">
+                </span>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px"
+                 x-text="analysis.support ? '지지: ' + analysis.support?.toLocaleString('ko-KR') + ' / 저항: ' + analysis.resistance?.toLocaleString('ko-KR') : ''">
+            </div>
+          </div>
+        </template>
+        <div x-show="Object.keys($store.mc.priceAnalysis).length === 0" class="empty">기술분석 데이터 없음</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 탭5: 알림/뉴스 ===== -->
+  <div x-show="$store.mc.tab === 'alerts'">
+    <!-- 알림 목록 -->
+    <div class="section">
+      <div class="section-title">활성 알림 (<span x-text="$store.mc.alerts.length"></span>)</div>
+      <template x-for="a in $store.mc.alerts" :key="a.message">
+        <div class="alert-banner" :class="a.level">
+          <span x-text="a.level === 'RED' ? '🔴' : a.level === 'YELLOW' ? '🟡' : '🟢'"></span>
+          <div style="flex:1">
+            <div x-text="a.message"></div>
+            <div style="font-size:11px;opacity:0.8;margin-top:2px"
+                 x-text="'타입: ' + (a.event_type ?? '-') + (a.value ? ' | 값: ' + a.value : '') + (a.threshold ? ' | 임계: ' + a.threshold : '')">
+            </div>
+          </div>
+        </div>
+      </template>
+      <div x-show="$store.mc.alerts.length === 0" class="card empty">알림 없음 — 모든 지표 정상</div>
+    </div>
+
+    <!-- 최신 뉴스 -->
+    <div class="section">
+      <div class="section-title">최신 뉴스</div>
+      <div class="card">
+        <template x-for="n in $store.mc.news" :key="n.url ?? n.title">
+          <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+              <div style="flex:1">
+                <a :href="n.url" target="_blank"
+                   style="color:var(--text);text-decoration:none;font-size:12px;line-height:1.4"
+                   x-text="n.title"
+                   onmouseover="this.style.color='var(--blue)'"
+                   onmouseout="this.style.color='var(--text)'">
+                </a>
+              </div>
+              <div style="flex-shrink:0">
+                <span class="badge"
+                      :class="$store.mc.sentimentBadge(n.sentiment).cls"
+                      x-text="$store.mc.sentimentBadge(n.sentiment).label">
+                </span>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:4px;font-size:11px;color:var(--text-muted)">
+              <span x-text="n.source"></span>
+              <span x-text="$store.mc.fmtDate(n.published_at)"></span>
+              <span x-show="n.category" x-text="n.category"></span>
+            </div>
+          </div>
+        </template>
+        <div x-show="$store.mc.news.length === 0" class="empty">뉴스 없음</div>
+      </div>
+    </div>
+
+    <!-- Fundamentals PER/PBR -->
+    <div class="section">
+      <div class="section-title">펀더멘털 (PER / PBR / ROE)</div>
+      <div class="card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>종목</th>
+              <th>PER</th>
+              <th>PBR</th>
+              <th>ROE (%)</th>
+              <th>부채비율</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="f in $store.mc.fundamentals" :key="f.ticker">
+              <tr>
+                <td>
+                  <div x-text="f.name ?? f.ticker"></div>
+                  <div class="muted" style="font-size:10px" x-text="f.ticker"></div>
+                </td>
+                <td x-text="f.per != null ? $store.mc.fmtNum(f.per, 1) + 'x' : '-'"></td>
+                <td x-text="f.pbr != null ? $store.mc.fmtNum(f.pbr, 2) + 'x' : '-'"></td>
+                <td :class="f.roe > 10 ? 'green' : f.roe < 0 ? 'red' : ''"
+                    x-text="f.roe != null ? $store.mc.fmtNum(f.roe, 1) + '%' : '-'">
+                </td>
+                <td :class="f.debt_ratio > 200 ? 'red' : f.debt_ratio > 100 ? 'yellow' : ''"
+                    x-text="f.debt_ratio != null ? $store.mc.fmtNum(f.debt_ratio, 1) + '%' : '-'">
+                </td>
+              </tr>
+            </template>
+            <tr x-show="$store.mc.fundamentals.length === 0">
+              <td colspan="5" class="empty">데이터 없음</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 탭6: 시스템 ===== -->
+  <div x-show="$store.mc.tab === 'system'">
+    <!-- 엔진 KPI -->
+    <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi-card">
+        <div class="kpi-label">파이프라인 상태</div>
+        <div class="kpi-value"
+             :class="$store.mc.engineStatus?.pipeline_ok ? 'green' : 'red'"
+             x-text="$store.mc.engineStatus?.pipeline_ok ? 'OK' : 'ERROR'">
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">총 오류</div>
+        <div class="kpi-value"
+             :class="($store.mc.engineStatus?.total_errors ?? 0) > 0 ? 'red' : 'green'"
+             x-text="$store.mc.engineStatus?.total_errors ?? 0">
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">가동일수</div>
+        <div class="kpi-value blue" x-text="($store.mc.engineStatus?.uptime_days ?? 0) + '일'"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">DB 크기</div>
+        <div class="kpi-value muted" x-text="($store.mc.engineStatus?.db_size_mb ?? 0).toFixed(2) + ' MB'"></div>
+      </div>
+    </div>
+
+    <!-- Fear & Greed -->
+    <div class="grid-2 section">
+      <div class="card">
+        <div class="section-title">Fear &amp; Greed Index</div>
+        <div class="gauge-container">
+          <div class="gauge-score"
+               :class="$store.mc.fearGreedColor($store.mc.supplyData?.fear_greed?.score)"
+               x-text="$store.mc.supplyData?.fear_greed?.score ?? '-'">
+          </div>
+          <div class="gauge-label"
+               :class="$store.mc.fearGreedColor($store.mc.supplyData?.fear_greed?.score)"
+               x-text="$store.mc.supplyData?.fear_greed?.rating ?? '-'">
+          </div>
+          <div style="margin-top:12px">
+            <div class="progress-bar">
+              <div class="progress-fill"
+                   :style="{
+                     width: ($store.mc.supplyData?.fear_greed?.score ?? 0) + '%',
+                     background: $store.mc.supplyData?.fear_greed?.score <= 25 ? 'var(--red)' :
+                                 $store.mc.supplyData?.fear_greed?.score <= 45 ? 'var(--orange)' :
+                                 $store.mc.supplyData?.fear_greed?.score <= 55 ? 'var(--yellow)' : 'var(--green)'
+                   }">
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px">
+              <span>공포</span><span>탐욕</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 시장 국면 상세 -->
+      <div class="card">
+        <div class="section-title">시장 국면 상세</div>
+        <div style="padding:8px 0">
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span class="muted">국면</span>
+            <span :class="$store.mc.regimeColor($store.mc.regime?.regime)" x-text="$store.mc.regime?.regime ?? '-'"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span class="muted">신뢰도</span>
+            <span x-text="$store.mc.regime?.confidence != null ? ($store.mc.regime.confidence * 100).toFixed(0) + '%' : '-'"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span class="muted">VIX</span>
+            <span :class="($store.mc.regime?.vix ?? 0) > 30 ? 'red' : ($store.mc.regime?.vix ?? 0) > 20 ? 'yellow' : 'green'"
+                  x-text="$store.mc.fmtNum($store.mc.regime?.vix, 2)">
+            </span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span class="muted">전략 스탠스</span>
+            <span x-text="$store.mc.regime?.strategy?.stance ?? '-'"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span class="muted">현금 비중</span>
+            <span x-text="$store.mc.regime?.strategy?.cash_ratio != null ? ($store.mc.regime.strategy.cash_ratio * 100).toFixed(0) + '%' : '-'"></span>
+          </div>
+          <div style="padding:8px 0">
+            <span class="muted">선호 섹터: </span>
+            <span x-text="($store.mc.regime?.strategy?.preferred_sectors ?? []).join(', ') || '-'"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모듈 상태 그리드 -->
+    <div class="section">
+      <div class="section-title">모듈 상태</div>
+      <div class="module-grid">
+        <template x-for="[name, mod] in Object.entries($store.mc.engineStatus?.modules ?? {})" :key="name">
+          <div class="module-card">
+            <span class="status-dot" :class="mod.success ? 'green' : 'red'"></span>
+            <div class="module-info">
+              <div class="module-name" x-text="name"></div>
+              <div class="module-count" x-text="mod.item_count + '건 | 오류 ' + mod.error_count"></div>
+              <div class="module-count muted" style="font-size:10px"
+                   x-text="$store.mc.fmtDate(mod.last_run)">
+              </div>
+            </div>
+          </div>
+        </template>
+        <div x-show="Object.keys($store.mc.engineStatus?.modules ?? {}).length === 0" class="empty">모듈 데이터 없음</div>
+      </div>
+    </div>
+
+    <!-- 성과 / 시뮬레이션 -->
+    <div class="grid-2 section">
+      <div class="card">
+        <div class="section-title">성과 리포트</div>
+        <template x-if="$store.mc.performance?.monthly_report">
+          <div style="padding:8px 0">
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span class="muted">1주 적중률</span>
+              <span class="blue" x-text="$store.mc.fmtNum($store.mc.performance.monthly_report.hit_rate_1w, 1) + '%'"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span class="muted">1개월 적중률</span>
+              <span class="blue" x-text="$store.mc.fmtNum($store.mc.performance.monthly_report.hit_rate_1m, 1) + '%'"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0">
+              <span class="muted">평균 수익 (1주)</span>
+              <span :class="$store.mc.pctClass($store.mc.performance.monthly_report.avg_return_1w)"
+                    x-text="$store.mc.fmtPct($store.mc.performance.monthly_report.avg_return_1w)">
+              </span>
+            </div>
+          </div>
+        </template>
+        <div x-show="!$store.mc.performance?.monthly_report" class="empty">데이터 없음</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">시뮬레이션 요약</div>
+        <template x-if="$store.mc.simulation?.summary">
+          <div style="padding:8px 0">
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span class="muted">총 시뮬레이션</span>
+              <span x-text="$store.mc.simulation.summary.total ?? '-'"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0">
+              <span class="muted">평균 수익률</span>
+              <span :class="$store.mc.pctClass($store.mc.simulation.summary.avg_return_pct)"
+                    x-text="$store.mc.fmtPct($store.mc.simulation.summary.avg_return_pct)">
+              </span>
+            </div>
+          </div>
+        </template>
+        <div x-show="!$store.mc.simulation?.summary" class="empty">데이터 없음</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>

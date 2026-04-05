@@ -15,6 +15,7 @@ import urllib.request
 import urllib.error
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import BASE_DIR
@@ -36,7 +37,7 @@ def _get_env():
     return appkey, secret
 
 
-def _load_cached_token() -> str | None:
+def _load_cached_token() -> Optional[str]:
     """캐시된 토큰이 유효하면 반환, 아니면 None"""
     if not TOKEN_CACHE_PATH.exists():
         return None

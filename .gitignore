@@ -16,6 +16,15 @@ venv/
 # RALF 로그
 .claude-logs/
 
+# 로그 파일
+logs/*.log
+
+# 로컬 MCP 설정
+.mcp.json
+
+# Ralph 상태
+.ralph-state/
+
 # macOS
 .DS_Store
 

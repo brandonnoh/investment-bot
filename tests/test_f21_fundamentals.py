@@ -121,7 +121,7 @@ class TestDartFetch:
             ],
         }
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
+    @patch("data.fetch_fundamentals_sources.urllib.request.urlopen")
     @patch.dict("os.environ", {"DART_API_KEY": "test_key"})
     def test_fetch_dart_success(self, mock_urlopen):
         """DART API 정상 응답 시 재무 데이터 파싱"""
@@ -140,7 +140,7 @@ class TestDartFetch:
         assert result["roe"] is not None
         assert result["debt_ratio"] is not None
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
+    @patch("data.fetch_fundamentals_sources.urllib.request.urlopen")
     @patch.dict("os.environ", {"DART_API_KEY": "test_key"})
     def test_fetch_dart_revenue_growth(self, mock_urlopen):
         """매출 성장률 계산 정확도"""
@@ -156,7 +156,7 @@ class TestDartFetch:
         # (279조 - 258조) / 258조 * 100 ≈ 8.14%
         assert abs(result["revenue_growth"] - 8.14) < 0.1
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
+    @patch("data.fetch_fundamentals_sources.urllib.request.urlopen")
     @patch.dict("os.environ", {"DART_API_KEY": "test_key"})
     def test_fetch_dart_operating_margin(self, mock_urlopen):
         """영업이익률 계산 정확도"""
@@ -172,7 +172,7 @@ class TestDartFetch:
         # 36조 / 279조 * 100 ≈ 12.9%
         assert abs(result["operating_margin"] - 12.9) < 0.1
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
+    @patch("data.fetch_fundamentals_sources.urllib.request.urlopen")
     @patch.dict("os.environ", {"DART_API_KEY": "test_key"})
     def test_fetch_dart_roe(self, mock_urlopen):
         """ROE 계산 정확도"""
@@ -196,7 +196,7 @@ class TestDartFetch:
             result = fetch_dart_financials("005930")
             assert result is None
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
+    @patch("data.fetch_fundamentals_sources.urllib.request.urlopen")
     @patch.dict("os.environ", {"DART_API_KEY": "test_key"})
     def test_fetch_dart_api_error(self, mock_urlopen):
         """DART API 에러 시 None 반환 (graceful degradation)"""
@@ -206,7 +206,7 @@ class TestDartFetch:
         result = fetch_dart_financials("005930")
         assert result is None
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
+    @patch("data.fetch_fundamentals_sources.urllib.request.urlopen")
     @patch.dict("os.environ", {"DART_API_KEY": "test_key"})
     def test_fetch_dart_empty_list(self, mock_urlopen):
         """DART API 빈 응답 시 None 반환"""
@@ -306,7 +306,7 @@ class TestYahooFetch:
         result = fetch_yahoo_financials("TSLA")
         assert result["market_cap"] == 850000000000
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
+    @patch("data.fetch_fundamentals_sources.urllib.request.urlopen")
     def test_fetch_yahoo_api_error(self, mock_urlopen):
         """Yahoo API 에러 시 None 반환"""
         from data.fetch_fundamentals import fetch_yahoo_financials
@@ -315,7 +315,7 @@ class TestYahooFetch:
         result = fetch_yahoo_financials("INVALID")
         assert result is None
 
-    @patch("data.fetch_fundamentals.urllib.request.urlopen")
+    @patch("data.fetch_fundamentals_sources.urllib.request.urlopen")
     def test_fetch_yahoo_empty_result(self, mock_urlopen):
         """Yahoo API 빈 결과 시 None 반환"""
         from data.fetch_fundamentals import fetch_yahoo_financials

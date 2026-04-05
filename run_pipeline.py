@@ -5,24 +5,35 @@ Phase 1: 수집 → 분석 → 일일 리포트
 Phase 2: 뉴스 수집 → 스크리너 → 포트폴리오 분석 → 주간 리포트
 """
 
+import os
 import sys
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from db.init_db import init_db
-from data.fetch_prices import run as fetch_prices
-from data.fetch_macro import run as fetch_macro
-from data.fetch_news import run as fetch_news
-from db.aggregate import run as aggregate_daily
-from db.maintenance import run as maintain_db
-from analysis.price_analysis import run as analyze_prices
-from analysis.alerts import run as check_alerts
-from analysis.screener import run as run_screener
-from analysis.portfolio import run as analyze_portfolio
-from reports.daily import run as generate_daily
-from reports.weekly import run as generate_weekly
+# .env 파일 자동 로드
+_env_path = Path(__file__).resolve().parent / ".env"
+if _env_path.exists():
+    with open(_env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
+
+from db.init_db import init_db  # noqa: E402
+from data.fetch_prices import run as fetch_prices  # noqa: E402
+from data.fetch_macro import run as fetch_macro  # noqa: E402
+from data.fetch_news import run as fetch_news  # noqa: E402
+from db.aggregate import run as aggregate_daily  # noqa: E402
+from db.maintenance import run as maintain_db  # noqa: E402
+from analysis.price_analysis import run as analyze_prices  # noqa: E402
+from analysis.alerts import run as check_alerts  # noqa: E402
+from analysis.screener import run as run_screener  # noqa: E402
+from analysis.portfolio import run as analyze_portfolio  # noqa: E402
+from reports.daily import run as generate_daily  # noqa: E402
+from reports.weekly import run as generate_weekly  # noqa: E402
 from utils.schema import validate_all_outputs  # noqa: E402
 from utils.engine_status import (  # noqa: E402
     EngineStatus,

@@ -359,7 +359,7 @@ class TestDuplicateAlertPrevention:
         from datetime import datetime, timezone, timedelta
 
         KST = timezone(timedelta(hours=9))
-        old_time = (datetime.now(KST) - timedelta(hours=2)).isoformat()
+        old_time = (datetime.now(KST) - timedelta(hours=9)).isoformat()
 
         db_conn.execute(
             "INSERT INTO alerts (level, event_type, ticker, message, value, threshold, triggered_at, notified) "

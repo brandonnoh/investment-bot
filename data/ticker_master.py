@@ -189,7 +189,7 @@ def get_seed_master() -> list:
     master = []
 
     # config.PORTFOLIO에서 추출
-    for p in config.PORTFOLIO:
+    for p in config.PORTFOLIO_LEGACY:
         if p["ticker"] not in seen:
             seen.add(p["ticker"])
             market = (

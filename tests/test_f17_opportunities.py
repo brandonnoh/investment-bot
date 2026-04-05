@@ -37,7 +37,7 @@ def test_search_brave_news(monkeypatch):
     mock_resp.__enter__ = lambda s: s
     mock_resp.__exit__ = MagicMock(return_value=False)
     monkeypatch.setattr(
-        "data.fetch_opportunities.urllib.request.urlopen",
+        "data.fetch_opportunities_search.urllib.request.urlopen",
         lambda req, **kw: mock_resp,
     )
     monkeypatch.setenv("BRAVE_API_KEY", "test-key")

@@ -115,7 +115,7 @@ class TestFetchNaverPrice:
             }
         ).encode()
 
-    @patch("data.fetch_prices.urllib.request.urlopen")
+    @patch("data.fetch_prices_kr.urllib.request.urlopen")
     def test_naver_정상_응답(self, mock_urlopen):
         """네이버 API 정상 응답 파싱 — price, prev_close, change_pct"""
         from data.fetch_prices import fetch_naver_price
@@ -131,7 +131,7 @@ class TestFetchNaverPrice:
         assert result["change_pct"] == 0.61
         assert result["volume"] == 15000000
 
-    @patch("data.fetch_prices.urllib.request.urlopen")
+    @patch("data.fetch_prices_kr.urllib.request.urlopen")
     def test_naver_네트워크_오류(self, mock_urlopen):
         """네이버 API 네트워크 오류 시 ConnectionError"""
         import urllib.error
@@ -141,7 +141,7 @@ class TestFetchNaverPrice:
         with pytest.raises(ConnectionError, match="네이버 API 네트워크 오류"):
             fetch_naver_price("005930")
 
-    @patch("data.fetch_prices.urllib.request.urlopen")
+    @patch("data.fetch_prices_kr.urllib.request.urlopen")
     def test_naver_파싱_실패(self, mock_urlopen):
         """네이버 API 응답 구조가 잘못된 경우 ValueError"""
         from data.fetch_prices import fetch_naver_price
@@ -158,7 +158,7 @@ class TestFetchNaverPrice:
 class TestKrStockFallback:
     """한국 주식 키움→네이버 폴백 로직 검증"""
 
-    @patch("data.fetch_prices.fetch_naver_price")
+    @patch("data.fetch_prices_kr.fetch_naver_price")
     def test_키움_없으면_네이버_사용(self, mock_naver):
         """KIWOOM_APPKEY 없으면 네이버 API로 폴백"""
         from data.fetch_prices import _fetch_kr_stock
@@ -176,7 +176,7 @@ class TestKrStockFallback:
         assert result["price"] == 82000
         mock_naver.assert_called_once_with("005930")
 
-    @patch("data.fetch_prices.fetch_naver_price")
+    @patch("data.fetch_prices_kr.fetch_naver_price")
     def test_키움_실패시_네이버_폴백(self, mock_naver):
         """키움 API 실패 시 네이버로 자동 폴백"""
         from data.fetch_prices import _fetch_kr_stock
@@ -203,8 +203,8 @@ class TestCollectPrices:
     """collect_prices() 통합 테스트 — 전종목 수집 + graceful degradation"""
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "테슬라",
                 "ticker": "TSLA",
@@ -212,11 +212,14 @@ class TestCollectPrices:
                 "currency": "USD",
                 "qty": 1,
                 "account": "미국",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.fetch_yahoo_quote")
-    def test_정상_수집(self, mock_yahoo):
+    def test_정상_수집(self, mock_yahoo, mock_holdings):
         """단일 종목 정상 수집 — 스키마 필드 검증"""
         from data.fetch_prices import collect_prices
 
@@ -242,8 +245,8 @@ class TestCollectPrices:
         assert "pnl_pct" in r
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "테슬라",
                 "ticker": "TSLA",
@@ -251,6 +254,9 @@ class TestCollectPrices:
                 "currency": "USD",
                 "qty": 1,
                 "account": "미국",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
             {
                 "name": "알파벳",
@@ -259,11 +265,14 @@ class TestCollectPrices:
                 "currency": "USD",
                 "qty": 2,
                 "account": "미국",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.fetch_yahoo_quote")
-    def test_일부_실패시_나머지_정상(self, mock_yahoo):
+    def test_일부_실패시_나머지_정상(self, mock_yahoo, mock_holdings):
         """한 종목 실패해도 나머지 정상 수집 (graceful degradation)"""
         from data.fetch_prices import collect_prices
 
@@ -289,8 +298,8 @@ class TestCollectPrices:
         assert googl["price"] == 160.00
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "테슬라",
                 "ticker": "TSLA",
@@ -298,11 +307,16 @@ class TestCollectPrices:
                 "currency": "USD",
                 "qty": 1,
                 "account": "미국",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.fetch_yahoo_quote")
-    def test_전체_실패시에도_빈_리스트_아닌_에러_레코드(self, mock_yahoo):
+    def test_전체_실패시에도_빈_리스트_아닌_에러_레코드(
+        self, mock_yahoo, mock_holdings
+    ):
         """전체 실패 시에도 에러 레코드가 포함된 리스트 반환"""
         from data.fetch_prices import collect_prices
 
@@ -676,7 +690,7 @@ class TestFetchGoogleNewsRss:
       </channel>
     </rss>"""
 
-    @patch("data.fetch_news.urllib.request.urlopen")
+    @patch("data.fetch_news_sources.urllib.request.urlopen")
     def test_rss_정상_파싱(self, mock_urlopen):
         """RSS XML에서 title, url, source, published_at 파싱"""
         from data.fetch_news import fetch_google_news_rss
@@ -691,7 +705,7 @@ class TestFetchGoogleNewsRss:
         assert results[0]["url"] == "https://example.com/news/1"
         assert results[0]["source"] == "Reuters"
 
-    @patch("data.fetch_news.urllib.request.urlopen")
+    @patch("data.fetch_news_sources.urllib.request.urlopen")
     def test_rss_count_제한(self, mock_urlopen):
         """count 파라미터로 결과 수 제한"""
         from data.fetch_news import fetch_google_news_rss
@@ -703,7 +717,7 @@ class TestFetchGoogleNewsRss:
         results = fetch_google_news_rss("삼성전자", count=1)
         assert len(results) == 1
 
-    @patch("data.fetch_news.urllib.request.urlopen")
+    @patch("data.fetch_news_sources.urllib.request.urlopen")
     def test_rss_빈_피드(self, mock_urlopen):
         """빈 RSS 피드 시 빈 리스트 반환"""
         from data.fetch_news import fetch_google_news_rss
@@ -722,8 +736,8 @@ class TestFetchGoogleNewsRss:
 class TestSearchBraveNews:
     """Brave Search API 모킹"""
 
-    @patch("data.fetch_news.urllib.request.urlopen")
-    @patch("data.fetch_news.BRAVE_API_KEY", "test_key_123")
+    @patch("data.fetch_news_sources.urllib.request.urlopen")
+    @patch("data.fetch_news_sources.BRAVE_API_KEY", "test_key_123")
     def test_brave_정상_응답(self, mock_urlopen):
         """Brave API 정상 응답 파싱"""
         from data.fetch_news import search_brave_news
@@ -741,9 +755,12 @@ class TestSearchBraveNews:
                 ]
             }
         ).encode()
-        mock_urlopen.return_value = MagicMock()
-        mock_urlopen.return_value.__enter__ = lambda s: BytesIO(resp_data)
-        mock_urlopen.return_value.__exit__ = MagicMock(return_value=False)
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.read.return_value = resp_data
+        mock_resp.headers.get.return_value = ""
+        mock_urlopen.return_value = mock_resp
 
         results = search_brave_news("저평가 종목", count=2)
         assert len(results) == 1
@@ -753,7 +770,7 @@ class TestSearchBraveNews:
         """BRAVE_API_KEY 없으면 ValueError"""
         from data.fetch_news import search_brave_news
 
-        with patch("data.fetch_news.BRAVE_API_KEY", ""):
+        with patch("data.fetch_news_sources.BRAVE_API_KEY", ""):
             with pytest.raises(ValueError, match="BRAVE_API_KEY"):
                 search_brave_news("test")
 
@@ -1008,8 +1025,8 @@ class TestGracefulDegradation:
     """공통: 일부 항목 실패 시 나머지 정상 수집 확인"""
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "삼성전자",
                 "ticker": "005930.KS",
@@ -1017,6 +1034,9 @@ class TestGracefulDegradation:
                 "currency": "KRW",
                 "qty": 10,
                 "account": "ISA",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
             {
                 "name": "테슬라",
@@ -1025,6 +1045,9 @@ class TestGracefulDegradation:
                 "currency": "USD",
                 "qty": 1,
                 "account": "미국",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
             {
                 "name": "알파벳",
@@ -1033,12 +1056,15 @@ class TestGracefulDegradation:
                 "currency": "USD",
                 "qty": 2,
                 "account": "미국",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.fetch_yahoo_quote")
     @patch("data.fetch_prices._fetch_kr_stock")
-    def test_prices_혼합_성공실패(self, mock_kr, mock_yahoo):
+    def test_prices_혼합_성공실패(self, mock_kr, mock_yahoo, mock_holdings):
         """prices: KR 1건 성공, US 1건 실패, US 1건 성공"""
         from data.fetch_prices import collect_prices
 

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-from __future__ import annotations
 """
 장 마감 리포트 생성 모듈 (Phase 2.5)
 오늘 수집된 DB 이력으로 시가/고가/저가/종가 + 최종 손익 계산
 출력: output/intel/closing_report.md
 """
+
+from __future__ import annotations
 
 import json
 import sqlite3
@@ -14,141 +15,22 @@ from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import PORTFOLIO, MACRO_INDICATORS, DB_PATH, OUTPUT_DIR
+from config import PORTFOLIO_LEGACY as PORTFOLIO, MACRO_INDICATORS, DB_PATH, OUTPUT_DIR
 from db.init_db import init_db
 
+# 헬퍼 함수 임포트 (하위 호환 re-export 포함)
+from reports.closing_helpers import (  # noqa: F401
+    save_portfolio_snapshot,
+    get_today_ohlc,
+    get_today_macro_ohlc,
+    fmt_price,
+    fmt_change,
+    get_today_alerts,
+    is_last_business_day_of_month,
+    apply_monthly_deposits,
+)
+
 KST = timezone(timedelta(hours=9))
-
-
-def save_portfolio_snapshot(conn: sqlite3.Connection, portfolio_summary: dict):
-    """portfolio_summary.json 데이터를 portfolio_history 테이블에 저장.
-
-    같은 날짜 데이터가 있으면 UPDATE, 없으면 INSERT.
-    """
-    today = datetime.now(KST).strftime("%Y-%m-%d")
-    total = portfolio_summary.get("total", {})
-
-    total_value_krw = total.get("current_value_krw")
-    total_invested_krw = total.get("invested_krw")
-    total_pnl_krw = total.get("pnl_krw")
-    total_pnl_pct = total.get("pnl_pct")
-    fx_rate = portfolio_summary.get("exchange_rate")
-    fx_pnl_krw = total.get("fx_pnl_krw")
-    holdings_snapshot = json.dumps(
-        portfolio_summary.get("holdings", []), ensure_ascii=False
-    )
-
-    conn.execute(
-        """INSERT INTO portfolio_history
-           (date, total_value_krw, total_invested_krw, total_pnl_krw, total_pnl_pct,
-            fx_rate, fx_pnl_krw, holdings_snapshot)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(date) DO UPDATE SET
-               total_value_krw = excluded.total_value_krw,
-               total_invested_krw = excluded.total_invested_krw,
-               total_pnl_krw = excluded.total_pnl_krw,
-               total_pnl_pct = excluded.total_pnl_pct,
-               fx_rate = excluded.fx_rate,
-               fx_pnl_krw = excluded.fx_pnl_krw,
-               holdings_snapshot = excluded.holdings_snapshot""",
-        (
-            today,
-            total_value_krw,
-            total_invested_krw,
-            total_pnl_krw,
-            total_pnl_pct,
-            fx_rate,
-            fx_pnl_krw,
-            holdings_snapshot,
-        ),
-    )
-    conn.commit()
-
-    value_man = round((total_value_krw or 0) / 10000)
-    print(f"  ✅ 포트폴리오 스냅샷 저장: {today} 총 {value_man:,}만원")
-
-
-def get_today_ohlc(ticker: str) -> dict | None:
-    """DB에서 오늘 수집된 해당 종목의 OHLC 계산"""
-    if not DB_PATH.exists():
-        return None
-
-    today_str = datetime.now(KST).strftime("%Y-%m-%d")
-    conn = sqlite3.connect(str(DB_PATH))
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            """SELECT price, prev_close, timestamp FROM prices
-               WHERE ticker = ? AND timestamp LIKE ?
-               ORDER BY timestamp""",
-            (ticker, f"{today_str}%"),
-        )
-        rows = cursor.fetchall()
-        if not rows:
-            return None
-
-        prices_today = [r[0] for r in rows]
-        return {
-            "open": prices_today[0],
-            "high": max(prices_today),
-            "low": min(prices_today),
-            "close": prices_today[-1],
-            "prev_close": rows[0][1],
-            "data_points": len(rows),
-            "first_ts": rows[0][2],
-            "last_ts": rows[-1][2],
-        }
-    finally:
-        conn.close()
-
-
-def get_today_macro_ohlc(indicator: str) -> dict | None:
-    """DB에서 오늘 수집된 매크로 지표의 OHLC 계산"""
-    if not DB_PATH.exists():
-        return None
-
-    today_str = datetime.now(KST).strftime("%Y-%m-%d")
-    conn = sqlite3.connect(str(DB_PATH))
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            """SELECT value, change_pct, timestamp FROM macro
-               WHERE indicator = ? AND timestamp LIKE ?
-               ORDER BY timestamp""",
-            (indicator, f"{today_str}%"),
-        )
-        rows = cursor.fetchall()
-        if not rows:
-            return None
-
-        values = [r[0] for r in rows]
-        return {
-            "open": values[0],
-            "high": max(values),
-            "low": min(values),
-            "close": values[-1],
-            "change_pct": rows[-1][1],
-            "data_points": len(rows),
-        }
-    finally:
-        conn.close()
-
-
-def fmt_price(val, currency="KRW"):
-    """가격 포맷"""
-    if val is None:
-        return "N/A"
-    if currency == "KRW":
-        return f"{val:,.0f}"
-    return f"{val:,.2f}"
-
-
-def fmt_change(pct):
-    """변동률 포맷"""
-    if pct is None:
-        return "—"
-    emoji = "🔴" if pct < -1 else "🟢" if pct > 1 else "⚪"
-    return f"{emoji} {pct:+.2f}%"
 
 
 def generate_closing_report() -> str:
@@ -290,42 +172,6 @@ def generate_closing_report() -> str:
     return "\n".join(lines)
 
 
-def get_today_alerts() -> list[dict]:
-    """DB에서 오늘 발생한 알림 조회"""
-    if not DB_PATH.exists():
-        return []
-
-    today_str = datetime.now(KST).strftime("%Y-%m-%d")
-    conn = sqlite3.connect(str(DB_PATH))
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            """SELECT level, message, triggered_at FROM alerts
-               WHERE triggered_at LIKE ?
-               ORDER BY triggered_at""",
-            (f"{today_str}%",),
-        )
-        rows = cursor.fetchall()
-        results = []
-        for r in rows:
-            # 시간 부분만 추출
-            try:
-                ts = datetime.fromisoformat(r[2])
-                time_str = ts.strftime("%H:%M")
-            except (ValueError, TypeError):
-                time_str = "??:??"
-            results.append(
-                {
-                    "level": r[0],
-                    "message": r[1],
-                    "time": time_str,
-                }
-            )
-        return results
-    finally:
-        conn.close()
-
-
 def run():
     """장 마감 리포트 생성 파이프라인"""
     print(
@@ -335,6 +181,13 @@ def run():
     # DB 초기화 확인
     if not DB_PATH.exists():
         init_db()
+
+    # ── 월말 자동이체 적립 반영 ──
+    deposit_logs = apply_monthly_deposits()
+    for log in deposit_logs:
+        print(f"  {log}")
+    if deposit_logs:
+        print()
 
     report = generate_closing_report()
 

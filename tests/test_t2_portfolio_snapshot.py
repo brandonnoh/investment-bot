@@ -5,7 +5,6 @@ import sqlite3
 import sys
 import os
 from datetime import datetime, timezone, timedelta
-from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 

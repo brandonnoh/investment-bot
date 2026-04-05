@@ -27,7 +27,7 @@ class TestModuleImports:
         """config 모듈 import"""
         import config
 
-        assert hasattr(config, "PORTFOLIO")
+        assert hasattr(config, "PORTFOLIO_LEGACY")
         assert hasattr(config, "MACRO_INDICATORS")
         assert hasattr(config, "ALERT_THRESHOLDS")
         assert hasattr(config, "DB_PATH")
@@ -303,13 +303,13 @@ class TestConfig:
 
     def test_portfolio_not_empty(self):
         """포트폴리오에 종목이 있어야 함"""
-        from config import PORTFOLIO
+        from config import PORTFOLIO_LEGACY as PORTFOLIO
 
         assert len(PORTFOLIO) > 0
 
     def test_portfolio_required_fields(self):
         """포트폴리오 각 항목에 필수 필드가 있어야 함"""
-        from config import PORTFOLIO
+        from config import PORTFOLIO_LEGACY as PORTFOLIO
 
         required = {"name", "ticker", "avg_cost", "currency", "qty", "account"}
         for item in PORTFOLIO:

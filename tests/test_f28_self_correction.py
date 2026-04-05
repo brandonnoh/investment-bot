@@ -1,7 +1,6 @@
 """F28 — 자기 교정: 성과 분석 → correction_notes.json 생성"""
 import json
 import pytest
-from pathlib import Path
 
 
 SAMPLE_PERFORMANCE = {

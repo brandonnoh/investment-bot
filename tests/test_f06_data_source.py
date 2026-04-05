@@ -73,8 +73,8 @@ class TestDataSourceYahoo:
     """미국 주식 → data_source='yahoo' 검증"""
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "테슬라",
                 "ticker": "TSLA",
@@ -82,11 +82,14 @@ class TestDataSourceYahoo:
                 "currency": "USD",
                 "qty": 1,
                 "account": "미국",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.urllib.request.urlopen")
-    def test_미국_주식_yahoo_소스(self, mock_urlopen):
+    def test_미국_주식_yahoo_소스(self, mock_urlopen, mock_holdings):
         """미국 주식은 data_source='yahoo'"""
         from data.fetch_prices import collect_prices
 
@@ -112,8 +115,8 @@ class TestDataSourceNaver:
     """한국 주식 (네이버 폴백) → data_source='naver' 검증"""
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "삼성전자",
                 "ticker": "005930.KS",
@@ -121,12 +124,15 @@ class TestDataSourceNaver:
                 "currency": "KRW",
                 "qty": 10,
                 "account": "ISA",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.os.environ.get", return_value=None)
     @patch("data.fetch_prices.fetch_naver_price")
-    def test_한국_주식_네이버_소스(self, mock_naver, mock_env):
+    def test_한국_주식_네이버_소스(self, mock_naver, mock_env, mock_holdings):
         """키움 API 없이 네이버 폴백 → data_source='naver'"""
         from data.fetch_prices import collect_prices
 
@@ -148,8 +154,8 @@ class TestDataSourceKiwoom:
     """한국 주식 (키움 API) → data_source='kiwoom' 검증"""
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "삼성전자",
                 "ticker": "005930.KS",
@@ -157,11 +163,14 @@ class TestDataSourceKiwoom:
                 "currency": "KRW",
                 "qty": 10,
                 "account": "ISA",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.os.environ.get", return_value="test_appkey")
-    def test_한국_주식_키움_소스(self, mock_env):
+    def test_한국_주식_키움_소스(self, mock_env, mock_holdings):
         """키움 API 성공 시 data_source='kiwoom'"""
         from data.fetch_prices import collect_prices
 
@@ -189,8 +198,8 @@ class TestDataSourceKiwoomFallbackNaver:
     """한국 주식 — 키움 실패 → 네이버 폴백 시 data_source='naver'"""
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "삼성전자",
                 "ticker": "005930.KS",
@@ -198,12 +207,15 @@ class TestDataSourceKiwoomFallbackNaver:
                 "currency": "KRW",
                 "qty": 10,
                 "account": "ISA",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.os.environ.get", return_value="test_appkey")
     @patch("data.fetch_prices.fetch_naver_price")
-    def test_키움_실패_네이버_폴백_소스(self, mock_naver, mock_env):
+    def test_키움_실패_네이버_폴백_소스(self, mock_naver, mock_env, mock_holdings):
         """키움 실패 후 네이버 폴백 → data_source='naver'"""
         from data.fetch_prices import collect_prices
 
@@ -228,8 +240,8 @@ class TestDataSourceGold:
     """금 현물 → data_source 검증"""
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "금 현물",
                 "ticker": "GOLD_KRW_G",
@@ -237,12 +249,15 @@ class TestDataSourceGold:
                 "currency": "KRW",
                 "qty": 128,
                 "account": "실물",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.os.environ.get", return_value=None)
     @patch("data.fetch_prices.fetch_yahoo_quote")
-    def test_금_현물_yahoo_계산_소스(self, mock_yahoo, mock_env):
+    def test_금_현물_yahoo_계산_소스(self, mock_yahoo, mock_env, mock_holdings):
         """금 현물 Yahoo 폴백 → data_source='calculated'"""
         from data.fetch_prices import collect_prices
 
@@ -259,8 +274,8 @@ class TestDataSourceGold:
         assert "GC=F" in records[0]["calc_method"]
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "금 현물",
                 "ticker": "GOLD_KRW_G",
@@ -268,11 +283,14 @@ class TestDataSourceGold:
                 "currency": "KRW",
                 "qty": 128,
                 "account": "실물",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.os.environ.get", return_value="test_appkey")
-    def test_금_현물_키움_소스(self, mock_env):
+    def test_금_현물_키움_소스(self, mock_env, mock_holdings):
         """금 현물 키움 KRX API → data_source='kiwoom'"""
         from data.fetch_prices import collect_prices
 
@@ -299,8 +317,8 @@ class TestDataSourceErrorRecord:
     """에러 레코드에도 data_source 필드 포함 (None)"""
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "테슬라",
                 "ticker": "TSLA",
@@ -308,13 +326,16 @@ class TestDataSourceErrorRecord:
                 "currency": "USD",
                 "qty": 1,
                 "account": "미국",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch(
         "data.fetch_prices.fetch_yahoo_quote", side_effect=ConnectionError("timeout")
     )
-    def test_에러_시_data_source_none(self, mock_yahoo):
+    def test_에러_시_data_source_none(self, mock_yahoo, mock_holdings):
         """수집 실패 시 data_source=None"""
         from data.fetch_prices import collect_prices
 
@@ -400,8 +421,8 @@ class TestDataSourceJSON하위호환:
     """기존 prices.json 필드 유지 + data_source 추가 검증"""
 
     @patch(
-        "data.fetch_prices.PORTFOLIO",
-        [
+        "data.fetch_prices.get_holdings",
+        return_value=[
             {
                 "name": "테슬라",
                 "ticker": "TSLA",
@@ -409,11 +430,14 @@ class TestDataSourceJSON하위호환:
                 "currency": "USD",
                 "qty": 1,
                 "account": "미국",
+                "sector": None,
+                "buy_fx_rate": None,
+                "note": None,
             },
         ],
     )
     @patch("data.fetch_prices.urllib.request.urlopen")
-    def test_기존_필드_유지_data_source_추가(self, mock_urlopen):
+    def test_기존_필드_유지_data_source_추가(self, mock_urlopen, mock_holdings):
         """prices.json에 기존 필드 모두 유지 + data_source 추가"""
         from data.fetch_prices import collect_prices
 
@@ -433,7 +457,7 @@ class TestDataSourceJSON하위호환:
         records = collect_prices()
         record = records[0]
 
-        # 기존 필수 필드 유지
+        # 기존 필수 필드 유지 (account는 SSoT 마이그레이션 후 성공 레코드에서 제외됨)
         기존_필드 = [
             "ticker",
             "name",
@@ -445,7 +469,6 @@ class TestDataSourceJSON하위호환:
             "pnl_pct",
             "currency",
             "qty",
-            "account",
             "market",
             "timestamp",
         ]

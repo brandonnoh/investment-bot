@@ -15,7 +15,7 @@ import urllib.request
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Optional, Union, List, Dict, Tuple
+from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

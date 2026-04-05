@@ -84,7 +84,7 @@ class TestConfigBuyFxRate:
 
     def test_usd_stocks_have_buy_fx_rate(self):
         """USD 종목에 buy_fx_rate 필드 존재"""
-        from config import PORTFOLIO
+        from config import PORTFOLIO_LEGACY as PORTFOLIO
 
         usd_stocks = [p for p in PORTFOLIO if p["currency"] == "USD"]
         assert len(usd_stocks) > 0, "USD 종목이 없음"
@@ -95,7 +95,7 @@ class TestConfigBuyFxRate:
 
     def test_krw_stocks_no_buy_fx_rate(self):
         """KRW 종목에는 buy_fx_rate 불필요"""
-        from config import PORTFOLIO
+        from config import PORTFOLIO_LEGACY as PORTFOLIO
 
         krw_stocks = [p for p in PORTFOLIO if p["currency"] == "KRW"]
         for stock in krw_stocks:
