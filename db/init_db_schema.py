@@ -281,6 +281,25 @@ CREATE_INDEX_TOTAL_WEALTH_DATE = """
     ON total_wealth_history (date)
 """
 
+# ── AI 분석 이력 ──
+
+CREATE_TABLE_ANALYSIS_HISTORY = """
+    CREATE TABLE IF NOT EXISTS analysis_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL UNIQUE,      -- YYYY-MM-DD
+        content TEXT NOT NULL,          -- 전체 마크다운
+        confidence_level INTEGER,       -- 1~5
+        regime TEXT,                    -- BULL/BEAR/NEUTRAL/etc
+        today_call TEXT,                -- TODAY'S CALL 섹션 내용
+        created_at TEXT NOT NULL
+    )
+"""
+
+CREATE_INDEX_ANALYSIS_HISTORY_DATE = """
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_analysis_history_date
+    ON analysis_history (date)
+"""
+
 # ── 인덱스 — 원시 테이블 조회 성능 최적화 ──
 
 CREATE_INDEX_PRICES_TICKER_TS = (
@@ -298,12 +317,16 @@ CREATE_INDEX_NEWS_TITLE_SOURCE = (
 
 # ── 인덱스 — 집계 테이블 (유니크 — UPSERT 지원) ──
 
-CREATE_INDEX_PRICES_DAILY_TICKER_DATE = "CREATE UNIQUE INDEX IF NOT EXISTS idx_prices_daily_ticker_date ON prices_daily (ticker, date)"
+CREATE_INDEX_PRICES_DAILY_TICKER_DATE = (
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_prices_daily_ticker_date ON prices_daily (ticker, date)"
+)
 CREATE_INDEX_MACRO_DAILY_INDICATOR_DATE = "CREATE UNIQUE INDEX IF NOT EXISTS idx_macro_daily_indicator_date ON macro_daily (indicator, date)"
 
 # ── 인덱스 — 기록 테이블 (일별 1행) ──
 
-CREATE_INDEX_PORTFOLIO_HISTORY_DATE = "CREATE UNIQUE INDEX IF NOT EXISTS idx_portfolio_history_date ON portfolio_history (date)"
+CREATE_INDEX_PORTFOLIO_HISTORY_DATE = (
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_portfolio_history_date ON portfolio_history (date)"
+)
 
 # ── 마이그레이션: 기존 테이블에 추가된 컬럼 목록 ──
 # (table_name, column_name, column_def) 튜플 리스트

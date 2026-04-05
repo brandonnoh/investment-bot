@@ -20,6 +20,66 @@ OUTPUT_FILE = INTEL_DIR / "marcus-analysis.md"
 # Claude CLI 경로 자동 탐지
 CLAUDE_BIN = shutil.which("claude") or "/Users/jarvis/.local/bin/claude"
 
+KST = timezone(timedelta(hours=9))
+
+
+def _parse_analysis(content: str) -> dict:
+    """마크다운에서 confidence_level, regime, today_call 추출"""
+    # 확신 레벨: "(4/5)" 패턴
+    confidence = None
+    m = re.search(r"\((\d)/5\)", content)
+    if m:
+        confidence = int(m.group(1))
+    elif (stars := content.count("★")) > 0:
+        confidence = stars
+
+    # 레짐: "## MARKET REGIME" 섹션 첫 줄
+    regime = None
+    m = re.search(r"## MARKET REGIME[^\n]*\n+([^\n]+)", content)
+    if m:
+        regime = m.group(1).strip()[:50]
+
+    # TODAY'S CALL 섹션 전체
+    today_call = None
+    m = re.search(r"## TODAY'S CALL[^\n]*\n+([\s\S]+?)(?=\n## |\Z)", content)
+    if m:
+        today_call = m.group(1).strip()[:500]
+
+    return {"confidence_level": confidence, "regime": regime, "today_call": today_call}
+
+
+def _save_to_db(content: str) -> None:
+    """분석 결과를 DB analysis_history 테이블에 저장 (일별 1행 UPSERT)"""
+    try:
+        db_path = PROJECT_ROOT / "db" / "history.db"
+        parsed = _parse_analysis(content)
+        today = datetime.now(KST).strftime("%Y-%m-%d")
+        created_at = datetime.now(KST).isoformat()
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.execute(
+                """
+                INSERT INTO analysis_history (date, content, confidence_level, regime, today_call, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(date) DO UPDATE SET
+                    content=excluded.content,
+                    confidence_level=excluded.confidence_level,
+                    regime=excluded.regime,
+                    today_call=excluded.today_call,
+                    created_at=excluded.created_at
+                """,
+                (
+                    today,
+                    content,
+                    parsed["confidence_level"],
+                    parsed["regime"],
+                    parsed["today_call"],
+                    created_at,
+                ),
+            )
+        print(f"  ✅ DB 저장 완료 ({today})")
+    except Exception as e:
+        print(f"  ⚠️  DB 저장 실패: {e}")
+
 
 def _load_json(path: Path, label: str) -> str:
     """JSON 파일을 문자열로 로드 (실패 시 빈 객체 반환)"""
@@ -133,6 +193,7 @@ def _send_failure_alert(error_msg: str) -> None:
         import json as _json
         import os
         import urllib.request as _urllib
+
         webhook = os.environ.get(
             "DISCORD_WEBHOOK_URL",
             "https://discord.com/api/webhooks/1490306786870165624/0JjO5i_BNWCmIDnFJXQZ0OcDGeWdYsryKnUFGXvoKlqALza6mFPqcjbFz40fWltCIkRR",
@@ -243,6 +304,9 @@ def run():
         _send_failure_alert(f"파일 저장 실패: {e}")
         return
 
+    # ── STEP 6.5: DB 저장 ──
+    _save_to_db(claude_output)
+
     # ── STEP 7: marcus_analysis.py 검증 ──
     print("[7/9] 출력 형식 검증...")
     try:
@@ -258,6 +322,7 @@ def run():
     print("[8/9] Discord 완료 알림...")
     try:
         from scripts.discord_notify import notify_marcus_complete
+
         notify_marcus_complete(OUTPUT_FILE)
     except Exception as e:
         print(f"  ⚠️  Discord 알림 실패: {e}")

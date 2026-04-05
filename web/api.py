@@ -13,6 +13,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 INTEL_DIR = PROJECT_ROOT / "output" / "intel"
 PID_DIR = PROJECT_ROOT / "logs"
+DB_PATH = PROJECT_ROOT / "db" / "history.db"
 
 # 읽을 JSON 파일 목록
 INTEL_FILES = [
@@ -137,3 +138,39 @@ def get_process_status() -> dict:
         pid = get_running_pid(name)
         status[name] = {"running": pid is not None, "pid": pid}
     return status
+
+
+def load_analysis_history(limit: int = 30) -> list[dict]:
+    """analysis_history 테이블에서 최신 N개 조회 (내용 제외 목록용)."""
+    if not DB_PATH.exists():
+        return []
+    try:
+        with sqlite3.connect(str(DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT date, confidence_level, regime, today_call, created_at
+                FROM analysis_history
+                ORDER BY date DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"[api] analysis_history 조회 실패: {e}")
+        return []
+
+
+def load_analysis_detail(date: str) -> dict | None:
+    """특정 날짜의 전체 분석 내용 조회."""
+    if not DB_PATH.exists():
+        return None
+    try:
+        with sqlite3.connect(str(DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM analysis_history WHERE date = ?", (date,)).fetchone()
+        return dict(row) if row else None
+    except Exception as e:
+        print(f"[api] analysis_history 상세 조회 실패: {e}")
+        return None

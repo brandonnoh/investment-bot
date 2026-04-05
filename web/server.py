@@ -126,6 +126,13 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.send_json(get_process_status())
         elif path == "/api/events":
             self._handle_sse()
+        elif path == "/api/analysis-history":
+            date = params.get("date", [None])[0]
+            if date:
+                result = load_analysis_detail(date)
+                self.send_json(result if result else {})
+            else:
+                self.send_json(load_analysis_history())
         else:
             self.send_response(404)
             self.end_headers()
@@ -144,7 +151,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         elif path == "/api/run-marcus":
             result = run_background(
                 "marcus",
-                ["python3", str(PROJECT_ROOT / "scripts" / "marcus_analysis.py")],
+                ["python3", str(PROJECT_ROOT / "scripts" / "run_marcus.py")],
             )
             self.send_json(result)
 

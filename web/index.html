@@ -38,7 +38,7 @@
     <button class="btn" :disabled="$store.mc.marcusRunning" @click="$store.mc.runMarcus()">
       <span x-show="!$store.mc.marcusRunning" style="display:flex;align-items:center;gap:5px">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/></svg>
-        Marcus
+        AI 분석
       </span>
       <span x-show="$store.mc.marcusRunning" style="display:flex;align-items:center;gap:5px">
         <span class="spin"></span> 분석 중
@@ -66,11 +66,11 @@
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
     포트폴리오
   </button>
-  <!-- 마커스 -->
+  <!-- AI 분석 -->
   <button class="tab" :class="$store.mc.tab === 'marcus' ? 'active' : ''"
-          @click="$store.mc.tab = 'marcus'">
+          @click="$store.mc.tab = 'marcus'; $store.mc.fetchAnalysisHistory()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-    마커스
+    AI 분석
   </button>
   <!-- 발굴 -->
   <button class="tab" :class="$store.mc.tab === 'discovery' ? 'active' : ''"
@@ -396,51 +396,74 @@
   <!-- ═══ END 포트폴리오 ════════════════════════════════ -->
 
 
-  <!-- ═══ TAB: 마커스 ════════════════════════════════════ -->
+  <!-- ═══ TAB: AI 분석 ════════════════════════════════════ -->
   <div x-show="$store.mc.tab === 'marcus'">
 
-    <div class="section">
-      <div class="sec-label">Marcus 분석</div>
-      <div class="panel">
-        <div class="panel-body">
-          <template x-if="$store.mc.marcusMd">
-            <div class="md" x-html="$store.mc.renderMarkdown($store.mc.marcusMd)"></div>
-          </template>
-          <div x-show="!$store.mc.marcusMd" class="empty">분석 데이터 없음 — Marcus 분석을 실행하세요</div>
-        </div>
-      </div>
-    </div>
+    <div class="col-70-30" style="gap:12px">
 
-    <div class="section" x-show="$store.mc.cioBriefingMd">
-      <div class="panel">
-        <div class="panel-body">
-          <div class="acc-hd" @click="$el.parentElement.querySelector('.acc-bd').classList.toggle('hidden')">
-            <span>CIO 브리핑</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-          <div class="acc-bd">
-            <div class="md" x-html="$store.mc.renderMarkdown($store.mc.cioBriefingMd)"></div>
+      <!-- 왼쪽: 분석 내용 -->
+      <div>
+        <div class="section">
+          <div class="sec-label" x-text="$store.mc.selectedAnalysis ? $store.mc.selectedAnalysis.date + ' 분석' : '최신 분석'"></div>
+          <div class="panel">
+            <div class="panel-body">
+              <template x-if="$store.mc.selectedAnalysis && $store.mc.selectedAnalysis.content">
+                <div class="md" x-html="$store.mc.renderMarkdown($store.mc.selectedAnalysis.content)"></div>
+              </template>
+              <template x-if="!$store.mc.selectedAnalysis && $store.mc.marcusMd">
+                <div class="md" x-html="$store.mc.renderMarkdown($store.mc.marcusMd)"></div>
+              </template>
+              <div x-show="!$store.mc.selectedAnalysis && !$store.mc.marcusMd" class="empty">
+                분석 데이터 없음 — 상단 'AI 분석' 버튼으로 실행하세요
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="section" x-show="$store.mc.dailyReportMd">
-      <div class="panel">
-        <div class="panel-body">
-          <div class="acc-hd" @click="$el.parentElement.querySelector('.acc-bd').classList.toggle('hidden')">
-            <span>일일 리포트</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-          <div class="acc-bd">
-            <div class="md" x-html="$store.mc.renderMarkdown($store.mc.dailyReportMd)"></div>
+        <!-- CIO 브리핑 (접기) -->
+        <div class="section" x-show="$store.mc.cioBriefingMd && !$store.mc.selectedAnalysis">
+          <div class="panel">
+            <div class="panel-body">
+              <div class="acc-hd" @click="$el.parentElement.querySelector('.acc-bd').classList.toggle('hidden')">
+                <span>CIO 브리핑</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="acc-bd">
+                <div class="md" x-html="$store.mc.renderMarkdown($store.mc.cioBriefingMd)"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- 오른쪽: 날짜별 이력 -->
+      <div>
+        <div class="section">
+          <div class="sec-label">분석 이력</div>
+          <div class="panel">
+            <div class="panel-body" style="padding:0">
+              <div x-show="$store.mc.analysisHistory.length === 0" class="empty" style="padding:16px">이력 없음</div>
+              <template x-for="item in $store.mc.analysisHistory" :key="item.date">
+                <div class="analysis-row"
+                     :class="$store.mc.selectedAnalysis?.date === item.date ? 'active' : ''"
+                     @click="$store.mc.selectAnalysis(item.date)">
+                  <div class="analysis-date" x-text="item.date"></div>
+                  <div class="analysis-meta">
+                    <span x-show="item.confidence_level" class="badge-blue" x-text="'★'.repeat(item.confidence_level || 0)"></span>
+                    <span x-show="item.regime" class="muted" style="font-size:11px" x-text="item.regime?.split(' ')[0]"></span>
+                  </div>
+                  <div x-show="item.today_call" class="analysis-call muted" x-text="item.today_call?.slice(0,60) + '…'"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
   </div>
-  <!-- ═══ END 마커스 ════════════════════════════════════ -->
+  <!-- ═══ END AI 분석 ════════════════════════════════════ -->
 
 
   <!-- ═══ TAB: 발굴 ══════════════════════════════════════ -->

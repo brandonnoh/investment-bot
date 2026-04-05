@@ -15,6 +15,7 @@ from config import DB_PATH
 from db.init_db_schema import (
     CREATE_INDEX_AGENT_KEYWORDS_DATE,
     CREATE_INDEX_ALERTS_TRIGGERED,
+    CREATE_INDEX_ANALYSIS_HISTORY_DATE,
     CREATE_INDEX_EXTRA_ASSETS_NAME,
     CREATE_INDEX_FUNDAMENTALS_TICKER,
     CREATE_INDEX_HOLDINGS_TICKER,
@@ -31,6 +32,7 @@ from db.init_db_schema import (
     CREATE_INDEX_TRANSACTIONS_TICKER_DATE,
     CREATE_TABLE_AGENT_KEYWORDS,
     CREATE_TABLE_ALERTS,
+    CREATE_TABLE_ANALYSIS_HISTORY,
     CREATE_TABLE_EXTRA_ASSETS,
     CREATE_TABLE_FUNDAMENTALS,
     CREATE_TABLE_HOLDINGS,
@@ -68,9 +70,7 @@ def _migrate_add_column(cursor, table_name, column_name, column_def):
     if _table_exists(cursor, table_name):
         cols = _get_column_names(cursor, table_name)
         if column_name not in cols:
-            cursor.execute(
-                f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_def}"
-            )
+            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_def}")
 
 
 def init_schema(conn):
@@ -116,6 +116,10 @@ def init_schema(conn):
     cursor.execute(CREATE_INDEX_EXTRA_ASSETS_NAME)
     cursor.execute(CREATE_TABLE_TOTAL_WEALTH_HISTORY)
     cursor.execute(CREATE_INDEX_TOTAL_WEALTH_DATE)
+
+    # ── AI 분석 이력 ──
+    cursor.execute(CREATE_TABLE_ANALYSIS_HISTORY)
+    cursor.execute(CREATE_INDEX_ANALYSIS_HISTORY_DATE)
 
     # ── 마이그레이션: 기존 테이블에 새 컬럼 추가 ──
     for table_name, column_name, column_def in MIGRATION_COLUMNS:

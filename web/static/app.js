@@ -41,6 +41,10 @@ document.addEventListener('alpine:init', () => {
     cioBriefingMd: '',
     dailyReportMd: '',
 
+    // AI 분석 이력
+    analysisHistory: [],
+    selectedAnalysis: null,
+
     // 차트 인스턴스
     _charts: {},
 
@@ -49,6 +53,7 @@ document.addEventListener('alpine:init', () => {
       await this.fetchData();
       this.initSSE();
       this.pollStatus();
+      this.fetchAnalysisHistory();
     },
 
     // SSE 구독
@@ -299,7 +304,31 @@ document.addEventListener('alpine:init', () => {
       }
     },
 
-    // Marcus 분석 실행
+    // AI 분석 이력 로드
+    async fetchAnalysisHistory() {
+      try {
+        const res = await fetch('/api/analysis-history');
+        if (res.ok) this.analysisHistory = await res.json();
+      } catch (e) {
+        console.error('[mc] 분석 이력 로드 실패:', e);
+      }
+    },
+
+    // 특정 날짜 분석 상세 조회
+    async selectAnalysis(date) {
+      if (this.selectedAnalysis?.date === date) {
+        this.selectedAnalysis = null;
+        return;
+      }
+      try {
+        const res = await fetch(`/api/analysis-history?date=${date}`);
+        if (res.ok) this.selectedAnalysis = await res.json();
+      } catch (e) {
+        console.error('[mc] 분석 상세 로드 실패:', e);
+      }
+    },
+
+    // AI 분석 실행
     async runMarcus() {
       if (this.marcusRunning) return;
       this.marcusRunning = true;
@@ -307,8 +336,11 @@ document.addEventListener('alpine:init', () => {
         const res = await fetch('/api/run-marcus', { method: 'POST' });
         const data = await res.json();
         if (!data.ok) {
-          alert(data.error ?? 'Marcus 실행 실패');
+          alert(data.error ?? 'AI 분석 실행 실패');
           this.marcusRunning = false;
+        } else {
+          // 완료 후 이력 갱신 (30초 대기)
+          setTimeout(() => this.fetchAnalysisHistory(), 30000);
         }
       } catch (e) {
         alert('서버 오류: ' + e.message);
