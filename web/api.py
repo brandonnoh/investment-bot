@@ -6,7 +6,9 @@ JSON 파일 로드, 프로세스 실행 관리
 
 import json
 import os
+import sqlite3
 import subprocess
+import threading
 from pathlib import Path
 
 # 프로젝트 루트
@@ -101,6 +103,12 @@ def get_running_pid(name: str) -> int | None:
         return None
 
 
+def _cleanup_pid_when_done(proc: subprocess.Popen, name: str) -> None:
+    """데몬 스레드: 프로세스 종료 후 PID 파일 삭제 (좀비 방지)."""
+    proc.wait()
+    _pid_file(name).unlink(missing_ok=True)
+
+
 def run_background(name: str, cmd: list) -> dict:
     """subprocess.Popen으로 백그라운드 실행, PID 파일 생성."""
     # 이미 실행 중이면 중복 실행 방지
@@ -125,6 +133,9 @@ def run_background(name: str, cmd: list) -> dict:
             )
         # PID 파일 저장
         _pid_file(name).write_text(str(proc.pid))
+        # 종료 시 PID 파일 자동 정리 (좀비 프로세스로 인한 뻥뻥이 방지)
+        t = threading.Thread(target=_cleanup_pid_when_done, args=(proc, name), daemon=True)
+        t.start()
         return {"ok": True, "pid": proc.pid, "name": name}
     except Exception as e:
         return {"ok": False, "error": str(e)}
