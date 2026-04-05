@@ -93,6 +93,12 @@
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
     시스템
   </button>
+  <!-- 서비스 맵 -->
+  <button class="tab" :class="$store.mc.tab === 'map' ? 'active' : ''"
+          @click="$store.mc.tab = 'map'">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+    서비스 맵
+  </button>
 </nav>
 
 <!-- ── Main Content ────────────────────────────────────── -->
@@ -884,6 +890,299 @@
 
   </div>
   <!-- ═══ END 시스템 ════════════════════════════════════ -->
+
+  <!-- ═══ TAB: 서비스 맵 ═══════════════════════════════════ -->
+  <div x-show="$store.mc.tab === 'map'">
+
+    <!-- 파이프라인 흐름 -->
+    <div class="section">
+      <div class="sec-label">파이프라인 실행 흐름</div>
+      <div class="panel">
+        <div class="panel-body">
+          <div class="pipeline-flow">
+            <div class="pf-step">
+              <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+              <div class="pf-label">DB 초기화</div>
+            </div>
+            <div class="pf-arrow">→</div>
+            <div class="pf-step">
+              <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+              <div class="pf-label">데이터 수집</div>
+              <div class="pf-sub">6개 소스</div>
+            </div>
+            <div class="pf-arrow">→</div>
+            <div class="pf-step">
+              <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+              <div class="pf-label">레짐 분류</div>
+            </div>
+            <div class="pf-arrow">→</div>
+            <div class="pf-step">
+              <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+              <div class="pf-label">분석</div>
+              <div class="pf-sub">기술·포트폴리오·스크리너</div>
+            </div>
+            <div class="pf-arrow">→</div>
+            <div class="pf-step">
+              <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+              <div class="pf-label">리포트</div>
+              <div class="pf-sub">일일·마감</div>
+            </div>
+            <div class="pf-arrow">→</div>
+            <div class="pf-step pf-step--action">
+              <div class="pf-icon green"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="pf-label green">완료</div>
+              <button class="btn btn-xs btn-primary" :disabled="$store.mc.pipelineRunning" @click="$store.mc.runPipeline()">
+                <span x-show="!$store.mc.pipelineRunning">실행</span>
+                <span x-show="$store.mc.pipelineRunning"><span class="spin"></span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="smap-grid">
+
+      <!-- 수집 계층 -->
+      <div class="smap-card">
+        <div class="smap-hd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>데이터 수집</span>
+          <span class="badge-blue">6</span>
+        </div>
+        <ul class="smap-list">
+          <li>
+            <div class="smap-name">fetch_prices</div>
+            <div class="smap-desc">포트폴리오 종목 실시간 주가 (KR 8 + US 3)</div>
+            <span class="smap-out">prices.json</span>
+          </li>
+          <li>
+            <div class="smap-name">fetch_macro</div>
+            <div class="smap-desc">매크로 지표 8개 — KOSPI·KOSDAQ·환율·WTI·금·VIX</div>
+            <span class="smap-out">macro.json</span>
+          </li>
+          <li>
+            <div class="smap-name">fetch_news</div>
+            <div class="smap-desc">RSS + Brave Search 뉴스 수집 (종목·매크로·지정학)</div>
+            <span class="smap-out">news.json</span>
+          </li>
+          <li>
+            <div class="smap-name">fetch_fundamentals</div>
+            <div class="smap-desc">DART·네이버금융 PER·PBR·ROE·EPS 수집</div>
+            <span class="smap-out">fundamentals.json</span>
+          </li>
+          <li>
+            <div class="smap-name">fetch_supply</div>
+            <div class="smap-desc">KRX 외국인·기관 순매매 + Fear &amp; Greed Index</div>
+            <span class="smap-out">supply_data.json</span>
+          </li>
+          <li>
+            <div class="smap-name">fetch_opportunities</div>
+            <div class="smap-desc">키워드 기반 신규 종목 발굴 (Brave/Naver 검색)</div>
+            <span class="smap-out">opportunities.json</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 분석 엔진 -->
+      <div class="smap-card">
+        <div class="smap-hd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          <span>분석 엔진</span>
+          <span class="badge-blue">9</span>
+        </div>
+        <ul class="smap-list">
+          <li>
+            <div class="smap-name">price_analysis</div>
+            <div class="smap-desc">기술 분석 — MA50·MA200·RSI·52주 고저·변동성</div>
+            <span class="smap-out">price_analysis.json</span>
+          </li>
+          <li>
+            <div class="smap-name">regime_classifier</div>
+            <div class="smap-desc">시장 레짐 분류 — BULL·BEAR·INFLATIONARY·STAGFLATION</div>
+            <span class="smap-out">regime.json</span>
+          </li>
+          <li>
+            <div class="smap-name">alerts</div>
+            <div class="smap-desc">임계값 기반 알림 — 급등락·환율·VIX·유가</div>
+            <span class="smap-out">alerts.json</span>
+          </li>
+          <li>
+            <div class="smap-name">screener</div>
+            <div class="smap-desc">종목 스크리너 — 섹터별 주목 종목 선별</div>
+            <span class="smap-out">screener_results.json</span>
+          </li>
+          <li>
+            <div class="smap-name">portfolio</div>
+            <div class="smap-desc">포트폴리오 평가손익·섹터 비중·리스크 지표</div>
+            <span class="smap-out">portfolio_summary.json</span>
+          </li>
+          <li>
+            <div class="smap-name">composite_score</div>
+            <div class="smap-desc">6팩터 복합 점수 — 가치·퀄리티·모멘텀·성장·수급·리스크</div>
+            <span class="smap-out">—</span>
+          </li>
+          <li>
+            <div class="smap-name">sentiment</div>
+            <div class="smap-desc">뉴스 감성 분석 — 키워드 기반 -1.0 ~ +1.0 스코어</div>
+            <span class="smap-out">—</span>
+          </li>
+          <li>
+            <div class="smap-name">performance</div>
+            <div class="smap-desc">성과 추적 — 1주·1개월 수익률, 월별 성과 리포트</div>
+            <span class="smap-out">performance_report.json</span>
+          </li>
+          <li>
+            <div class="smap-name">simulation</div>
+            <div class="smap-desc">포트폴리오 시뮬레이션 — 리밸런싱 시나리오</div>
+            <span class="smap-out">simulation_report.json</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 리포트 -->
+      <div class="smap-card">
+        <div class="smap-hd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>리포트</span>
+          <span class="badge-blue">3</span>
+        </div>
+        <ul class="smap-list">
+          <li>
+            <div class="smap-name">daily report</div>
+            <div class="smap-desc">파이프라인 완료 후 자동 생성 — 포트폴리오·매크로·알림 요약</div>
+            <span class="smap-out">daily_report.md</span>
+          </li>
+          <li>
+            <div class="smap-name">weekly report</div>
+            <div class="smap-desc">주간 성과·섹터 로테이션·신규 종목 추천 (--weekly 플래그)</div>
+            <span class="smap-out">weekly_report.md</span>
+          </li>
+          <li>
+            <div class="smap-name">closing report</div>
+            <div class="smap-desc">장 마감 후 OHLC + 최종 손익 요약 (수동 실행)</div>
+            <span class="smap-out">closing_report.md</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- AI 에이전트 -->
+      <div class="smap-card">
+        <div class="smap-hd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/></svg>
+          <span>AI 에이전트</span>
+          <span class="badge-blue">2</span>
+        </div>
+        <ul class="smap-list">
+          <li>
+            <div class="smap-name">Marcus 분석</div>
+            <div class="smap-desc">Claude CLI → Intel JSON 조합 → 투자 분석 리포트 생성. RISK FIRST·MARKET REGIME·TODAY'S CALL 포함</div>
+            <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+              <span class="smap-out">marcus-analysis.md</span>
+              <button class="btn btn-xs btn-primary" :disabled="$store.mc.marcusRunning" @click="$store.mc.runMarcus(); $store.mc.tab='marcus'">
+                <span x-show="!$store.mc.marcusRunning">실행</span>
+                <span x-show="$store.mc.marcusRunning"><span class="spin"></span></span>
+              </button>
+            </div>
+          </li>
+          <li>
+            <div class="smap-name">Jarvis 브리핑</div>
+            <div class="smap-desc">매일 07:30 KST 자동 실행 — CIO 관점 투자 브리핑 생성 (launchd 배치)</div>
+            <span class="smap-out">cio-briefing.md</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 배치 / 크론 -->
+      <div class="smap-card">
+        <div class="smap-hd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>배치 / 크론 (launchd)</span>
+          <span class="badge-blue">5</span>
+        </div>
+        <ul class="smap-list">
+          <li>
+            <div class="smap-name">파이프라인</div>
+            <div class="smap-desc">수동 실행 (대시보드 버튼 또는 <code>python3 run_pipeline.py</code>)</div>
+            <span class="smap-out badge-green">상시</span>
+          </li>
+          <li>
+            <div class="smap-name">Marcus 분석</div>
+            <div class="smap-desc">평일 05:30 KST 자동 실행 → AI 분석 탭에 저장</div>
+            <span class="smap-out">com.investment-bot.marcus.plist</span>
+          </li>
+          <li>
+            <div class="smap-name">Jarvis 브리핑</div>
+            <div class="smap-desc">평일 07:30 KST 자동 실행 → Discord 알림</div>
+            <span class="smap-out">com.investment-bot.jarvis.plist</span>
+          </li>
+          <li>
+            <div class="smap-name">알림 감시</div>
+            <div class="smap-desc">alerts_watch.py 상시 실행 — DB 변화 감지 → Discord 즉시 전송</div>
+            <span class="smap-out badge-green">상시</span>
+          </li>
+          <li>
+            <div class="smap-name">월말 적립</div>
+            <div class="smap-desc">매월 마지막 날 23:59 — 월 적립금 DB 자동 반영</div>
+            <span class="smap-out">com.investment-bot.deposit.plist</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 데이터베이스 -->
+      <div class="smap-card">
+        <div class="smap-hd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          <span>데이터베이스 (SQLite)</span>
+          <span class="badge-blue">10</span>
+        </div>
+        <ul class="smap-list smap-list--db">
+          <li><div class="smap-name">prices</div><div class="smap-desc">실시간 주가 — 10분 해상도, 3개월 보존</div></li>
+          <li><div class="smap-name">prices_daily</div><div class="smap-desc">일봉 집계 — OHLCV, 영구 보존</div></li>
+          <li><div class="smap-name">macro / macro_daily</div><div class="smap-desc">매크로 지표 원시 + 일봉</div></li>
+          <li><div class="smap-name">news</div><div class="smap-desc">뉴스 기사 + 감성 점수</div></li>
+          <li><div class="smap-name">alerts</div><div class="smap-desc">발생 알림 이력</div></li>
+          <li><div class="smap-name">portfolio_history</div><div class="smap-desc">일별 포트폴리오 스냅샷</div></li>
+          <li><div class="smap-name">holdings / transactions</div><div class="smap-desc">보유 종목 + 매매 내역 (SSoT)</div></li>
+          <li><div class="smap-name">opportunities</div><div class="smap-desc">발굴 종목 + 복합 점수</div></li>
+          <li><div class="smap-name">fundamentals</div><div class="smap-desc">PER·PBR·ROE·EPS + 외국인 수급</div></li>
+          <li><div class="smap-name">analysis_history</div><div class="smap-desc">AI 분석 일자별 이력</div></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- 출력 파일 맵 -->
+    <div class="section" style="margin-top:12px">
+      <div class="sec-label">output/intel/ 파일 목록</div>
+      <div class="panel">
+        <div class="panel-body">
+          <div class="intel-grid">
+            <div class="intel-item" title="포트폴리오 종목 시세"><span class="intel-name">prices.json</span><span class="muted">주가</span></div>
+            <div class="intel-item" title="매크로 지표 8개"><span class="intel-name">macro.json</span><span class="muted">매크로</span></div>
+            <div class="intel-item" title="뉴스 + 감성"><span class="intel-name">news.json</span><span class="muted">뉴스</span></div>
+            <div class="intel-item" title="포트폴리오 평가손익"><span class="intel-name">portfolio_summary.json</span><span class="muted">포트폴리오</span></div>
+            <div class="intel-item" title="시장 레짐"><span class="intel-name">regime.json</span><span class="muted">레짐</span></div>
+            <div class="intel-item" title="MA·RSI·모멘텀"><span class="intel-name">price_analysis.json</span><span class="muted">기술분석</span></div>
+            <div class="intel-item" title="임계값 초과 알림"><span class="intel-name">alerts.json</span><span class="muted">알림</span></div>
+            <div class="intel-item" title="스크리너 결과"><span class="intel-name">screener_results.json</span><span class="muted">스크리너</span></div>
+            <div class="intel-item" title="신규 발굴 종목"><span class="intel-name">opportunities.json</span><span class="muted">발굴</span></div>
+            <div class="intel-item" title="PER·PBR·ROE"><span class="intel-name">fundamentals.json</span><span class="muted">펀더멘탈</span></div>
+            <div class="intel-item" title="외국인·기관 수급"><span class="intel-name">supply_data.json</span><span class="muted">수급</span></div>
+            <div class="intel-item" title="성과 추적"><span class="intel-name">performance_report.json</span><span class="muted">성과</span></div>
+            <div class="intel-item" title="시뮬레이션"><span class="intel-name">simulation_report.json</span><span class="muted">시뮬</span></div>
+            <div class="intel-item" title="엔진 모듈 상태"><span class="intel-name">engine_status.json</span><span class="muted">엔진상태</span></div>
+            <div class="intel-item" title="보유 제안"><span class="intel-name">holdings_proposal.json</span><span class="muted">보유제안</span></div>
+            <div class="intel-item intel-item--md" title="AI 투자 분석 리포트"><span class="intel-name">marcus-analysis.md</span><span class="muted">AI분석</span></div>
+            <div class="intel-item intel-item--md" title="CIO 브리핑"><span class="intel-name">cio-briefing.md</span><span class="muted">브리핑</span></div>
+            <div class="intel-item intel-item--md" title="일일 요약 리포트"><span class="intel-name">daily_report.md</span><span class="muted">일일</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <!-- ═══ END 서비스 맵 ═════════════════════════════════════ -->
 
 </main>
 

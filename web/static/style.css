@@ -486,3 +486,131 @@ td.mono { font-family: var(--mono); }
 .analysis-date { font-family: var(--mono); font-size: 12px; color: var(--fg); font-weight: 600; }
 .analysis-meta { display: flex; gap: 8px; align-items: center; margin: 3px 0; }
 .analysis-call { font-size: 11px; line-height: 1.4; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* ── 서비스 맵 ── */
+.smap-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 0 16px 4px;
+}
+.smap-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.smap-hd {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  background: var(--hover);
+}
+.smap-hd svg { color: var(--gold); flex-shrink: 0; }
+.smap-hd span:last-of-type { margin-left: auto; }
+.smap-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.smap-list li {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.smap-list li:last-child { border-bottom: none; }
+.smap-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.smap-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.smap-desc code {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--hover);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--fg);
+}
+.smap-out {
+  display: inline-block;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--hover);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.smap-list--db li { padding: 6px 14px; }
+.smap-list--db .smap-desc { font-size: 10px; }
+
+/* 파이프라인 흐름 */
+.pipeline-flow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pf-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  min-width: 80px;
+}
+.pf-step--action { border-color: var(--gold); background: rgba(201,169,58,.06); }
+.pf-icon { color: var(--muted); }
+.pf-icon.green { color: var(--green); }
+.pf-label { font-size: 11px; font-weight: 600; color: var(--fg); text-align: center; }
+.pf-label.green { color: var(--green); }
+.pf-sub { font-size: 10px; color: var(--muted); text-align: center; }
+.pf-arrow { color: var(--border); font-size: 14px; flex-shrink: 0; }
+.btn-xs { padding: 2px 8px; font-size: 10px; }
+
+/* intel 파일 그리드 */
+.intel-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.intel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: default;
+  transition: border-color .15s;
+}
+.intel-item:hover { border-color: var(--gold); }
+.intel-item--md { border-color: rgba(201,169,58,.3); }
+.intel-name { font-family: var(--mono); font-size: 10px; color: var(--fg); font-weight: 600; }
+.intel-item .muted { font-size: 9px; }
+.badge-green { background: rgba(77,202,126,.12); color: var(--green); padding: 1px 6px; border-radius: 3px; font-size: 10px; font-family: var(--mono); }
+
+@media (max-width: 900px) {
+  .smap-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .smap-grid { grid-template-columns: 1fr; }
+  .pipeline-flow { gap: 4px; }
+  .pf-step { min-width: 60px; padding: 6px 8px; }
+}
