@@ -8,9 +8,8 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -114,7 +113,7 @@ def save_fallback_keywords(keywords: list, output_path: Path) -> None:
     logger.info(f"Fallback 키워드 저장: {output_path}")
 
 
-def ensure_fresh_keywords(keywords_path: Path, output_dir: Optional[Path] = None) -> bool:
+def ensure_fresh_keywords(keywords_path: Path, output_dir: Path | None = None) -> bool:
     """키워드 파일이 stale이면 fallback으로 갱신. True=fresh, False=fallback 사용."""
     if is_keywords_fresh(keywords_path):
         return True

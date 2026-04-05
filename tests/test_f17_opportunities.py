@@ -1,8 +1,8 @@
 """Phase 4 종목 발굴 테스트"""
 
 import json
-import sys
 import os
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 

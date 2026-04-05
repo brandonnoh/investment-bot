@@ -6,7 +6,6 @@ weekly.py에서 분리된 순수 포매팅 함수 모음
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -72,7 +71,7 @@ def format_macro_weekly(macro_changes: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def format_portfolio_analysis(portfolio_data: Optional[dict]) -> str:
+def format_portfolio_analysis(portfolio_data: dict | None) -> str:
     """포트폴리오 분석 결과 섹션"""
     if not portfolio_data:
         return "## 💼 포트폴리오 분석\n\n> portfolio_summary.json 없음 — portfolio.py 실행 필요\n"
@@ -131,7 +130,7 @@ def format_screener_summary() -> str:
     if not screener_path.exists():
         return "## 🔍 신규 주목 종목\n\n> screener.md 없음 — screener.py 실행 필요\n"
 
-    with open(screener_path, "r", encoding="utf-8") as f:
+    with screener_path.open(encoding="utf-8") as f:
         content = f.read()
 
     # 스크리너 리포트에서 주목 종목 테이블 추출

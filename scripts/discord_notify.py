@@ -7,8 +7,8 @@ analysis/alerts_watch_notify.py 패턴 재사용
 import json
 import os
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -60,7 +60,7 @@ def notify_marcus_complete(md_path: Path) -> None:
     """
     try:
         # scripts/marcus_analysis.py의 extract_sections() 재사용
-        from scripts.marcus_analysis import extract_sections, extract_confidence_level
+        from scripts.marcus_analysis import extract_confidence_level, extract_sections
 
         if not md_path.exists():
             print(f"  ⚠️  marcus-analysis.md 없음: {md_path}")

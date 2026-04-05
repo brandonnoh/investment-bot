@@ -9,25 +9,25 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import OUTPUT_DIR  # noqa: E402
 from analysis.screener_report import (  # noqa: E402
     generate_screener_report,
-    pick_highlights,
     generate_universe_section,
+    pick_highlights,
 )
-from analysis.screener_ticker import fetch_yahoo_quote, analyze_ticker  # noqa: E402, F401
+from analysis.screener_ticker import analyze_ticker, fetch_yahoo_quote  # noqa: E402, F401
 from analysis.screener_universe import (  # noqa: E402
+    SCREENING_TARGETS,
     UNIVERSE_KOSPI200,
     UNIVERSE_SP100,
-    SCREENING_TARGETS,
-    screen_universe,
     merge_universe,
+    screen_universe,
 )
+from config import OUTPUT_DIR  # noqa: E402
 
 KST = timezone(timedelta(hours=9))
 
@@ -76,7 +76,7 @@ def run():
     opp_path = OUTPUT_DIR / "opportunities.json"
     if opp_path.exists():
         try:
-            with open(opp_path, encoding="utf-8") as f:
+            with opp_path.open(encoding="utf-8") as f:
                 opp_data = json.load(f)
             opp_tickers = [
                 {
@@ -140,13 +140,13 @@ def run():
         "total_kospi_scanned": len(UNIVERSE_KOSPI200),
         "total_sp_scanned": len(UNIVERSE_SP100),
     }
-    with open(results_path, "w", encoding="utf-8") as f:
+    with results_path.open("w", encoding="utf-8") as f:
         json.dump(results_data, f, ensure_ascii=False, indent=2)
     print(f"  💾 유니버스 결과 저장: {results_path}")
 
     # screener.md 저장
     output_path = OUTPUT_DIR / "screener.md"
-    with open(output_path, "w", encoding="utf-8") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         f.write(report)
 
     print(f"\n  📄 스크리너 저장: {output_path}")

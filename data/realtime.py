@@ -17,25 +17,25 @@
 
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import MACRO_INDICATORS, DB_PATH
-from db.ssot import get_holdings
+from config import DB_PATH, MACRO_INDICATORS
 
 # 외부 수집 함수 re-export (하위 호환성)
 from data.realtime_fetch import (  # noqa: F401
-    _is_kr_ticker,
-    _extract_kr_code,
-    fetch_naver_price,
-    _fetch_kr_stock,
-    fetch_naver_index,
-    fetch_yahoo_quote,
-    fetch_gold_krw_per_gram,
     NAVER_INDEX_CODES,
+    _extract_kr_code,
+    _fetch_kr_stock,
+    _is_kr_ticker,
+    fetch_gold_krw_per_gram,
+    fetch_naver_index,
+    fetch_naver_price,
+    fetch_yahoo_quote,
 )
+from db.ssot import get_holdings
 
 KST = timezone(timedelta(hours=9))
 
@@ -94,14 +94,27 @@ def fmt_price(val, currency="KRW"):
     return f"{val:,.2f}"
 
 
-def run():
-    """실시간 시세 조회 후 마크다운 출력"""
-    now = datetime.now(KST)
-    lines = []
-    lines.append(f"# 📡 실시간 시세 — {now.strftime('%H:%M')} KST")
-    lines.append(f"> 조회 시각: {now.strftime('%Y-%m-%d %H:%M:%S')} KST\n")
+def _fetch_stock_quote(ticker: str) -> tuple:
+    """종목 티커에 맞는 API로 시세 조회.
 
-    # ── 1. 포트폴리오 종목 ──
+    Returns:
+        (price, prev_close, day_high, day_low) 튜플
+    """
+    if ticker == "GOLD_KRW_G":
+        gold = fetch_gold_krw_per_gram()
+        return gold["price"], gold["prev_close"], gold["high"], gold["low"]
+    if _is_kr_ticker(ticker):
+        kr = _fetch_kr_stock(_extract_kr_code(ticker))
+        return kr["price"], kr["prev_close"], kr["high"], kr["low"]
+    meta = fetch_yahoo_quote(ticker)
+    price = meta["regularMarketPrice"]
+    prev_close = meta.get("chartPreviousClose", meta.get("previousClose", price))
+    return price, prev_close, meta.get("_dayHigh"), meta.get("_dayLow")
+
+
+def _render_portfolio_section(holdings: list) -> list[str]:
+    """포트폴리오 종목 섹션 마크다운 라인 목록 생성."""
+    lines = []
     lines.append("## 💼 포트폴리오 종목")
     lines.append("")
     lines.append("> 오늘등락: 전일 대비 | 매입손익: 평균 매입가 대비\n")
@@ -112,35 +125,12 @@ def run():
         "|------|--------|----------|----------|-----------|-----------|--------|"
     )
 
-    # SSoT: DB에서 보유 종목 로드
-    holdings = get_holdings()
-
     for stock in holdings:
         ticker = stock["ticker"]
         name = stock["name"]
         currency = stock.get("currency", "KRW")
         try:
-            if ticker == "GOLD_KRW_G":
-                gold = fetch_gold_krw_per_gram()
-                price = gold["price"]
-                prev_close = gold["prev_close"]
-                day_high = gold["high"]
-                day_low = gold["low"]
-            elif _is_kr_ticker(ticker):
-                # 한국 주식 → 키움증권 API (fallback: 네이버 금융)
-                kr = _fetch_kr_stock(_extract_kr_code(ticker))
-                price = kr["price"]
-                prev_close = kr["prev_close"]
-                day_high = kr["high"]
-                day_low = kr["low"]
-            else:
-                meta = fetch_yahoo_quote(ticker)
-                price = meta["regularMarketPrice"]
-                prev_close = meta.get(
-                    "chartPreviousClose", meta.get("previousClose", price)
-                )
-                day_high = meta.get("_dayHigh")
-                day_low = meta.get("_dayLow")
+            price, prev_close, day_high, day_low = _fetch_stock_quote(ticker)
 
             change_pct = (
                 round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
@@ -150,7 +140,6 @@ def run():
                 round((price - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
             )
 
-            # DB 이력 비교: 오전 첫 수집 대비 변화
             history = get_today_db_prices(ticker)
             if history:
                 morning_price = history[0]["price"]
@@ -167,8 +156,12 @@ def run():
             lines.append(f"| {name} | ❌ 조회실패 | — | — | — | — | — |")
             print(f"[오류] {name} ({ticker}): {e}", file=sys.stderr)
 
-    # ── 2. 매크로 지표 ──
-    lines.append("")
+    return lines
+
+
+def _render_macro_section() -> list[str]:
+    """매크로 지표 섹션 마크다운 라인 목록 생성."""
+    lines = []
     lines.append("## 🌍 매크로 지표")
     lines.append("")
     lines.append("| 지표 | 현재값 | 오늘등락 | 오전비 |")
@@ -181,7 +174,6 @@ def run():
         name = ind["name"]
         try:
             if ticker in NAVER_INDEX_CODES:
-                # 코스피/코스닥 → 네이버 금융 API
                 naver = fetch_naver_index(ticker)
                 value = naver["price"]
                 change_pct = naver["change_pct"]
@@ -197,7 +189,6 @@ def run():
                     else 0.0
                 )
 
-            # DB 이력 비교
             history = get_today_db_macro(name)
             if history:
                 morning_val = history[0]["value"]
@@ -206,12 +197,7 @@ def run():
             else:
                 morning_str = "—"
 
-            # 환율은 원 단위, 나머지는 소수점 2자리
-            if ticker == "KRW=X":
-                val_str = f"{value:,.2f}원"
-            else:
-                val_str = f"{value:,.2f}"
-
+            val_str = f"{value:,.2f}원" if ticker == "KRW=X" else f"{value:,.2f}"
             lines.append(
                 f"| {name} | {val_str} | {fmt_change(change_pct)} | {morning_str} |"
             )
@@ -219,6 +205,24 @@ def run():
         except Exception as e:
             lines.append(f"| {name} | ❌ 조회실패 | — | — |")
             print(f"[오류] {name} ({ticker}): {e}", file=sys.stderr)
+
+    return lines
+
+
+def run():
+    """실시간 시세 조회 후 마크다운 출력"""
+    now = datetime.now(KST)
+    lines = []
+    lines.append(f"# 📡 실시간 시세 — {now.strftime('%H:%M')} KST")
+    lines.append(f"> 조회 시각: {now.strftime('%Y-%m-%d %H:%M:%S')} KST\n")
+
+    # ── 1. 포트폴리오 종목 ──
+    holdings = get_holdings()
+    lines.extend(_render_portfolio_section(holdings))
+
+    # ── 2. 매크로 지표 ──
+    lines.append("")
+    lines.extend(_render_macro_section())
 
     lines.append("")
     lines.append(f"---\n_수집 완료: {datetime.now(KST).strftime('%H:%M')} KST_")

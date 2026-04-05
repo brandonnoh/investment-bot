@@ -4,15 +4,15 @@
 fetch_fundamentals.py에서 분리된 소스별 수집 함수 모음
 """
 
+import contextlib
 import json
 import logging
 import os
 import sys
-import urllib.request
 import urllib.parse
-from datetime import datetime, timezone, timedelta
+import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -49,7 +49,96 @@ def _parse_dart_amount(amount_str: str) -> float:
         return 0.0
 
 
-def fetch_dart_financials(stock_code: str) -> Optional[dict]:
+def _parse_dart_response(data: dict, stock_code: str) -> dict | None:
+    """DART API 응답에서 계정과목별 금액 딕셔너리 추출.
+
+    Args:
+        data: DART API JSON 응답
+        stock_code: 로그용 종목코드
+
+    Returns:
+        {계정과목명: {"current": float, "previous": float}} 또는 None (데이터 없음)
+    """
+    status = data.get("status", "")
+    items = data.get("list", [])
+
+    if status != "000" or not items:
+        logger.info(f"DART 데이터 없음 ({stock_code}): status={status}")
+        return None
+
+    accounts = {}
+    for item in items:
+        account_nm = item.get("account_nm", "")
+        thstrm = _parse_dart_amount(item.get("thstrm_amount", ""))
+        frmtrm = _parse_dart_amount(item.get("frmtrm_amount", ""))
+        accounts[account_nm] = {"current": thstrm, "previous": frmtrm}
+
+    return accounts
+
+
+def _extract_financial_metrics(accounts: dict, stock_code: str) -> dict:
+    """계정과목 딕셔너리에서 재무 지표 계산 및 비정상값 필터링.
+
+    Args:
+        accounts: {계정과목명: {"current": float, "previous": float}}
+        stock_code: 로그용 종목코드
+
+    Returns:
+        {"revenue_growth", "operating_margin", "roe", "debt_ratio", "fcf"} 딕셔너리
+    """
+
+    def _get_account(*names):
+        """여러 후보 계정과목명 중 존재하는 첫 번째 반환"""
+        for name in names:
+            if name in accounts:
+                return accounts[name]
+        return {}
+
+    # 재무 지표 계산 (연결재무제표 계정과목명 다양성 대응)
+    revenue = _get_account("매출액", "매출", "수익(매출액)")
+    operating_profit = _get_account("영업이익", "영업이익(손실)")
+    net_income = _get_account("당기순이익", "당기순이익(손실)", "연결당기순이익", "당기순손익")
+    total_debt = _get_account("부채총계", "부채 총계")
+    total_equity = _get_account("자본총계", "자본 총계", "지배기업 소유주지분")
+
+    rev_current = revenue.get("current", 0)
+    rev_previous = revenue.get("previous", 0)
+    op_current = operating_profit.get("current", 0)
+    ni_current = net_income.get("current", 0)
+    debt_current = total_debt.get("current", 0)
+    equity_current = total_equity.get("current", 0)
+
+    result = {
+        "revenue_growth": None,
+        "operating_margin": None,
+        "roe": None,
+        "debt_ratio": None,
+        "fcf": None,
+    }
+
+    if rev_previous and rev_previous != 0:
+        result["revenue_growth"] = round((rev_current - rev_previous) / abs(rev_previous) * 100, 2)
+    if rev_current and rev_current != 0:
+        result["operating_margin"] = round(op_current / rev_current * 100, 2)
+    if equity_current and equity_current != 0:
+        result["roe"] = round(ni_current / equity_current * 100, 2)
+    if equity_current and equity_current != 0:
+        result["debt_ratio"] = round(debt_current / equity_current * 100, 2)
+
+    # 비정상값 필터링
+    if result.get("roe") is not None and abs(result["roe"]) > 200:
+        logger.warning(f"DART ROE 비정상값 필터링: {stock_code} ROE={result['roe']:.1f}%")
+        result["roe"] = None
+    if result.get("debt_ratio") is not None and result["debt_ratio"] > 2000:
+        logger.warning(
+            f"DART 부채비율 비정상값 필터링: {stock_code} 부채비율={result['debt_ratio']:.1f}%"
+        )
+        result["debt_ratio"] = None
+
+    return result
+
+
+def fetch_dart_financials(stock_code: str) -> dict | None:
     """DART OpenAPI로 한국 종목 재무제표 수집.
 
     Args:
@@ -90,77 +179,11 @@ def fetch_dart_financials(stock_code: str) -> Optional[dict]:
         logger.error(f"DART API 호출 실패 ({stock_code}): {e}")
         return None
 
-    status = data.get("status", "")
-    items = data.get("list", [])
-
-    if status != "000" or not items:
-        logger.info(f"DART 데이터 없음 ({stock_code}): status={status}")
+    accounts = _parse_dart_response(data, stock_code)
+    if accounts is None:
         return None
 
-    # 계정과목별 금액 추출
-    accounts = {}
-    for item in items:
-        account_nm = item.get("account_nm", "")
-        thstrm = _parse_dart_amount(item.get("thstrm_amount", ""))
-        frmtrm = _parse_dart_amount(item.get("frmtrm_amount", ""))
-        accounts[account_nm] = {"current": thstrm, "previous": frmtrm}
-
-    def _get_account(*names):
-        """여러 후보 계정과목명 중 존재하는 첫 번째 반환"""
-        for name in names:
-            if name in accounts:
-                return accounts[name]
-        return {}
-
-    # 재무 지표 계산 (연결재무제표 계정과목명 다양성 대응)
-    revenue = _get_account("매출액", "매출", "수익(매출액)")
-    operating_profit = _get_account("영업이익", "영업이익(손실)")
-    net_income = _get_account("당기순이익", "당기순이익(손실)", "연결당기순이익", "당기순손익")
-    total_debt = _get_account("부채총계", "부채 총계")
-    total_equity = _get_account("자본총계", "자본 총계", "지배기업 소유주지분")
-
-    rev_current = revenue.get("current", 0)
-    rev_previous = revenue.get("previous", 0)
-    op_current = operating_profit.get("current", 0)
-    ni_current = net_income.get("current", 0)
-    debt_current = total_debt.get("current", 0)
-    equity_current = total_equity.get("current", 0)
-
-    result = {
-        "revenue_growth": None,
-        "operating_margin": None,
-        "roe": None,
-        "debt_ratio": None,
-        "fcf": None,
-    }
-
-    # 매출 성장률
-    if rev_previous and rev_previous != 0:
-        result["revenue_growth"] = round(
-            (rev_current - rev_previous) / abs(rev_previous) * 100, 2
-        )
-
-    # 영업이익률
-    if rev_current and rev_current != 0:
-        result["operating_margin"] = round(op_current / rev_current * 100, 2)
-
-    # ROE
-    if equity_current and equity_current != 0:
-        result["roe"] = round(ni_current / equity_current * 100, 2)
-
-    # 부채비율
-    if equity_current and equity_current != 0:
-        result["debt_ratio"] = round(debt_current / equity_current * 100, 2)
-
-    # 비정상값 필터링
-    if result.get("roe") is not None and abs(result["roe"]) > 200:
-        logger.warning(f"DART ROE 비정상값 필터링: {stock_code} ROE={result['roe']:.1f}%")
-        result["roe"] = None
-    if result.get("debt_ratio") is not None and result["debt_ratio"] > 2000:
-        logger.warning(f"DART 부채비율 비정상값 필터링: {stock_code} 부채비율={result['debt_ratio']:.1f}%")
-        result["debt_ratio"] = None
-
-    return result
+    return _extract_financial_metrics(accounts, stock_code)
 
 
 def fetch_naver_per_pbr(stock_code: str) -> dict:
@@ -185,10 +208,8 @@ def fetch_naver_per_pbr(stock_code: str) -> dict:
             if code in ("per", "pbr") and value_str:
                 # "28.37배" → 28.37
                 cleaned = value_str.replace("배", "").replace(",", "").strip()
-                try:
+                with contextlib.suppress(ValueError):
                     result[code] = float(cleaned)
-                except ValueError:
-                    pass
         return result
     except Exception as e:
         logger.debug(f"네이버 PER/PBR 수집 실패 ({stock_code}): {e}")
@@ -205,7 +226,7 @@ def _safe_raw(obj: dict, key: str, default=None):
     return default
 
 
-def fetch_yahoo_financials(ticker: str) -> Optional[dict]:
+def fetch_yahoo_financials(ticker: str) -> dict | None:
     """yfinance로 재무 데이터 수집 (Yahoo Finance quoteSummary 대체).
 
     Args:
@@ -216,6 +237,7 @@ def fetch_yahoo_financials(ticker: str) -> Optional[dict]:
     """
     try:
         import yfinance as yf
+
         t = yf.Ticker(ticker)
         info = t.info
         if not info or info.get("regularMarketPrice") is None and info.get("currentPrice") is None:
@@ -235,10 +257,14 @@ def fetch_yahoo_financials(ticker: str) -> Optional[dict]:
         roe = round(float(roe_raw) * 100, 2) if roe_raw is not None else None
 
         rev_growth_raw = info.get("revenueGrowth")
-        revenue_growth = round(float(rev_growth_raw) * 100, 2) if rev_growth_raw is not None else None
+        revenue_growth = (
+            round(float(rev_growth_raw) * 100, 2) if rev_growth_raw is not None else None
+        )
 
         op_margin_raw = info.get("operatingMargins")
-        operating_margin = round(float(op_margin_raw) * 100, 2) if op_margin_raw is not None else None
+        operating_margin = (
+            round(float(op_margin_raw) * 100, 2) if op_margin_raw is not None else None
+        )
 
         div_yield_raw = info.get("dividendYield")
         dividend_yield = round(float(div_yield_raw) * 100, 2) if div_yield_raw is not None else None

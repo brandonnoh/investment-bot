@@ -12,18 +12,18 @@
 from __future__ import annotations
 
 import sys
-import os
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config  # noqa: E402
 
 # 팩터 계산 레이어 re-export
 from analysis.composite_score_factors import (  # noqa: E402, F401
     calculate_12_1_momentum,
-    calculate_value_score,
-    calculate_quality_score,
-    calculate_growth_score,
     calculate_eps_growth,
+    calculate_growth_score,
+    calculate_quality_score,
+    calculate_value_score,
 )
 
 

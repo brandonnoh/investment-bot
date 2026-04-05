@@ -9,43 +9,43 @@ import json
 import logging
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import analysis.price_analysis_calc as _calc_mod
+from analysis.price_analysis_calc import (  # noqa: F401
+    _calc_trend_duration,
+    calc_ma_from_list,
+    calc_rsi_from_list,
+    calc_support_resistance_from_list,
+    calc_trend_from_list,
+    calc_volatility_from_list,
+)
+
+# ── 하위 호환: 수집/계산 서브모듈 re-export ──
+from analysis.price_analysis_fetch import (  # noqa: F401
+    fetch_naver_history,
+    fetch_yahoo_history,
+    get_history_data,
+)
+
+# ── 하위 호환: 지표 계산 서브모듈 re-export ──
+from analysis.price_analysis_indicators import (  # noqa: F401
+    calc_52w_range,
+    calc_moving_averages,
+    calc_rsi,
+    calc_support_resistance,
+    calc_trend,
+    calc_volatility,
+    get_ma_signal,
+    get_rsi_signal,
+)
 from config import (
     DB_PATH,
     OUTPUT_DIR,
 )
 from db.ssot import get_holdings
-
-# ── 하위 호환: 수집/계산 서브모듈 re-export ──
-from analysis.price_analysis_fetch import (  # noqa: F401
-    fetch_yahoo_history,
-    fetch_naver_history,
-    get_history_data,
-)
-from analysis.price_analysis_calc import (  # noqa: F401
-    calc_ma_from_list,
-    calc_rsi_from_list,
-    calc_trend_from_list,
-    calc_volatility_from_list,
-    calc_support_resistance_from_list,
-    _calc_trend_duration,
-)
-import analysis.price_analysis_calc as _calc_mod
-
-# ── 하위 호환: 지표 계산 서브모듈 re-export ──
-from analysis.price_analysis_indicators import (  # noqa: F401
-    calc_moving_averages,
-    get_ma_signal,
-    calc_rsi,
-    get_rsi_signal,
-    calc_52w_range,
-    calc_volatility,
-    calc_trend,
-    calc_support_resistance,
-)
 
 KST = timezone(timedelta(hours=9))
 logger = logging.getLogger(__name__)

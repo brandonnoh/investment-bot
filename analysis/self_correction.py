@@ -9,9 +9,8 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -116,9 +115,9 @@ def save_correction_notes(notes: dict, output_path: Path) -> None:
 
 
 def run(
-    performance_path: Optional[Path] = None,
-    output_dir: Optional[Path] = None,
-) -> Optional[dict]:
+    performance_path: Path | None = None,
+    output_dir: Path | None = None,
+) -> dict | None:
     """파이프라인 진입점.
 
     Args:

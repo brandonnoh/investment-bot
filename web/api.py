@@ -7,7 +7,6 @@ JSON 파일 로드, 프로세스 실행 관리
 import json
 import os
 import subprocess
-import signal
 from pathlib import Path
 
 # 프로젝트 루트
@@ -50,7 +49,7 @@ def load_intel_data() -> dict:
         filepath = INTEL_DIR / filename
         try:
             if filepath.exists():
-                with open(filepath, "r", encoding="utf-8") as f:
+                with filepath.open(encoding="utf-8") as f:
                     result[key] = json.load(f)
             else:
                 result[key] = {}
@@ -72,7 +71,7 @@ def load_md_file(filename: str) -> str:
     filepath = INTEL_DIR / filename
     try:
         if filepath.exists():
-            with open(filepath, "r", encoding="utf-8") as f:
+            with filepath.open(encoding="utf-8") as f:
                 return f.read()
         return ""
     except Exception as e:
@@ -97,10 +96,7 @@ def get_running_pid(name: str) -> int | None:
         return pid
     except (ValueError, ProcessLookupError, PermissionError, OSError):
         # 죽은 프로세스 → PID 파일 정리
-        try:
-            pid_path.unlink(missing_ok=True)
-        except Exception:
-            pass
+        pid_path.unlink(missing_ok=True)
         return None
 
 
@@ -109,12 +105,16 @@ def run_background(name: str, cmd: list) -> dict:
     # 이미 실행 중이면 중복 실행 방지
     existing_pid = get_running_pid(name)
     if existing_pid:
-        return {"ok": False, "error": f"이미 실행 중 (PID {existing_pid})", "pid": existing_pid}
+        return {
+            "ok": False,
+            "error": f"이미 실행 중 (PID {existing_pid})",
+            "pid": existing_pid,
+        }
 
     try:
         # 로그 파일 경로
         log_path = PID_DIR / f"{name}.log"
-        with open(log_path, "a", encoding="utf-8") as log_f:
+        with log_path.open("a", encoding="utf-8") as log_f:
             proc = subprocess.Popen(
                 cmd,
                 cwd=str(PROJECT_ROOT),

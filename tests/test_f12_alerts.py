@@ -7,7 +7,7 @@ F12 — alerts.py 레거시 정리 + 통합 테스트
 import json
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -336,8 +336,9 @@ class TestDuplicateAlertPrevention:
 
     def test_duplicate_within_interval(self, db_conn):
         """1시간 내 같은 알림은 중복으로 판단"""
+        from datetime import datetime, timedelta, timezone
+
         from analysis.alerts_watch import is_duplicate_alert
-        from datetime import datetime, timezone, timedelta
 
         KST = timezone(timedelta(hours=9))
         now = datetime.now(KST).isoformat()
@@ -355,8 +356,9 @@ class TestDuplicateAlertPrevention:
 
     def test_not_duplicate_after_interval(self, db_conn):
         """1시간 경과 후에는 중복이 아님"""
+        from datetime import datetime, timedelta, timezone
+
         from analysis.alerts_watch import is_duplicate_alert
-        from datetime import datetime, timezone, timedelta
 
         KST = timezone(timedelta(hours=9))
         old_time = (datetime.now(KST) - timedelta(hours=9)).isoformat()
@@ -373,8 +375,9 @@ class TestDuplicateAlertPrevention:
 
     def test_different_ticker_not_duplicate(self, db_conn):
         """다른 종목은 중복이 아님"""
+        from datetime import datetime, timedelta, timezone
+
         from analysis.alerts_watch import is_duplicate_alert
-        from datetime import datetime, timezone, timedelta
 
         KST = timezone(timedelta(hours=9))
         now = datetime.now(KST).isoformat()

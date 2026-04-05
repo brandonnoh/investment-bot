@@ -1,10 +1,10 @@
 """T2: 포트폴리오 히스토리 자동 저장 테스트"""
 
 import json
+import os
 import sqlite3
 import sys
-import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -126,9 +126,9 @@ def test_save_snapshot_prints_value(capsys):
 
 def test_run_saves_snapshot(tmp_path):
     """run() 실행 후 portfolio_history에 행이 저장됨"""
-    from reports import closing
-    from db.init_db import init_schema
     import config
+    from db.init_db import init_schema
+    from reports import closing
 
     # 임시 DB 및 출력 디렉토리 설정
     db_path = tmp_path / "history.db"
@@ -168,9 +168,9 @@ def test_run_saves_snapshot(tmp_path):
 
 def test_run_graceful_when_no_portfolio_json(tmp_path):
     """portfolio_summary.json 없어도 run()이 오류 없이 완료됨"""
-    from reports import closing
-    from db.init_db import init_schema
     import config
+    from db.init_db import init_schema
+    from reports import closing
 
     db_path = tmp_path / "history.db"
     orig_db = config.DB_PATH

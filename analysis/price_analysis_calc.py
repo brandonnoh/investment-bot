@@ -76,9 +76,7 @@ def _calc_trend_duration(closes, trend):
 
     duration = 0
     for i in range(len(closes) - 1, 0, -1):
-        if trend == "uptrend" and closes[i] >= closes[i - 1]:
-            duration += 1
-        elif trend == "downtrend" and closes[i] <= closes[i - 1]:
+        if trend == "uptrend" and closes[i] >= closes[i - 1] or trend == "downtrend" and closes[i] <= closes[i - 1]:
             duration += 1
         elif trend == "sideways":
             change = (

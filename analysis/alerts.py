@@ -11,16 +11,15 @@
 
 import json
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config as _config
+from analysis.alerts_io import save_alerts_to_db, save_alerts_to_json  # noqa: F401 (re-export)
 from config import ALERT_THRESHOLDS, DB_PATH, OUTPUT_DIR
 from db.init_db import init_db
-from analysis.alerts_io import save_alerts_to_db, save_alerts_to_json  # noqa: F401 (re-export)
 
 KST = timezone(timedelta(hours=9))
 
@@ -37,7 +36,7 @@ def load_latest_prices() -> list[dict]:
     if not prices_path.exists():
         print("  ⚠️  prices.json 없음 — fetch_prices.py를 먼저 실행하세요")
         return []
-    with open(prices_path, "r", encoding="utf-8") as f:
+    with prices_path.open(encoding="utf-8") as f:
         data = json.load(f)
     return data.get("prices", [])
 
@@ -48,12 +47,12 @@ def load_latest_macro() -> list[dict]:
     if not macro_path.exists():
         print("  ⚠️  macro.json 없음 — fetch_macro.py를 먼저 실행하세요")
         return []
-    with open(macro_path, "r", encoding="utf-8") as f:
+    with macro_path.open(encoding="utf-8") as f:
         data = json.load(f)
     return data.get("indicators", [])
 
 
-def get_current_vix(macro: list[dict]) -> Optional[float]:
+def get_current_vix(macro: list[dict]) -> float | None:
     """매크로 지표 리스트에서 현재 VIX 값 추출"""
     for m in macro:
         if m.get("indicator") == "VIX":
@@ -65,7 +64,7 @@ def get_current_vix(macro: list[dict]) -> Optional[float]:
 
 
 def check_stock_alerts(
-    prices: list[dict], thresholds: Optional[dict] = None
+    prices: list[dict], thresholds: dict | None = None
 ) -> list[dict]:
     """종목별 급등/급락 감지.
 
@@ -119,9 +118,103 @@ def check_stock_alerts(
     return alerts
 
 
-def check_macro_alerts(
-    macro: list[dict], thresholds: Optional[dict] = None
-) -> list[dict]:
+def _check_kospi_alert(m: dict, thresholds: dict | None) -> dict | None:
+    """코스피 폭락 알림 감지"""
+    change = m.get("change_pct")
+    value = m.get("value")
+    if change is None:
+        return None
+    threshold = (
+        thresholds.get("kospi_drop", ALERT_THRESHOLDS["kospi_drop"]["threshold"])
+        if thresholds is not None
+        else ALERT_THRESHOLDS["kospi_drop"]["threshold"]
+    )
+    if change <= threshold:
+        return {
+            "level": "RED",
+            "event_type": "kospi_drop",
+            "ticker": m.get("ticker"),
+            "message": f"🔴 긴급: 코스피 {change:+.2f}% 폭락 (현재: {value:,.2f})",
+            "value": change,
+            "threshold": threshold,
+        }
+    return None
+
+
+def _check_usd_krw_alert(m: dict) -> dict | None:
+    """환율 급등 알림 감지 (절대값 기준)"""
+    value = m.get("value")
+    threshold = ALERT_THRESHOLDS["usd_krw_high"]["threshold"]
+    if value >= threshold:
+        return {
+            "level": "RED",
+            "event_type": "usd_krw_high",
+            "ticker": m.get("ticker"),
+            "message": f"🔴 긴급: 원/달러 환율 {value:,.2f}원 돌파 (임계값: {threshold:,.0f}원)",
+            "value": value,
+            "threshold": threshold,
+        }
+    return None
+
+
+def _check_oil_alert(m: dict) -> dict | None:
+    """WTI 유가 급등 알림 감지"""
+    change = m.get("change_pct")
+    value = m.get("value")
+    if change is None:
+        return None
+    threshold = ALERT_THRESHOLDS["oil_surge"]["threshold"]
+    if change >= threshold:
+        return {
+            "level": "YELLOW",
+            "event_type": "oil_surge",
+            "ticker": m.get("ticker"),
+            "message": f"🟡 주의: WTI 유가 {change:+.2f}% 급등 (현재: ${value:,.2f})",
+            "value": change,
+            "threshold": threshold,
+        }
+    return None
+
+
+def _check_vix_alert(m: dict) -> dict | None:
+    """VIX 급등 알림 감지 (절대값 기준)"""
+    value = m.get("value")
+    if "vix_high" not in ALERT_THRESHOLDS:
+        return None
+    vix_threshold = ALERT_THRESHOLDS["vix_high"]["threshold"]
+    if value >= vix_threshold:
+        return {
+            "level": "YELLOW",
+            "event_type": "vix_high",
+            "ticker": m.get("ticker"),
+            "message": f"🟡 주의: VIX {value:.2f} 돌파 (임계값: {vix_threshold})",
+            "value": value,
+            "threshold": vix_threshold,
+        }
+    return None
+
+
+def _check_gold_alert(m: dict) -> dict | None:
+    """금 현물 급변 알림 감지 (±3%)"""
+    change = m.get("change_pct")
+    value = m.get("value")
+    if change is None:
+        return None
+    threshold = ALERT_THRESHOLDS["gold_swing"]["threshold"]
+    if abs(change) >= threshold:
+        direction = "급등" if change > 0 else "급락"
+        return {
+            "level": "YELLOW",
+            "event_type": "gold_swing",
+            "ticker": m.get("ticker"),
+            "message": f"🟡 주의: 금 현물 {change:+.2f}% {direction} (현재: ${value:,.2f})",
+            "value": change,
+            "threshold": threshold,
+        }
+    return None
+
+
+def check_macro_alerts(macro: list[dict], thresholds: dict | None = None) -> list[dict]:
     """매크로 지표 알림 감지.
 
     Args:
@@ -133,92 +226,25 @@ def check_macro_alerts(
     for m in macro:
         indicator = m.get("indicator")
         value = m.get("value")
-        change = m.get("change_pct")
 
         if value is None:
             continue
 
-        # 코스피 폭락
-        if indicator == "코스피" and change is not None:
-            threshold = (
-                thresholds.get(
-                    "kospi_drop", ALERT_THRESHOLDS["kospi_drop"]["threshold"]
-                )
-                if thresholds is not None
-                else ALERT_THRESHOLDS["kospi_drop"]["threshold"]
-            )
-            if change <= threshold:
-                alerts.append(
-                    {
-                        "level": "RED",
-                        "event_type": "kospi_drop",
-                        "ticker": m.get("ticker"),
-                        "message": f"🔴 긴급: 코스피 {change:+.2f}% 폭락 (현재: {value:,.2f})",
-                        "value": change,
-                        "threshold": threshold,
-                    }
-                )
+        # 지표별 체크 함수 호출
+        alert = None
+        if indicator == "코스피":
+            alert = _check_kospi_alert(m, thresholds)
+        elif indicator == "원/달러":
+            alert = _check_usd_krw_alert(m)
+        elif indicator == "WTI 유가":
+            alert = _check_oil_alert(m)
+        elif indicator == "VIX":
+            alert = _check_vix_alert(m)
+        elif indicator == "금 현물":
+            alert = _check_gold_alert(m)
 
-        # 환율 급등 (절대값 기준)
-        if indicator == "원/달러":
-            threshold = ALERT_THRESHOLDS["usd_krw_high"]["threshold"]
-            if value >= threshold:
-                alerts.append(
-                    {
-                        "level": "RED",
-                        "event_type": "usd_krw_high",
-                        "ticker": m.get("ticker"),
-                        "message": f"🔴 긴급: 원/달러 환율 {value:,.2f}원 돌파 (임계값: {threshold:,.0f}원)",
-                        "value": value,
-                        "threshold": threshold,
-                    }
-                )
-
-        # 유가 급등 (WTI)
-        if indicator == "WTI 유가" and change is not None:
-            threshold = ALERT_THRESHOLDS["oil_surge"]["threshold"]
-            if change >= threshold:
-                alerts.append(
-                    {
-                        "level": "YELLOW",
-                        "event_type": "oil_surge",
-                        "ticker": m.get("ticker"),
-                        "message": f"🟡 주의: WTI 유가 {change:+.2f}% 급등 (현재: ${value:,.2f})",
-                        "value": change,
-                        "threshold": threshold,
-                    }
-                )
-
-        # VIX 급등 (절대값 기준)
-        if indicator == "VIX" and "vix_high" in ALERT_THRESHOLDS:
-            vix_threshold = ALERT_THRESHOLDS["vix_high"]["threshold"]
-            if value >= vix_threshold:
-                alerts.append(
-                    {
-                        "level": "YELLOW",
-                        "event_type": "vix_high",
-                        "ticker": m.get("ticker"),
-                        "message": f"🟡 주의: VIX {value:.2f} 돌파 (임계값: {vix_threshold})",
-                        "value": value,
-                        "threshold": vix_threshold,
-                    }
-                )
-
-        # 금 현물 급변 (±3%)
-        if indicator == "금 현물" and change is not None:
-            threshold = ALERT_THRESHOLDS["gold_swing"]["threshold"]
-            if abs(change) >= threshold:
-                direction = "급등" if change > 0 else "급락"
-                alerts.append(
-                    {
-                        "level": "YELLOW",
-                        "event_type": "gold_swing",
-                        "ticker": m.get("ticker"),
-                        "message": f"🟡 주의: 금 현물 {change:+.2f}% {direction} (현재: ${value:,.2f})",
-                        "value": change,
-                        "threshold": threshold,
-                    }
-                )
+        if alert is not None:
+            alerts.append(alert)
 
     return alerts
 

@@ -1,7 +1,7 @@
 """Phase 4 복합 점수 엔진 테스트"""
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 

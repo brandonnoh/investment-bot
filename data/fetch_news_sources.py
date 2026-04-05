@@ -9,9 +9,9 @@
 import json
 import os
 import sys
-import urllib.request
 import urllib.error
 import urllib.parse
+import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -30,9 +30,7 @@ BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/news/search"
 def fetch_google_news_rss(query: str, count: int = 5, lang: str = "ko") -> list[dict]:
     """Google News RSS로 무료 뉴스 수집 (자동 재시도)"""
     encoded = urllib.parse.quote(query)
-    url = (
-        f"https://news.google.com/rss/search?q={encoded}&hl={lang}&gl=KR&ceid=KR:{lang}"
-    )
+    url = f"https://news.google.com/rss/search?q={encoded}&hl={lang}&gl=KR&ceid=KR:{lang}"
     body = retry_request(
         url,
         headers={"User-Agent": "Mozilla/5.0"},
@@ -78,6 +76,7 @@ def search_brave_news(query: str, count: int = 2) -> list[dict]:
 
     try:
         import gzip as _gzip
+
         req = urllib.request.Request(
             url,
             headers={
@@ -93,7 +92,7 @@ def search_brave_news(query: str, count: int = 2) -> list[dict]:
         data = json.loads(raw)
         return data.get("results", [])
     except urllib.error.URLError as e:
-        raise ConnectionError(f"Brave Search 네트워크 오류: {e}")
+        raise ConnectionError(f"Brave Search 네트워크 오류: {e}") from e
 
 
 # ── 관련도 스코어링 ──

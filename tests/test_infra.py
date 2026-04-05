@@ -290,7 +290,7 @@ class TestSampleDataFixtures:
         for fname in ["sample_prices.json", "sample_macro.json", "sample_news.json"]:
             fpath = FIXTURES_DIR / fname
             assert fpath.exists(), f"{fname} 파일이 없습니다"
-            with open(fpath, "r", encoding="utf-8") as f:
+            with open(fpath, encoding="utf-8") as f:
                 data = json.load(f)
             assert isinstance(data, dict)
 

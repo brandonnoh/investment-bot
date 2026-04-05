@@ -139,9 +139,86 @@ def calculate_sector_weights(holdings: list[dict]) -> list[dict]:
     return sectors
 
 
+def _find_best_worst(holdings: list[dict]) -> tuple[dict | None, dict | None]:
+    """보유 종목 중 최고/최저 수익률 종목 반환"""
+    valid = [h for h in holdings if h.get("pnl_pct") is not None]
+    if not valid:
+        return None, None
+    worst = min(valid, key=lambda x: x["pnl_pct"])
+    best = max(valid, key=lambda x: x["pnl_pct"])
+    return (
+        {"name": best["name"], "pnl_pct": best["pnl_pct"]},
+        {"name": worst["name"], "pnl_pct": worst["pnl_pct"]},
+    )
+
+
+def _fetch_daily_returns(tickers: list[str]) -> list[float]:
+    """DB에서 최근 30일 가격 히스토리를 조회해 일별 평균 수익률 반환"""
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.cursor()
+    placeholders = ",".join("?" * len(tickers))
+    cursor.execute(
+        f"""
+        SELECT timestamp, ticker, change_pct
+        FROM prices
+        WHERE ticker IN ({placeholders})
+          AND timestamp >= datetime('now', '-30 days')
+        ORDER BY timestamp
+        """,
+        tickers,
+    )
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        return []
+
+    # 일별 포트폴리오 평균 변동률 집계
+    daily_changes: dict[str, list[float]] = {}
+    for ts, _ticker, change_pct in rows:
+        if change_pct is None:
+            continue
+        date_key = ts[:10]  # YYYY-MM-DD
+        daily_changes.setdefault(date_key, []).append(change_pct)
+
+    if len(daily_changes) < 2:
+        return []
+
+    return [
+        sum(changes) / len(changes)
+        for date_key in sorted(daily_changes.keys())
+        for changes in [daily_changes[date_key]]
+    ]
+
+
+def _calc_volatility(daily_returns: list[float]) -> float | None:
+    """일간 수익률 표준편차(변동성) 계산"""
+    if len(daily_returns) < 2:
+        return None
+    mean = sum(daily_returns) / len(daily_returns)
+    variance = sum((r - mean) ** 2 for r in daily_returns) / (len(daily_returns) - 1)
+    return round(math.sqrt(variance), 2)
+
+
+def _calc_mdd(daily_returns: list[float]) -> float:
+    """누적 수익률 기반 최대 낙폭(MDD) 계산"""
+    cumulative = [1.0]
+    for r in daily_returns:
+        cumulative.append(cumulative[-1] * (1 + r / 100))
+    peak = cumulative[0]
+    max_dd = 0.0
+    for val in cumulative:
+        if val > peak:
+            peak = val
+        dd = (peak - val) / peak * 100
+        if dd > max_dd:
+            max_dd = dd
+    return round(max_dd, 2) if max_dd > 0 else 0.0
+
+
 def calculate_risk_metrics(holdings: list[dict]) -> dict:
     """리스크 지표 계산 — DB 이력 활용"""
-    metrics = {
+    metrics: dict = {
         "max_drawdown_pct": None,
         "volatility_daily": None,
         "worst_performer": None,
@@ -149,94 +226,21 @@ def calculate_risk_metrics(holdings: list[dict]) -> dict:
     }
 
     # 현재 보유 종목 중 최악/최고 수익률
-    valid = [h for h in holdings if h.get("pnl_pct") is not None]
-    if valid:
-        worst = min(valid, key=lambda x: x["pnl_pct"])
-        best = max(valid, key=lambda x: x["pnl_pct"])
-        metrics["worst_performer"] = {
-            "name": worst["name"],
-            "pnl_pct": worst["pnl_pct"],
-        }
-        metrics["best_performer"] = {
-            "name": best["name"],
-            "pnl_pct": best["pnl_pct"],
-        }
+    metrics["best_performer"], metrics["worst_performer"] = _find_best_worst(holdings)
 
-    # DB에서 최근 30일 가격 히스토리로 변동성 계산
+    # DB에서 최근 30일 가격 히스토리로 변동성/MDD 계산
     if not DB_PATH.exists():
         return metrics
 
+    tickers = [h["ticker"] for h in holdings]
+    if not tickers:
+        return metrics
+
     try:
-        conn = sqlite3.connect(str(DB_PATH))
-        cursor = conn.cursor()
-
-        # 포트폴리오 전체 일간 수익률 히스토리
-        tickers = [h["ticker"] for h in holdings]
-        if not tickers:
-            conn.close()
-            return metrics
-
-        placeholders = ",".join("?" * len(tickers))
-        cursor.execute(
-            f"""
-            SELECT timestamp, ticker, change_pct
-            FROM prices
-            WHERE ticker IN ({placeholders})
-              AND timestamp >= datetime('now', '-30 days')
-            ORDER BY timestamp
-        """,
-            tickers,
-        )
-
-        rows = cursor.fetchall()
-        conn.close()
-
-        if not rows:
-            return metrics
-
-        # 일별 포트폴리오 평균 변동률
-        daily_changes = {}
-        for ts, ticker, change_pct in rows:
-            if change_pct is None:
-                continue
-            date_key = ts[:10]  # YYYY-MM-DD
-            if date_key not in daily_changes:
-                daily_changes[date_key] = []
-            daily_changes[date_key].append(change_pct)
-
-        if len(daily_changes) < 2:
-            return metrics
-
-        # 일별 평균 수익률
-        daily_returns = []
-        for date_key in sorted(daily_changes.keys()):
-            changes = daily_changes[date_key]
-            avg_return = sum(changes) / len(changes)
-            daily_returns.append(avg_return)
-
-        # 변동성 (일간 수익률 표준편차)
-        if len(daily_returns) >= 2:
-            mean = sum(daily_returns) / len(daily_returns)
-            variance = sum((r - mean) ** 2 for r in daily_returns) / (
-                len(daily_returns) - 1
-            )
-            volatility = round(math.sqrt(variance), 2)
-            metrics["volatility_daily"] = volatility
-
-        # 최대 낙폭 (MDD)
-        cumulative = [1.0]
-        for r in daily_returns:
-            cumulative.append(cumulative[-1] * (1 + r / 100))
-        peak = cumulative[0]
-        max_dd = 0.0
-        for val in cumulative:
-            if val > peak:
-                peak = val
-            dd = (peak - val) / peak * 100
-            if dd > max_dd:
-                max_dd = dd
-        metrics["max_drawdown_pct"] = round(max_dd, 2) if max_dd > 0 else 0.0
-
+        daily_returns = _fetch_daily_returns(tickers)
+        if daily_returns:
+            metrics["volatility_daily"] = _calc_volatility(daily_returns)
+            metrics["max_drawdown_pct"] = _calc_mdd(daily_returns)
     except Exception as e:
         print(f"  ⚠️  리스크 지표 계산 오류: {e}")
 

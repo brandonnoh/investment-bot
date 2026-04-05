@@ -23,6 +23,11 @@ from analysis.sentiment_keywords import (  # noqa: F401, E402  # re-export
 logger = logging.getLogger(__name__)
 
 
+def _count_keyword_matches(text: str, keywords: list[str]) -> int:
+    """텍스트 내 키워드 목록 매칭 횟수 반환"""
+    return sum(1 for kw in keywords if kw in text)
+
+
 def calculate_sentiment(title: str, summary: str) -> float:
     """제목 + 요약 기반 감성 점수 계산 (-1.0 ~ 1.0)
 
@@ -41,24 +46,13 @@ def calculate_sentiment(title: str, summary: str) -> float:
 
     text = f"{title} {summary}".lower()
 
-    pos_count = 0
-    neg_count = 0
-
-    # 한국어 키워드 매칭
-    for kw in KO_POSITIVE:
-        if kw in text:
-            pos_count += 1
-    for kw in KO_NEGATIVE:
-        if kw in text:
-            neg_count += 1
-
-    # 영어 키워드 매칭
-    for kw in EN_POSITIVE:
-        if kw in text:
-            pos_count += 1
-    for kw in EN_NEGATIVE:
-        if kw in text:
-            neg_count += 1
+    # 한국어 + 영어 긍정/부정 키워드 매칭
+    pos_count = _count_keyword_matches(text, KO_POSITIVE) + _count_keyword_matches(
+        text, EN_POSITIVE
+    )
+    neg_count = _count_keyword_matches(text, KO_NEGATIVE) + _count_keyword_matches(
+        text, EN_NEGATIVE
+    )
 
     total = pos_count + neg_count
     if total == 0:
@@ -187,7 +181,9 @@ def aggregate_sentiment_by_ticker_weighted(news_records: list[dict]) -> dict:
     for ticker in weighted_sum:
         total_w = weight_total[ticker]
         result[ticker] = {
-            "avg_sentiment": round(weighted_sum[ticker] / total_w, 4) if total_w > 0 else 0.0,
+            "avg_sentiment": round(weighted_sum[ticker] / total_w, 4)
+            if total_w > 0
+            else 0.0,
             "count": counts[ticker],
         }
     return result

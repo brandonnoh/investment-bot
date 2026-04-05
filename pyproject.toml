@@ -1,0 +1,21 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "E", "F", "W",   # pycodestyle + pyflakes
+  "I",             # isort
+  "UP",            # pyupgrade
+  "B",             # flake8-bugbear
+  "C90",           # mccabe complexity
+  "SIM",           # flake8-simplify
+  "PTH",           # flake8-use-pathlib
+]
+ignore = [
+  "E501",          # 줄 길이는 경고만 (포맷터에 위임)
+  "SIM108",        # 삼항연산자 강제 비활성 (가독성 우선)
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10

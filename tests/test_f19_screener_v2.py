@@ -1,7 +1,7 @@
 """Phase 4 screener 고도화 테스트"""
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 

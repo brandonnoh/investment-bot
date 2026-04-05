@@ -9,9 +9,8 @@ import json
 import logging
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -22,7 +21,7 @@ OUTPUT_DIR = PROJECT_ROOT / "output" / "intel"
 DB_PATH = PROJECT_ROOT / "db" / "history.db"
 
 
-def _get_price_on_date(conn: sqlite3.Connection, ticker: str, target_date: str) -> Optional[float]:
+def _get_price_on_date(conn: sqlite3.Connection, ticker: str, target_date: str) -> float | None:
     """prices_daily에서 ±3일 내 가장 가까운 날의 종가 조회."""
     rows = conn.execute(
         """SELECT date, close FROM prices_daily
@@ -39,7 +38,7 @@ def simulate_trade(
     buy_date: str,
     sell_date: str,
     qty: float = 1,
-    buy_price: Optional[float] = None,
+    buy_price: float | None = None,
 ) -> dict:
     """단일 가상 매매 손익 계산."""
     entry_price = buy_price if buy_price is not None else _get_price_on_date(conn, ticker, buy_date)
@@ -97,7 +96,7 @@ def _build_opportunity_simulations(conn: sqlite3.Connection) -> list:
     return results
 
 
-def run(conn: Optional[sqlite3.Connection] = None, output_dir: Optional[Path] = None) -> dict:
+def run(conn: sqlite3.Connection | None = None, output_dir: Path | None = None) -> dict:
     """시뮬레이션 파이프라인 실행."""
     out_dir = Path(output_dir) if output_dir else OUTPUT_DIR
     own_conn = False

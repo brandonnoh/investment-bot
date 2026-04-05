@@ -10,9 +10,8 @@ import calendar
 import json
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -69,7 +68,7 @@ def save_portfolio_snapshot(conn: sqlite3.Connection, portfolio_summary: dict):
     print(f"  ✅ 포트폴리오 스냅샷 저장: {today} 총 {value_man:,}만원")
 
 
-def get_today_ohlc(ticker: str) -> Optional[dict]:
+def get_today_ohlc(ticker: str) -> dict | None:
     """DB에서 오늘 수집된 해당 종목의 OHLC 계산"""
     if not DB_PATH.exists():
         return None
@@ -103,7 +102,7 @@ def get_today_ohlc(ticker: str) -> Optional[dict]:
         conn.close()
 
 
-def get_today_macro_ohlc(indicator: str) -> Optional[dict]:
+def get_today_macro_ohlc(indicator: str) -> dict | None:
     """DB에서 오늘 수집된 매크로 지표의 OHLC 계산"""
     if not DB_PATH.exists():
         return None
@@ -210,7 +209,8 @@ def apply_monthly_deposits(force: bool = False) -> list[str]:
 
     반환: 로그 메시지 목록
     """
-    from db.ssot import apply_monthly_deposits as db_apply_deposits, get_extra_assets
+    from db.ssot import apply_monthly_deposits as db_apply_deposits
+    from db.ssot import get_extra_assets
 
     logs: list[str] = []
     now = datetime.now(KST)

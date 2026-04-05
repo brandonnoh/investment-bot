@@ -166,8 +166,8 @@ document.addEventListener('alpine:init', () => {
           datasets: [{
             label: '수익률 (%)',
             data: pnlData,
-            borderColor: '#58a6ff',
-            backgroundColor: 'rgba(88,166,255,0.1)',
+            borderColor: '#c9a93a',
+            backgroundColor: 'rgba(201,169,58,0.08)',
             borderWidth: 2,
             pointRadius: 3,
             fill: true,
@@ -179,8 +179,8 @@ document.addEventListener('alpine:init', () => {
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: '#30363d' } },
-            y: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: '#30363d' } }
+            x: { ticks: { color: '#5a504a', font: { size: 11 } }, grid: { color: '#2a2420' } },
+            y: { ticks: { color: '#5a504a', font: { size: 11 } }, grid: { color: '#2a2420' } }
           }
         }
       });
@@ -205,7 +205,7 @@ document.addEventListener('alpine:init', () => {
 
       const sectors = Object.keys(sectorMap);
       const values = sectors.map(s => sectorMap[s]);
-      const COLORS = ['#58a6ff','#3fb950','#d29922','#f85149','#bc8cff','#f0883e','#56d364','#79c0ff'];
+      const COLORS = ['#c9a93a','#4dca7e','#e09b3d','#e05656','#4ec9b0','#9a8e84','#7b6d8d','#b58a5a'];
 
       if (this._charts['sector']) {
         this._charts['sector'].destroy();
@@ -219,7 +219,7 @@ document.addEventListener('alpine:init', () => {
           datasets: [{
             data: values,
             backgroundColor: COLORS.slice(0, sectors.length),
-            borderColor: '#0d1117',
+            borderColor: '#0c0b0a',
             borderWidth: 2,
           }]
         },
@@ -229,7 +229,7 @@ document.addEventListener('alpine:init', () => {
           plugins: {
             legend: {
               position: 'right',
-              labels: { color: '#8b949e', font: { size: 11 }, padding: 10, boxWidth: 12 }
+              labels: { color: '#9a8e84', font: { size: 11 }, padding: 10, boxWidth: 12 }
             }
           }
         }
@@ -247,7 +247,7 @@ document.addEventListener('alpine:init', () => {
       const sorted = [...opps].sort((a, b) => (b.composite_score ?? 0) - (a.composite_score ?? 0)).slice(0, 8);
       const labels = sorted.map(o => o.name ?? o.ticker);
       const scores = sorted.map(o => +(o.composite_score * 100).toFixed(1));
-      const colors = scores.map(s => s >= 80 ? '#3fb950' : s >= 60 ? '#58a6ff' : '#d29922');
+      const colors = scores.map(s => s >= 80 ? '#4dca7e' : s >= 60 ? '#c9a93a' : '#e09b3d');
 
       if (this._charts['opportunity']) {
         this._charts['opportunity'].destroy();
@@ -273,10 +273,10 @@ document.addEventListener('alpine:init', () => {
           scales: {
             x: {
               min: 0, max: 100,
-              ticks: { color: '#8b949e', font: { size: 11 } },
-              grid: { color: '#30363d' }
+              ticks: { color: '#5a504a', font: { size: 11 } },
+              grid: { color: '#2a2420' }
             },
-            y: { ticks: { color: '#e6edf3', font: { size: 11 } }, grid: { display: false } }
+            y: { ticks: { color: '#e2d9d0', font: { size: 11 } }, grid: { display: false } }
           }
         }
       });

@@ -4,8 +4,8 @@ fetch_news.py = 포트폴리오 모니터링 (종목 RSS + 매크로 뉴스)
 fetch_opportunities.py = 종목 발굴 전담 (키워드 기반 검색)
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -26,8 +26,7 @@ def test_fetch_opportunities_module_exists():
 
 def test_news_and_opportunities_separate():
     """두 모듈이 독립적으로 존재하는지"""
-    from data import fetch_news
-    from data import fetch_opportunities
+    from data import fetch_news, fetch_opportunities
 
     # 서로 다른 모듈
     assert fetch_news.__file__ != fetch_opportunities.__file__

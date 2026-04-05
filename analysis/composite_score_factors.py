@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -28,7 +27,7 @@ def _percentile_rank(values: list, value: float) -> float:
     return (count_below + 0.5 * count_equal) / n
 
 
-def calculate_12_1_momentum(ticker: str, conn) -> Optional[float]:
+def calculate_12_1_momentum(ticker: str, conn) -> float | None:
     """12-1 모멘텀 팩터 계산.
 
     DB의 prices 테이블에서 해당 종목의 가격 이력을 조회하여
@@ -79,8 +78,8 @@ def calculate_12_1_momentum(ticker: str, conn) -> Optional[float]:
 
 
 def calculate_value_score(
-    per: Optional[float],
-    pbr: Optional[float],
+    per: float | None,
+    pbr: float | None,
     universe_per: list,
     universe_pbr: list,
 ) -> float:
@@ -109,9 +108,9 @@ def calculate_value_score(
 
 
 def calculate_quality_score(
-    roe: Optional[float],
-    debt_ratio: Optional[float],
-    fcf: Optional[float],
+    roe: float | None,
+    debt_ratio: float | None,
+    fcf: float | None,
     universe_roe: list,
     universe_debt: list,
     universe_fcf: list,
@@ -143,8 +142,8 @@ def calculate_quality_score(
 
 
 def calculate_growth_score(
-    revenue_growth: Optional[float],
-    eps_growth: Optional[float],
+    revenue_growth: float | None,
+    eps_growth: float | None,
     universe_rev_growth: list,
     universe_eps_growth: list,
 ) -> float:
@@ -171,8 +170,8 @@ def calculate_growth_score(
 
 
 def calculate_eps_growth(
-    current_eps: Optional[float], previous_eps: Optional[float]
-) -> Optional[float]:
+    current_eps: float | None, previous_eps: float | None
+) -> float | None:
     """EPS 성장률 계산.
 
     Args:

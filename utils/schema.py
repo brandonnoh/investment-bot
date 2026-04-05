@@ -20,6 +20,94 @@ def _check_type(value, expected_type):
     return isinstance(value, expected_type)
 
 
+def _type_name(expected_type) -> str:
+    """기대 타입의 이름 문자열 반환"""
+    return expected_type if isinstance(expected_type, str) else expected_type.__name__
+
+
+def _validate_top_level(filename, data, schema) -> list:
+    """최상위 필드 검증 — 누락/타입 불일치 경고 반환"""
+    warnings = []
+    for field, expected_type in schema["top_level"].items():
+        if field not in data:
+            warnings.append(f"[{filename}] 필수 필드 '{field}' 누락")
+        elif data[field] is not None and not _check_type(data[field], expected_type):
+            warnings.append(
+                f"[{filename}] 필드 '{field}' 타입 불일치: "
+                f"기대={_type_name(expected_type)}, 실제={type(data[field]).__name__}"
+            )
+    return warnings
+
+
+def _validate_nested(filename, data, schema) -> list:
+    """중첩 딕셔너리 필드 검증 (예: portfolio_summary.total)"""
+    warnings = []
+    for nested_key, nested_fields in schema.get("nested", {}).items():
+        nested_data = data.get(nested_key)
+        if not isinstance(nested_data, dict):
+            continue
+        for field, expected_type in nested_fields.items():
+            if field not in nested_data:
+                warnings.append(f"[{filename}] {nested_key}.'{field}' 누락")
+            elif nested_data[field] is not None and not _check_type(
+                nested_data[field], expected_type
+            ):
+                warnings.append(
+                    f"[{filename}] {nested_key}.'{field}' 타입 불일치: "
+                    f"기대={_type_name(expected_type)}, 실제={type(nested_data[field]).__name__}"
+                )
+    return warnings
+
+
+def _validate_item(filename, idx, item, item_fields) -> list:
+    """개별 아이템 필드 검증 — 누락/None/타입 불일치 경고 반환"""
+    warnings = []
+    for field, expected_type in item_fields.items():
+        if field not in item:
+            warnings.append(f"[{filename}] 항목[{idx}] 필수 필드 '{field}' 누락")
+        elif item[field] is None:
+            warnings.append(
+                f"[{filename}] 항목[{idx}] 필드 '{field}'이 None "
+                f"(기대 타입: {_type_name(expected_type)})"
+            )
+        elif not _check_type(item[field], expected_type):
+            warnings.append(
+                f"[{filename}] 항목[{idx}] 필드 '{field}' 타입 불일치: "
+                f"기대={_type_name(expected_type)}, 실제={type(item[field]).__name__}"
+            )
+    return warnings
+
+
+def _validate_items(filename, data, schema) -> list:
+    """항목(아이템) 컬렉션 검증 — 리스트 또는 딕셔너리 구조 모두 지원"""
+    warnings = []
+    items_key = schema.get("items_key")
+    if not items_key or items_key not in data:
+        return warnings
+
+    items_data = data[items_key]
+    items_type = schema.get("items_type", "list")
+
+    if items_type == "dict" and isinstance(items_data, dict):
+        # price_analysis.json 같은 딕셔너리 구조
+        items = list(items_data.items())
+    elif isinstance(items_data, list):
+        items = list(enumerate(items_data))
+    else:
+        return warnings
+
+    item_fields = schema.get("item_fields", {})
+    for idx, item in items:
+        if not isinstance(item, dict):
+            continue
+        # error 필드가 있는 항목은 스킵 (graceful degradation)
+        if item.get("error"):
+            continue
+        warnings.extend(_validate_item(filename, idx, item, item_fields))
+
+    return warnings
+
+
 def validate_json(filename, data):
     """
     JSON 데이터를 스키마에 따라 검증.
@@ -36,90 +124,9 @@ def validate_json(filename, data):
 
     schema = SCHEMAS[filename]
     warnings = []
-
-    # 1) 최상위 필드 검증
-    for field, expected_type in schema["top_level"].items():
-        if field not in data:
-            warnings.append(f"[{filename}] 필수 필드 '{field}' 누락")
-        elif data[field] is not None and not _check_type(data[field], expected_type):
-            type_name = (
-                expected_type
-                if isinstance(expected_type, str)
-                else expected_type.__name__
-            )
-            warnings.append(
-                f"[{filename}] 필드 '{field}' 타입 불일치: "
-                f"기대={type_name}, 실제={type(data[field]).__name__}"
-            )
-
-    # 2) 중첩 딕셔너리 검증 (예: portfolio_summary.total)
-    for nested_key, nested_fields in schema.get("nested", {}).items():
-        nested_data = data.get(nested_key)
-        if isinstance(nested_data, dict):
-            for field, expected_type in nested_fields.items():
-                if field not in nested_data:
-                    warnings.append(f"[{filename}] {nested_key}.'{field}' 누락")
-                elif nested_data[field] is not None and not _check_type(
-                    nested_data[field], expected_type
-                ):
-                    type_name = (
-                        expected_type
-                        if isinstance(expected_type, str)
-                        else expected_type.__name__
-                    )
-                    warnings.append(
-                        f"[{filename}] {nested_key}.'{field}' 타입 불일치: "
-                        f"기대={type_name}, 실제={type(nested_data[field]).__name__}"
-                    )
-
-    # 3) 항목(아이템) 필드 검증
-    items_key = schema.get("items_key")
-    if not items_key or items_key not in data:
-        return warnings
-
-    items_data = data[items_key]
-    items_type = schema.get("items_type", "list")
-
-    if items_type == "dict" and isinstance(items_data, dict):
-        # price_analysis.json 같은 딕셔너리 구조
-        items = [(k, v) for k, v in items_data.items()]
-    elif isinstance(items_data, list):
-        items = [(i, v) for i, v in enumerate(items_data)]
-    else:
-        return warnings
-
-    for idx, item in items:
-        if not isinstance(item, dict):
-            continue
-
-        # error 필드가 있는 항목은 스킵 (graceful degradation)
-        if item.get("error"):
-            continue
-
-        for field, expected_type in schema["item_fields"].items():
-            if field not in item:
-                warnings.append(f"[{filename}] 항목[{idx}] 필수 필드 '{field}' 누락")
-            elif item[field] is None:
-                type_name = (
-                    expected_type
-                    if isinstance(expected_type, str)
-                    else expected_type.__name__
-                )
-                warnings.append(
-                    f"[{filename}] 항목[{idx}] 필드 '{field}'이 None "
-                    f"(기대 타입: {type_name})"
-                )
-            elif not _check_type(item[field], expected_type):
-                type_name = (
-                    expected_type
-                    if isinstance(expected_type, str)
-                    else expected_type.__name__
-                )
-                warnings.append(
-                    f"[{filename}] 항목[{idx}] 필드 '{field}' 타입 불일치: "
-                    f"기대={type_name}, 실제={type(item[field]).__name__}"
-                )
-
+    warnings.extend(_validate_top_level(filename, data, schema))
+    warnings.extend(_validate_nested(filename, data, schema))
+    warnings.extend(_validate_items(filename, data, schema))
     return warnings
 
 
@@ -147,7 +154,7 @@ def validate_all_outputs(output_dir=None):
             continue
 
         try:
-            with open(filepath, encoding="utf-8") as f:
+            with filepath.open(encoding="utf-8") as f:
                 data = json.load(f)
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
             all_warnings[filename] = [f"[{filename}] JSON 파싱 실패: {e}"]

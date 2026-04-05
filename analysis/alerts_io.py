@@ -7,7 +7,7 @@ alerts.py에서 분리된 I/O 전용 모듈
 import json
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
@@ -89,6 +89,6 @@ def save_alerts_to_json(alerts: list[dict], output_dir=None):
         "count": len(alerts),
         "alerts": alerts,
     }
-    with open(alerts_path, "w", encoding="utf-8") as f:
+    with alerts_path.open("w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"  🚨 알림 JSON 저장: {alerts_path} ({len(alerts)}건)")

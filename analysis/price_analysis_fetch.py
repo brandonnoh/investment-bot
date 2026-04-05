@@ -7,14 +7,14 @@ DB 데이터 부족 시 외부 API에서 일봉 역사 데이터를 보충한다
 import json
 import logging
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import (
+    HTTP_RETRY_CONFIG,
     YAHOO_HEADERS,
     YAHOO_TIMEOUT,
-    HTTP_RETRY_CONFIG,
 )
 from utils.http import retry_request
 

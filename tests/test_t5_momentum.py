@@ -1,8 +1,8 @@
 """T5: 12-1 모멘텀 팩터 테스트"""
 
+import os
 import sqlite3
 import sys
-import os
 from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

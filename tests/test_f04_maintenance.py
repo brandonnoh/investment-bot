@@ -5,8 +5,8 @@ F04 테스트 — DB 보존 정책 + 자동 정리
 """
 
 import sys
-from pathlib import Path
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

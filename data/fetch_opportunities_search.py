@@ -4,14 +4,15 @@
 fetch_opportunities.py의 파이프라인 오케스트레이션으로부터 분리된 순수 검색 함수들.
 """
 
+import contextlib
 import gzip
 import json
 import logging
 import os
 import re
 import sys
-import urllib.request
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
@@ -27,14 +28,12 @@ except ImportError:
         return 0.0
 
 
-try:
+with contextlib.suppress(ImportError):
     from data.ticker_master import (
-        extract_ticker_codes,
         extract_companies,
+        extract_ticker_codes,
         extract_us_tickers,
     )
-except ImportError:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +71,7 @@ def search_brave(query: str, count: int = 10) -> list:
         resp = urllib.request.urlopen(req, timeout=15)
         raw = resp.read()
         # gzip 압축 응답 자동 처리
-        if resp.headers.get("Content-Encoding") == "gzip" or raw[:2] == b'\x1f\x8b':
+        if resp.headers.get("Content-Encoding") == "gzip" or raw[:2] == b"\x1f\x8b":
             raw = gzip.decompress(raw)
         data = json.loads(raw)
         results = data.get("results", [])
@@ -107,8 +106,7 @@ def search_naver_news(query: str, count: int = 10) -> list:
 
     encoded_q = urllib.parse.quote(query)
     url = (
-        f"https://openapi.naver.com/v1/search/news.json"
-        f"?query={encoded_q}&display={count}&sort=date"
+        f"https://openapi.naver.com/v1/search/news.json?query={encoded_q}&display={count}&sort=date"
     )
     req = urllib.request.Request(
         url,
@@ -139,6 +137,56 @@ def search_naver_news(query: str, count: int = 10) -> list:
         return []
 
 
+def _resolve_kr_ticker(code: str, master: list) -> dict | None:
+    """6자리 코드로 KS/KQ 종목 탐색. 매칭 결과 dict 또는 None 반환.
+
+    Args:
+        code: 6자리 종목 코드
+        master: 종목 사전 리스트
+
+    Returns:
+        {"ticker": ..., "name": ...} 또는 None
+    """
+    ticker_ks = f"{code}.KS"
+    for item in master:
+        if item["ticker"] == ticker_ks:
+            return {"ticker": ticker_ks, "name": item["name"]}
+    ticker_kq = f"{code}.KQ"
+    for item in master:
+        if item["ticker"] == ticker_kq:
+            return {"ticker": ticker_kq, "name": item["name"]}
+    return None
+
+
+def _match_tickers_in_text(text: str, master: list) -> list[dict]:
+    """텍스트에서 KR 코드, 종목명, 미국 티커 모두 매칭. 매칭 리스트 반환.
+
+    Args:
+        text: 제목 + 설명 합산 텍스트
+        master: 종목 사전 리스트
+
+    Returns:
+        [{"ticker": ..., "name": ...}, ...] (중복 포함 가능)
+    """
+    matched: list[dict] = []
+
+    # 1. 종목코드(6자리) 추출
+    for code in extract_ticker_codes(text):
+        result = _resolve_kr_ticker(code, master)
+        if result:
+            matched.append(result)
+
+    # 2. 종목명 직접 매칭
+    for item in extract_companies(text, master):
+        matched.append({"ticker": item["ticker"], "name": item["name"]})
+
+    # 3. 미국 티커 추출
+    for t in extract_us_tickers(text):
+        matched.append({"ticker": t, "name": config.US_TICKER_MAP.get(t, t)})
+
+    return matched
+
+
 def extract_opportunities(news: list, master: list, keyword: str) -> list:
     """뉴스 결과에서 종목 후보 추출.
 
@@ -153,7 +201,7 @@ def extract_opportunities(news: list, master: list, keyword: str) -> list:
         종목 후보 리스트 [{"ticker", "name", "discovered_via", ...}, ...]
     """
     opportunities = []
-    seen_tickers = set()
+    seen_tickers: set = set()
 
     for article in news:
         title = article.get("title", "")
@@ -162,46 +210,10 @@ def extract_opportunities(news: list, master: list, keyword: str) -> list:
         source = article.get("source", "unknown")
         text = f"{title} {desc}"
 
-        matched_items = []
-
-        # 1. 종목코드(6자리) 추출
-        codes = extract_ticker_codes(text)
-        for code in codes:
-            ticker = f"{code}.KS"
-            # master에서 이름 찾기
-            name = ""
-            for item in master:
-                if item["ticker"] == ticker:
-                    name = item["name"]
-                    break
-            if not name:
-                # .KQ도 시도
-                ticker_kq = f"{code}.KQ"
-                for item in master:
-                    if item["ticker"] == ticker_kq:
-                        ticker = ticker_kq
-                        name = item["name"]
-                        break
-            if name:
-                matched_items.append({"ticker": ticker, "name": name})
-
-        # 2. 종목명 직접 매칭
-        company_matches = extract_companies(text, master)
-        for item in company_matches:
-            matched_items.append({"ticker": item["ticker"], "name": item["name"]})
-
-        # 3. 미국 티커 추출
-        us_tickers = extract_us_tickers(text)
-        for t in us_tickers:
-            name = config.US_TICKER_MAP.get(t, t)
-            matched_items.append({"ticker": t, "name": name})
-
-        # 중복 제거 후 추가
-        for m in matched_items:
+        for m in _match_tickers_in_text(text, master):
             ticker = m["ticker"]
             if ticker not in seen_tickers:
                 seen_tickers.add(ticker)
-                sentiment = calculate_sentiment(title, desc)
                 opportunities.append(
                     {
                         "ticker": ticker,
@@ -209,7 +221,7 @@ def extract_opportunities(news: list, master: list, keyword: str) -> list:
                         "discovered_via": keyword,
                         "source": source,
                         "url": url,
-                        "sentiment": sentiment,
+                        "sentiment": calculate_sentiment(title, desc),
                         "title": title,
                         "composite_score": None,
                         "price_at_discovery": None,

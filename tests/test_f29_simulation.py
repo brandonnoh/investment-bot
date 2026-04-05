@@ -2,8 +2,9 @@
 import json
 import sqlite3
 import sys
-import pytest
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from db.init_db import init_schema

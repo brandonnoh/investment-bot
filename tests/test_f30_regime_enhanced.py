@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import json
-from analysis.regime_classifier import RegimeClassifier
 
+from analysis.regime_classifier import RegimeClassifier
 
 BULL_MACRO = {
     "indicators": [
@@ -97,8 +97,9 @@ def test_to_json_contains_confidence():
 
 def test_regime_json_output_has_confidence(tmp_path):
     """regime.json 출력 파일에 confidence 포함 확인."""
-    from unittest.mock import patch
     import json
+    from unittest.mock import patch
+
     from analysis.regime_classifier import run as regime_run
 
     macro_path = tmp_path / "macro.json"

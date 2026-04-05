@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 
-
 SAMPLE_PORTFOLIO = {
     "holdings": [
         {"ticker": "XOP", "name": "SPDR S&P Oil", "pnl_pct": 25.0, "sector": "에너지"},

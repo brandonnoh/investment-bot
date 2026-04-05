@@ -8,17 +8,17 @@
 import json
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import DB_PATH, OUTPUT_DIR
 from analysis.portfolio_calc import (  # noqa: E402  # re-export
     calculate_holdings,
-    calculate_sector_weights,
     calculate_risk_metrics,
+    calculate_sector_weights,
 )
+from config import DB_PATH, OUTPUT_DIR
 
 KST = timezone(timedelta(hours=9))
 
@@ -29,7 +29,7 @@ def load_prices() -> list[dict]:
     if not prices_path.exists():
         print("  ⚠️  prices.json 없음")
         return []
-    with open(prices_path, "r", encoding="utf-8") as f:
+    with prices_path.open(encoding="utf-8") as f:
         data = json.load(f)
     return data.get("prices", [])
 
@@ -39,7 +39,7 @@ def load_macro() -> list[dict]:
     macro_path = OUTPUT_DIR / "macro.json"
     if not macro_path.exists():
         return []
-    with open(macro_path, "r", encoding="utf-8") as f:
+    with macro_path.open(encoding="utf-8") as f:
         data = json.load(f)
     return data.get("indicators", [])
 
@@ -173,6 +173,61 @@ def build_summary(
     }
 
 
+def _load_history_from_db(conn) -> list[dict]:
+    """DB에서 최근 30일 이력 조회 (오류 시 빈 리스트)"""
+    try:
+        return load_history(conn, days=30)
+    except Exception as e:
+        print(f"  ⚠️  이력 조회 오류: {e}")
+        return []
+
+
+def _save_snapshots(conn, summary: dict, today: str, exchange_rate: float):
+    """portfolio_history + total_wealth_history 스냅샷 저장"""
+    try:
+        save_snapshot(conn, summary, today)
+        print(f"  💾 일별 스냅샷 저장: {today}")
+        _save_total_wealth(conn, summary, exchange_rate, today)
+    except Exception as e:
+        print(f"  ⚠️  스냅샷 저장 오류: {e}")
+
+
+def _save_total_wealth(conn, summary: dict, exchange_rate: float, today: str):
+    """SSoT: total_wealth_history에 저장"""
+    try:
+        from db.ssot import get_extra_assets_total, save_total_wealth_snapshot
+
+        extra_total = get_extra_assets_total(conn)
+        total_data = summary["total"]
+        save_total_wealth_snapshot(
+            investment_value=total_data["current_value_krw"],
+            extra_assets=extra_total,
+            pnl_krw=total_data["pnl_krw"],
+            pnl_pct=total_data["pnl_pct"],
+            fx_rate=exchange_rate,
+            date=today,
+            conn=conn,
+        )
+    except Exception as e:
+        print(f"  ⚠️  total_wealth 저장 오류: {e}")
+
+
+def _print_total_summary(summary: dict):
+    """포트폴리오 총 손익 및 분해 출력"""
+    total = summary["total"]
+    history = summary.get("history", [])
+    if total["pnl_pct"] is not None:
+        flag = "🟢" if total["pnl_pct"] >= 0 else "🔴"
+        print(
+            f"\n  {flag} 총 포트폴리오: {total['pnl_krw']:+,.0f}원 ({total['pnl_pct']:+.2f}%)"
+        )
+        if total.get("fx_pnl_krw") is not None:
+            print(f"    📈 주식 손익: {total['stock_pnl_krw']:+,.0f}원")
+            print(f"    💱 환율 손익: {total['fx_pnl_krw']:+,.0f}원")
+    if history:
+        print(f"  📈 수익률 추이: 최근 {len(history)}일")
+
+
 def run():
     """포트폴리오 분석 파이프라인 실행"""
     print(
@@ -212,65 +267,28 @@ def run():
     if risk.get("max_drawdown_pct") is not None:
         print(f"  📉 MDD: -{risk['max_drawdown_pct']}%")
 
-    # DB 연결 → 이력 조회 + 스냅샷 저장
+    # DB 연결 → 이력 조회
     history = []
     conn = _get_db_conn()
     if conn is not None:
-        try:
-            history = load_history(conn, days=30)
-        except Exception as e:
-            print(f"  ⚠️  이력 조회 오류: {e}")
+        history = _load_history_from_db(conn)
 
     # 요약 생성 (이력 포함)
     summary = build_summary(holdings, sectors, risk, exchange_rate, history=history)
 
-    # 스냅샷 저장 (portfolio_history + total_wealth_history)
+    # 스냅샷 저장
     if conn is not None:
-        try:
-            today = datetime.now(KST).strftime("%Y-%m-%d")
-            save_snapshot(conn, summary, today)
-            print(f"  💾 일별 스냅샷 저장: {today}")
-
-            # SSoT: total_wealth_history에도 저장
-            try:
-                from db.ssot import save_total_wealth_snapshot, get_extra_assets_total
-
-                extra_total = get_extra_assets_total(conn)
-                total_data = summary["total"]
-                save_total_wealth_snapshot(
-                    investment_value=total_data["current_value_krw"],
-                    extra_assets=extra_total,
-                    pnl_krw=total_data["pnl_krw"],
-                    pnl_pct=total_data["pnl_pct"],
-                    fx_rate=exchange_rate,
-                    date=today,
-                    conn=conn,
-                )
-            except Exception as e:
-                print(f"  ⚠️  total_wealth 저장 오류: {e}")
-        except Exception as e:
-            print(f"  ⚠️  스냅샷 저장 오류: {e}")
-        finally:
-            conn.close()
+        today = datetime.now(KST).strftime("%Y-%m-%d")
+        _save_snapshots(conn, summary, today, exchange_rate)
+        conn.close()
 
     # 총 수익률 출력
-    total = summary["total"]
-    if total["pnl_pct"] is not None:
-        flag = "🟢" if total["pnl_pct"] >= 0 else "🔴"
-        print(
-            f"\n  {flag} 총 포트폴리오: {total['pnl_krw']:+,.0f}원 ({total['pnl_pct']:+.2f}%)"
-        )
-        if total.get("fx_pnl_krw") is not None:
-            print(f"    📈 주식 손익: {total['stock_pnl_krw']:+,.0f}원")
-            print(f"    💱 환율 손익: {total['fx_pnl_krw']:+,.0f}원")
-
-    if history:
-        print(f"  📈 수익률 추이: 최근 {len(history)}일")
+    _print_total_summary(summary)
 
     # JSON 저장
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_path = OUTPUT_DIR / "portfolio_summary.json"
-    with open(output_path, "w", encoding="utf-8") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
     print(f"  📄 포트폴리오 요약 저장: {output_path}")
     print()

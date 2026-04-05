@@ -6,9 +6,8 @@ config.py/JSON 대신 DB를 유일한 진실 소스로 사용
 
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Dict
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import DB_PATH
@@ -26,7 +25,7 @@ def get_conn():
 # ══════════════════════════════════════════════════════════════
 
 
-def get_holdings(conn=None) -> List[Dict]:
+def get_holdings(conn=None) -> list[dict]:
     """현재 보유 종목 목록 반환 (config.py PORTFOLIO 대체)"""
     own_conn = conn is None
     if own_conn:
@@ -184,7 +183,7 @@ def record_transaction(
         conn.close()
 
 
-def get_transactions(ticker: str = None, limit: int = 100, conn=None) -> List[Dict]:
+def get_transactions(ticker: str = None, limit: int = 100, conn=None) -> list[dict]:
     """거래 내역 조회"""
     own_conn = conn is None
     if own_conn:
@@ -236,13 +235,13 @@ def get_transactions(ticker: str = None, limit: int = 100, conn=None) -> List[Di
 
 # 하위 호환: ssot_wealth의 자산/입금 관련 함수 re-export
 from db.ssot_wealth import (  # noqa: E402
-    get_extra_assets,
-    update_extra_asset,
     apply_monthly_deposits,
+    get_extra_assets,
     get_extra_assets_total,
-    save_total_wealth_snapshot,
     get_total_wealth_history,
     get_wealth_summary,
+    save_total_wealth_snapshot,
+    update_extra_asset,
 )
 
 __all__ = [

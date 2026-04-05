@@ -9,12 +9,11 @@ import difflib
 import re
 import sqlite3
 import sys
-import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
 
 KST = timezone(timedelta(hours=9))

@@ -8,17 +8,15 @@
 
 import json
 import logging
-import os
 import sqlite3
 import sys
-import urllib.request
 import urllib.parse
-from datetime import datetime, timezone, timedelta
+import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 KST = timezone(timedelta(hours=9))
 logger = logging.getLogger(__name__)
@@ -72,6 +70,7 @@ def parse_krx_response(data: dict) -> dict:
 def _latest_trading_date() -> str:
     """가장 최근 거래일 (주말 제외) 반환. 형식: YYYYMMDD"""
     from datetime import date, timedelta
+
     d = date.today()
     # 토요일(5) → 금요일, 일요일(6) → 금요일
     if d.weekday() == 5:
@@ -88,6 +87,7 @@ def fetch_krx_supply() -> dict:
         {종목코드: {"foreign_net": int, "inst_net": int}} 또는 빈 딕셔너리
     """
     import http.cookiejar
+
     trd_date = _latest_trading_date()
 
     url = "http://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd"
@@ -131,7 +131,7 @@ def fetch_krx_supply() -> dict:
         return {}
 
 
-def fetch_fear_greed() -> Optional[dict]:
+def fetch_fear_greed() -> dict | None:
     """Alternative.me Fear & Greed Index 수집 (CNN 대체).
 
     Returns:
@@ -167,7 +167,7 @@ def fetch_fear_greed() -> Optional[dict]:
         return None
 
 
-def fear_greed_to_score(score: Optional[float]) -> float:
+def fear_greed_to_score(score: float | None) -> float:
     """Fear & Greed 점수(0~100)를 매크로 방향 점수(-1.0~1.0)로 변환.
 
     0 = 극도의 공포 → -1.0
@@ -214,7 +214,7 @@ def save_supply_to_db(conn: sqlite3.Connection, supply_data: dict):
     conn.commit()
 
 
-def _save_json(out_dir: Path, krx_supply: dict, fear_greed: Optional[dict]):
+def _save_json(out_dir: Path, krx_supply: dict, fear_greed: dict | None):
     """supply_data.json 파일 저장"""
     out_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now(KST).isoformat()
@@ -227,7 +227,7 @@ def _save_json(out_dir: Path, krx_supply: dict, fear_greed: Optional[dict]):
 
     json_path = out_dir / "supply_data.json"
     try:
-        with open(json_path, "w", encoding="utf-8") as f:
+        with json_path.open("w", encoding="utf-8") as f:
             json.dump(json_data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         logger.error(f"supply_data.json 저장 실패: {e}")

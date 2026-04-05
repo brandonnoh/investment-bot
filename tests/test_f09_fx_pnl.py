@@ -225,7 +225,7 @@ class TestBuildSummaryFxPnl:
 
     def test_summary_total_has_fx_pnl_krw(self, prices_with_fx):
         """summary.total에 fx_pnl_krw 필드 포함"""
-        from analysis.portfolio import calculate_holdings, build_summary
+        from analysis.portfolio import build_summary, calculate_holdings
 
         exchange_rate = 1450.0
         holdings = calculate_holdings(prices_with_fx, exchange_rate)
@@ -236,7 +236,7 @@ class TestBuildSummaryFxPnl:
 
     def test_summary_total_has_stock_pnl_krw(self, prices_with_fx):
         """summary.total에 stock_pnl_krw 필드 포함"""
-        from analysis.portfolio import calculate_holdings, build_summary
+        from analysis.portfolio import build_summary, calculate_holdings
 
         exchange_rate = 1450.0
         holdings = calculate_holdings(prices_with_fx, exchange_rate)
@@ -247,7 +247,7 @@ class TestBuildSummaryFxPnl:
 
     def test_summary_fx_pnl_is_sum_of_holdings(self, prices_with_fx):
         """summary.total.fx_pnl_krw = 각 종목 fx_pnl_krw 합계"""
-        from analysis.portfolio import calculate_holdings, build_summary
+        from analysis.portfolio import build_summary, calculate_holdings
 
         exchange_rate = 1450.0
         holdings = calculate_holdings(prices_with_fx, exchange_rate)
@@ -260,7 +260,7 @@ class TestBuildSummaryFxPnl:
 
     def test_summary_stock_plus_fx_equals_total(self, prices_with_fx):
         """stock_pnl_krw + fx_pnl_krw = pnl_krw 항등식"""
-        from analysis.portfolio import calculate_holdings, build_summary
+        from analysis.portfolio import build_summary, calculate_holdings
 
         exchange_rate = 1450.0
         holdings = calculate_holdings(prices_with_fx, exchange_rate)

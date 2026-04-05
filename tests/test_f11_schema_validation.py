@@ -9,8 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from utils.schema import SCHEMAS, validate_json, validate_all_outputs
-
+from utils.schema import SCHEMAS, validate_all_outputs, validate_json
 
 # ── 스키마 정의 테스트 ──
 

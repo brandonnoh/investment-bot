@@ -14,17 +14,16 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import ANALYSIS_PARAMS
 from analysis.price_analysis_calc import _calc_trend_duration
 
 # 모멘텀 지표 re-export (하위 호환)
 from analysis.price_analysis_momentum import (  # noqa: F401
     calc_moving_averages,
-    get_ma_signal,
     calc_rsi,
+    get_ma_signal,
     get_rsi_signal,
 )
-
+from config import ANALYSIS_PARAMS
 
 # ── 52주 고저 ──
 

@@ -8,30 +8,29 @@
 import json
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import DB_PATH, OUTPUT_DIR
 from db.init_db import init_db
 from reports.weekly_formatters import (  # noqa: F401  re-export
-    format_weekly_performance,
     format_macro_weekly,
     format_portfolio_analysis,
     format_screener_summary,
+    format_weekly_performance,
 )
 
 KST = timezone(timedelta(hours=9))
 
 
-def load_json(filename: str) -> Optional[dict]:
+def load_json(filename: str) -> dict | None:
     """output/intel/ 에서 JSON 파일 로드"""
     path = OUTPUT_DIR / filename
     if not path.exists():
         return None
-    with open(path, "r", encoding="utf-8") as f:
+    with path.open(encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -211,7 +210,7 @@ def run():
     # 저장
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_path = OUTPUT_DIR / "weekly_report.md"
-    with open(output_path, "w", encoding="utf-8") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         f.write(report)
 
     print(f"  📄 주간 리포트 저장: {output_path}")

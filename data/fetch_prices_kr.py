@@ -52,9 +52,9 @@ def fetch_naver_price(code: str) -> dict:
             "low": int(data["lowPrice"].replace(",", "")),
         }
     except urllib.error.URLError as e:
-        raise ConnectionError(f"네이버 API 네트워크 오류 ({code}): {e}")
+        raise ConnectionError(f"네이버 API 네트워크 오류 ({code}): {e}") from e
     except (KeyError, IndexError) as e:
-        raise ValueError(f"네이버 API 응답 파싱 실패 ({code}): {e}")
+        raise ValueError(f"네이버 API 응답 파싱 실패 ({code}): {e}") from e
 
 
 def _fetch_kr_stock(code: str) -> dict:

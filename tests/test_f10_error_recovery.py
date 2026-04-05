@@ -8,7 +8,7 @@ import sys
 import time
 import urllib.error
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -59,10 +59,9 @@ class TestRetryRequest:
         from utils.http import retry_request
 
         error = urllib.error.URLError("server down")
-        with patch("urllib.request.urlopen", side_effect=error):
-            with patch("time.sleep"):
-                with pytest.raises(urllib.error.URLError):
-                    retry_request("http://example.com", max_retries=3, timeout=5)
+        with patch("urllib.request.urlopen", side_effect=error), patch("time.sleep"):
+            with pytest.raises(urllib.error.URLError):
+                retry_request("http://example.com", max_retries=3, timeout=5)
 
     def test_지수_백오프_대기시간(self):
         """재시도 대기: 1초 → 2초 → 4초"""
@@ -116,10 +115,9 @@ class TestRetryRequest:
             "http://example.com", 429, "Too Many Requests", {}, None
         )
         effects = [error_429, mock_resp]
-        with patch("urllib.request.urlopen", side_effect=effects):
-            with patch("time.sleep"):
-                result = retry_request("http://example.com", timeout=5)
-                assert result == b"ok"
+        with patch("urllib.request.urlopen", side_effect=effects), patch("time.sleep"):
+            result = retry_request("http://example.com", timeout=5)
+            assert result == b"ok"
 
     def test_HTTP_5xx_재시도함(self):
         """서버 오류(5xx)는 재시도 대상"""
@@ -134,10 +132,9 @@ class TestRetryRequest:
             "http://example.com", 500, "Internal Server Error", {}, None
         )
         effects = [error_500, mock_resp]
-        with patch("urllib.request.urlopen", side_effect=effects):
-            with patch("time.sleep"):
-                result = retry_request("http://example.com", timeout=5)
-                assert result == b"ok"
+        with patch("urllib.request.urlopen", side_effect=effects), patch("time.sleep"):
+            result = retry_request("http://example.com", timeout=5)
+            assert result == b"ok"
 
 
 # ── CircuitBreaker 테스트 ──

@@ -6,12 +6,12 @@
 """
 
 import logging
-import os
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
 
 KST = timezone(timedelta(hours=9))
@@ -149,9 +149,11 @@ def update_outcomes(conn=None):
 
 
 # 리포트 생성 함수 re-export (하위 호환)
-from analysis.performance_report import generate_monthly_report  # noqa: E402, F401
-from analysis.performance_report import generate_weight_suggestion  # noqa: E402, F401
-from analysis.performance_report import save_performance_report  # noqa: E402
+from analysis.performance_report import (
+    generate_monthly_report,  # noqa: E402, F401
+    generate_weight_suggestion,  # noqa: E402, F401
+    save_performance_report,  # noqa: E402
+)
 
 
 def run(conn=None, output_dir=None):

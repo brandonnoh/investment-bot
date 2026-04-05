@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import json
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -30,12 +29,12 @@ def fetch_yahoo_quote(ticker: str) -> dict:
                 raise ValueError(f"데이터 없음: {ticker}")
             return result[0]
     except urllib.error.URLError as e:
-        raise ConnectionError(f"네트워크 오류 ({ticker}): {e}")
+        raise ConnectionError(f"네트워크 오류 ({ticker}): {e}") from e
     except (KeyError, IndexError) as e:
-        raise ValueError(f"응답 파싱 실패 ({ticker}): {e}")
+        raise ValueError(f"응답 파싱 실패 ({ticker}): {e}") from e
 
 
-def analyze_ticker(ticker_info: dict) -> Optional[dict]:
+def analyze_ticker(ticker_info: dict) -> dict | None:
     """종목 분석 — 현재가, 1개월 수익률, 거래량"""
     ticker = ticker_info["ticker"]
     try:
@@ -56,9 +55,7 @@ def analyze_ticker(ticker_info: dict) -> Optional[dict]:
                 month_return = round((price - first_close) / first_close * 100, 2)
 
         # 전일 대비 변동률
-        day_change = (
-            round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
-        )
+        day_change = round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
 
         volume = meta.get("regularMarketVolume", 0)
 

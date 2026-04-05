@@ -1,8 +1,8 @@
 """F22 퀀트 스코어링 고도화 — 6팩터 복합 점수 테스트"""
 
+import os
 import sqlite3
 import sys
-import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 

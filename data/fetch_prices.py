@@ -9,31 +9,30 @@ import json
 import os
 import sqlite3
 import sys
-import urllib.request
 import urllib.error
-from datetime import datetime, timezone, timedelta
+import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, Tuple
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import (
     DB_PATH,
+    HTTP_RETRY_CONFIG,
     OUTPUT_DIR,
     YAHOO_HEADERS,
     YAHOO_TIMEOUT,
-    HTTP_RETRY_CONFIG,
     get_market,
+)
+from data.fetch_prices_kr import (
+    _extract_kr_code,
+    _fetch_kr_stock,
+    _is_kr_ticker,
+    fetch_naver_price,  # noqa: F401 — 테스트 mock 네임스페이스 호환
 )
 from db.init_db import init_db
 from db.ssot import get_holdings
 from utils.http import retry_request, validate_price_data
-from data.fetch_prices_kr import (
-    _is_kr_ticker,
-    _extract_kr_code,
-    fetch_naver_price,  # noqa: F401 — 테스트 mock 네임스페이스 호환
-    _fetch_kr_stock,
-)
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -56,12 +55,12 @@ def fetch_yahoo_quote(ticker: str) -> dict:
             raise ValueError(f"데이터 없음: {ticker}")
         return result[0]["meta"]
     except urllib.error.URLError as e:
-        raise ConnectionError(f"네트워크 오류 ({ticker}): {e}")
+        raise ConnectionError(f"네트워크 오류 ({ticker}): {e}") from e
     except (KeyError, IndexError) as e:
-        raise ValueError(f"응답 파싱 실패 ({ticker}): {e}")
+        raise ValueError(f"응답 파싱 실패 ({ticker}): {e}") from e
 
 
-def fetch_gold_krw_per_gram() -> Tuple[float, float, str, Optional[str]]:
+def fetch_gold_krw_per_gram() -> tuple[float, float, str, str | None]:
     """
     금 현물 원화/g 가격 계산.
     1순위: 키움증권 KRX 금 현물(4001) API
@@ -86,9 +85,7 @@ def fetch_gold_krw_per_gram() -> Tuple[float, float, str, Optional[str]]:
     fx_meta = fetch_yahoo_quote("KRW=X")
     gold_usd = gold_meta["regularMarketPrice"]
     usd_krw = fx_meta["regularMarketPrice"]
-    gold_prev = gold_meta.get(
-        "chartPreviousClose", gold_meta.get("previousClose", gold_usd)
-    )
+    gold_prev = gold_meta.get("chartPreviousClose", gold_meta.get("previousClose", gold_usd))
     fx_prev = fx_meta.get("chartPreviousClose", fx_meta.get("previousClose", usd_krw))
 
     price_krw_g = gold_usd * usd_krw / 31.1035
@@ -130,22 +127,16 @@ def collect_prices() -> list[dict]:
             else:
                 meta = fetch_yahoo_quote(ticker)
                 price = meta["regularMarketPrice"]
-                prev_close = meta.get(
-                    "chartPreviousClose", meta.get("previousClose", price)
-                )
+                prev_close = meta.get("chartPreviousClose", meta.get("previousClose", price))
                 volume = meta.get("regularMarketVolume", 0)
                 data_source = "yahoo"
 
             # 전일 대비 변동률
-            change_pct = (
-                round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
-            )
+            change_pct = round((price - prev_close) / prev_close * 100, 2) if prev_close else 0.0
 
             # 평단 대비 손익률
             avg_cost = stock["avg_cost"]
-            pnl_pct = (
-                round((price - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
-            )
+            pnl_pct = round((price - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
 
             record = {
                 "ticker": ticker,
@@ -245,7 +236,7 @@ def save_to_json(records: list[dict]):
         "count": len([r for r in records if r.get("price") is not None]),
         "prices": records,
     }
-    with open(output_path, "w", encoding="utf-8") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"  📄 JSON 저장: {output_path}")
 

@@ -7,7 +7,7 @@ DART 재무제표 + Yahoo Finance quoteSummary + fundamentals DB + JSON 출력
 import json
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -423,7 +423,7 @@ class TestFundamentalsDB:
 
     def test_load_fundamentals(self, db_conn):
         """펀더멘탈 데이터 조회"""
-        from data.fetch_fundamentals import save_fundamentals_to_db, load_fundamentals
+        from data.fetch_fundamentals import load_fundamentals, save_fundamentals_to_db
 
         records = [
             {

@@ -1,7 +1,7 @@
 """T3: 동적 알림 임계값 (VIX 기반) 테스트"""
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -152,11 +152,12 @@ def test_check_macro_alerts_kospi_dynamic():
 
 def test_run_logs_regime(tmp_path, capsys):  # noqa: F811
     """run() 실행 시 VIX 레짐 로그 출력"""
+    import json
+    import sqlite3
+
+    import config
     from analysis import alerts
     from db.init_db import init_schema
-    import sqlite3
-    import json
-    import config
 
     orig_out = config.OUTPUT_DIR
     orig_db = config.DB_PATH

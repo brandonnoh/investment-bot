@@ -7,8 +7,8 @@
 import json
 import os
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가

@@ -1,8 +1,8 @@
 """Phase 4 DB 스키마 + ticker_master 모듈 테스트"""
 
 import json
-import sys
 import os
+import sys
 from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -189,7 +189,7 @@ def test_extract_companies_from_text():
 
 def test_save_and_load_master(db_conn):
     """DB에 종목 사전 저장/로드"""
-    from data.ticker_master import save_master_to_db, load_master_from_db
+    from data.ticker_master import load_master_from_db, save_master_to_db
 
     master = _load_fixture()
     save_master_to_db(db_conn, master)

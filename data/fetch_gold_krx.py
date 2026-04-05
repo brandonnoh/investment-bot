@@ -11,11 +11,10 @@
 import json
 import os
 import sys
-import urllib.request
 import urllib.error
-from datetime import datetime, timezone, timedelta
+import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import BASE_DIR
@@ -33,16 +32,16 @@ def _get_env():
     appkey = os.environ.get("KIWOOM_APPKEY")
     secret = os.environ.get("KIWOOM_SECRETKEY")
     if not appkey or not secret:
-        raise EnvironmentError("KIWOOM_APPKEY / KIWOOM_SECRETKEY 환경변수 필요")
+        raise OSError("KIWOOM_APPKEY / KIWOOM_SECRETKEY 환경변수 필요")
     return appkey, secret
 
 
-def _load_cached_token() -> Optional[str]:
+def _load_cached_token() -> str | None:
     """캐시된 토큰이 유효하면 반환, 아니면 None"""
     if not TOKEN_CACHE_PATH.exists():
         return None
     try:
-        with open(TOKEN_CACHE_PATH, "r") as f:
+        with TOKEN_CACHE_PATH.open() as f:
             cache = json.load(f)
         expires_at = datetime.fromisoformat(cache["expires_at"])
         if datetime.now(KST) < expires_at - timedelta(minutes=5):
@@ -55,7 +54,7 @@ def _load_cached_token() -> Optional[str]:
 def _save_token(token: str, expires_in: int):
     """토큰을 파일에 캐시"""
     expires_at = datetime.now(KST) + timedelta(seconds=expires_in)
-    with open(TOKEN_CACHE_PATH, "w") as f:
+    with TOKEN_CACHE_PATH.open("w") as f:
         json.dump(
             {
                 "access_token": token,
@@ -241,7 +240,7 @@ if __name__ == "__main__":
             result = fetch_gold_krx()
             print("✅ KRX 금 현물 시세:")
         print(json.dumps(result, ensure_ascii=False, indent=2))
-    except EnvironmentError as e:
+    except OSError as e:
         print(f"❌ 환경변수 오류: {e}")
         _sys.exit(1)
     except Exception as e:

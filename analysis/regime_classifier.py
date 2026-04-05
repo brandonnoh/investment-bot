@@ -4,13 +4,13 @@
 4가지 레짐: RISK_ON, RISK_OFF, INFLATIONARY, STAGFLATION
 출력: output/intel/regime.json
 """
+
 from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -113,10 +113,7 @@ class RegimeClassifier:
 
     def classify_with_confidence(self, macro_data: dict) -> dict:
         """시장 국면 분류 + 신뢰도 반환."""
-        indicators = {
-            ind["indicator"]: ind
-            for ind in macro_data.get("indicators", [])
-        }
+        indicators = {ind["indicator"]: ind for ind in macro_data.get("indicators", [])}
 
         vix = (indicators.get("VIX") or {}).get("value", 20)
         kospi_chg = (indicators.get("코스피") or {}).get("change_pct", 0)
@@ -130,7 +127,9 @@ class RegimeClassifier:
         signals.append(1.0 if kospi_chg > 1.5 else (-1.0 if kospi_chg < -1.5 else 0.0))
         signals.append(1.0 if vix < 18 else (-1.0 if vix > 28 else 0.0))
         signals.append(1.0 if usdkrw < 1350 else (-1.0 if usdkrw > 1450 else 0.0))
-        signals.append(1.0 if nasdaq_chg > 1.0 else (-1.0 if nasdaq_chg < -1.0 else 0.0))
+        signals.append(
+            1.0 if nasdaq_chg > 1.0 else (-1.0 if nasdaq_chg < -1.0 else 0.0)
+        )
 
         mean_strength = sum(abs(s) for s in signals) / len(signals)
         directional_agreement = abs(sum(signals)) / len(signals)
@@ -151,7 +150,7 @@ class RegimeClassifier:
         result["classified_at"] = datetime.now(KST).isoformat()
         return json.dumps(result, ensure_ascii=False, indent=2)
 
-    def _get_indicator_value(self, indicators: list, name: str) -> Optional[float]:
+    def _get_indicator_value(self, indicators: list, name: str) -> float | None:
         """지표 리스트에서 특정 지표의 값 추출"""
         for item in indicators:
             if item.get("indicator") == name:
@@ -163,7 +162,7 @@ class RegimeClassifier:
                         return None
         return None
 
-    def _get_indicator_change(self, indicators: list, name: str) -> Optional[float]:
+    def _get_indicator_change(self, indicators: list, name: str) -> float | None:
         """지표 리스트에서 특정 지표의 변동률 추출"""
         for item in indicators:
             if item.get("indicator") == name:
@@ -182,27 +181,27 @@ def _load_macro_data() -> dict:
     if not macro_path.exists():
         print("  ⚠️  macro.json 없음 — fetch_macro.py를 먼저 실행하세요")
         return {}
-    with open(macro_path, "r", encoding="utf-8") as f:
+    with macro_path.open(encoding="utf-8") as f:
         return json.load(f)
 
 
-def _load_previous_regime() -> Optional[str]:
+def _load_previous_regime() -> str | None:
     """이전에 저장된 regime.json에서 레짐 값 로드"""
     regime_path = OUTPUT_DIR / "regime.json"
     if not regime_path.exists():
         return None
     try:
-        with open(regime_path, "r", encoding="utf-8") as f:
+        with regime_path.open(encoding="utf-8") as f:
             data = json.load(f)
         return data.get("regime")
-    except (json.JSONDecodeError, IOError):
+    except (OSError, json.JSONDecodeError):
         return None
 
 
 MACRO_FILE = OUTPUT_DIR / "macro.json"
 
 
-def run(macro_data: Optional[dict] = None, output_dir: Optional[Path] = None) -> dict:
+def run(macro_data: dict | None = None, output_dir: Path | None = None) -> dict:
     """
     레짐 분류 실행 — macro.json 읽기 → 분류 → regime.json 저장.
 
@@ -252,12 +251,16 @@ def run(macro_data: Optional[dict] = None, output_dir: Optional[Path] = None) ->
 
     effective_output_dir.mkdir(parents=True, exist_ok=True)
     regime_path = effective_output_dir / "regime.json"
-    with open(regime_path, "w", encoding="utf-8") as f:
+    with regime_path.open("w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    print(f"  레짐: {regime} | confidence={enhanced['confidence']} | panic={enhanced['panic_signal']}")
+    print(
+        f"  레짐: {regime} | confidence={enhanced['confidence']} | panic={enhanced['panic_signal']}"
+    )
     print(f"  VIX={vix} | FX변동={fx_change}% | 유가변동={oil_change}%")
-    print(f"  전략: {strategy['stance']} (현금비중 {strategy['cash_ratio']*100:.0f}%)")
+    print(
+        f"  전략: {strategy['stance']} (현금비중 {strategy['cash_ratio'] * 100:.0f}%)"
+    )
 
     return output
 

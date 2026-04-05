@@ -8,8 +8,7 @@ import json
 import sqlite3
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-
+from unittest.mock import MagicMock, patch
 
 # 프로젝트 루트를 모듈 경로에 추가
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

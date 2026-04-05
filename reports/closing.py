@@ -10,50 +10,47 @@ from __future__ import annotations
 import json
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import PORTFOLIO_LEGACY as PORTFOLIO, MACRO_INDICATORS, DB_PATH, OUTPUT_DIR
+from config import DB_PATH, MACRO_INDICATORS, OUTPUT_DIR
+from config import PORTFOLIO_LEGACY as PORTFOLIO
 from db.init_db import init_db
 
 # 헬퍼 함수 임포트 (하위 호환 re-export 포함)
 from reports.closing_helpers import (  # noqa: F401
-    save_portfolio_snapshot,
-    get_today_ohlc,
-    get_today_macro_ohlc,
-    fmt_price,
-    fmt_change,
-    get_today_alerts,
-    is_last_business_day_of_month,
     apply_monthly_deposits,
+    fmt_change,
+    fmt_price,
+    get_today_alerts,
+    get_today_macro_ohlc,
+    get_today_ohlc,
+    is_last_business_day_of_month,
+    save_portfolio_snapshot,
 )
 
 KST = timezone(timedelta(hours=9))
 
 
-def generate_closing_report() -> str:
-    """장 마감 리포트 마크다운 생성"""
-    now = datetime.now(KST)
-    date_str = now.strftime("%Y-%m-%d")
-    time_str = now.strftime("%H:%M KST")
+def _render_price_section() -> tuple[list, dict]:
+    """포트폴리오 종목 OHLC 섹션 렌더링.
 
+    Returns:
+        (lines, totals): 마크다운 라인 목록과 통화별 투자/평가 합계 딕셔너리
+    """
     lines = [
-        f"# 📈 장 마감 리포트 — {date_str}",
-        f"> 생성 시각: {time_str}\n",
-        "---\n",
+        "## 💼 포트폴리오 종목 (오늘 OHLC)\n",
+        "| 종목 | 시가 | 고가 | 저가 | 종가 | 전일比 | 평단比 | 수집 |",
+        "|------|------|------|------|------|--------|--------|------|",
     ]
-
-    # ── 1. 포트폴리오 종목 OHLC ──
-    lines.append("## 💼 포트폴리오 종목 (오늘 OHLC)\n")
-    lines.append("| 종목 | 시가 | 고가 | 저가 | 종가 | 전일比 | 평단比 | 수집 |")
-    lines.append("|------|------|------|------|------|--------|--------|------|")
-
-    total_invested_krw = 0
-    total_current_krw = 0
-    total_invested_usd = 0
-    total_current_usd = 0
+    totals = {
+        "invested_krw": 0,
+        "current_krw": 0,
+        "invested_usd": 0,
+        "current_usd": 0,
+    }
 
     for stock in PORTFOLIO:
         ticker = stock["ticker"]
@@ -69,25 +66,20 @@ def generate_closing_report() -> str:
 
         close = ohlc["close"]
         prev_close = ohlc["prev_close"]
-
-        # 전일 대비 변동률
         change_pct = (
             round((close - prev_close) / prev_close * 100, 2) if prev_close else None
         )
-
-        # 평단 대비 손익률
         pnl_pct = (
             round((close - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
         )
 
-        # 포트폴리오 손익 집계
         if avg_cost > 0:
             if currency == "KRW":
-                total_invested_krw += avg_cost * qty
-                total_current_krw += close * qty
+                totals["invested_krw"] += avg_cost * qty
+                totals["current_krw"] += close * qty
             else:
-                total_invested_usd += avg_cost * qty
-                total_current_usd += close * qty
+                totals["invested_usd"] += avg_cost * qty
+                totals["current_usd"] += close * qty
 
         lines.append(
             f"| {name} | {fmt_price(ohlc['open'], currency)} "
@@ -100,75 +92,110 @@ def generate_closing_report() -> str:
         )
 
     lines.append("")
+    return lines, totals
 
-    # ── 2. 오늘 최종 손익 ──
-    lines.append("## 💰 오늘 최종 손익\n")
 
-    if total_invested_krw > 0:
-        pnl_krw = total_current_krw - total_invested_krw
-        pnl_pct_krw = pnl_krw / total_invested_krw * 100
+def _render_pnl_section(totals: dict) -> list:
+    """오늘 최종 손익 섹션 렌더링"""
+    lines = ["## 💰 오늘 최종 손익\n"]
+    invested_krw = totals["invested_krw"]
+    current_krw = totals["current_krw"]
+    invested_usd = totals["invested_usd"]
+    current_usd = totals["current_usd"]
+
+    if invested_krw > 0:
+        pnl_krw = current_krw - invested_krw
+        pnl_pct_krw = pnl_krw / invested_krw * 100
         emoji_krw = "🟢" if pnl_krw >= 0 else "🔴"
         lines.append(
-            f"- **KRW 포트폴리오**: 투자 {total_invested_krw:,.0f}원 → 현재 {total_current_krw:,.0f}원"
+            f"- **KRW 포트폴리오**: 투자 {invested_krw:,.0f}원 → 현재 {current_krw:,.0f}원"
         )
         lines.append(f"  - {emoji_krw} 손익: {pnl_krw:+,.0f}원 ({pnl_pct_krw:+.2f}%)")
 
-    if total_invested_usd > 0:
-        pnl_usd = total_current_usd - total_invested_usd
-        pnl_pct_usd = pnl_usd / total_invested_usd * 100
+    if invested_usd > 0:
+        pnl_usd = current_usd - invested_usd
+        pnl_pct_usd = pnl_usd / invested_usd * 100
         emoji_usd = "🟢" if pnl_usd >= 0 else "🔴"
         lines.append(
-            f"- **USD 포트폴리오**: 투자 ${total_invested_usd:,.2f} → 현재 ${total_current_usd:,.2f}"
+            f"- **USD 포트폴리오**: 투자 ${invested_usd:,.2f} → 현재 ${current_usd:,.2f}"
         )
         lines.append(f"  - {emoji_usd} 손익: ${pnl_usd:+,.2f} ({pnl_pct_usd:+.2f}%)")
 
-    if total_invested_krw == 0 and total_invested_usd == 0:
+    if invested_krw == 0 and invested_usd == 0:
         lines.append("> 오늘 수집된 가격 데이터 없음")
 
     lines.append("")
+    return lines
 
-    # ── 3. 매크로 지표 마감 ──
-    lines.append("---\n")
-    lines.append("## 🌍 매크로 지표 마감\n")
-    lines.append("| 지표 | 시가 | 고가 | 저가 | 종가 | 전일比 |")
-    lines.append("|------|------|------|------|------|--------|")
 
+def _render_macro_section() -> list:
+    """매크로 지표 마감 섹션 렌더링"""
+    lines = [
+        "---\n",
+        "## 🌍 매크로 지표 마감\n",
+        "| 지표 | 시가 | 고가 | 저가 | 종가 | 전일比 |",
+        "|------|------|------|------|------|--------|",
+    ]
     target_macros = {"코스피", "코스닥", "원/달러", "WTI 유가", "브렌트유", "VIX"}
     for ind in MACRO_INDICATORS:
         if ind["name"] not in target_macros:
             continue
-
         ohlc = get_today_macro_ohlc(ind["name"])
         if ohlc is None:
             lines.append(f"| {ind['name']} | — | — | — | — | — |")
             continue
 
-        # 환율은 원 단위 표시
-        def fmt(v, is_fx=ind["name"] == "원/달러"):
+        is_fx = ind["name"] == "원/달러"
+
+        def fmt(v, _is_fx=is_fx):
+            """매크로 값 포맷 (환율은 원 단위)"""
             if not v:
                 return "—"
-            return f"{v:,.2f}원" if is_fx else f"{v:,.2f}"
+            return f"{v:,.2f}원" if _is_fx else f"{v:,.2f}"
 
         lines.append(
             f"| {ind['name']} | {fmt(ohlc['open'])} "
             f"| {fmt(ohlc['high'])} | {fmt(ohlc['low'])} "
             f"| {fmt(ohlc['close'])} | {fmt_change(ohlc['change_pct'])} |"
         )
-
     lines.append("")
+    return lines
 
-    # ── 4. 오늘 알림 히스토리 ──
+
+def _render_alerts_section() -> list:
+    """오늘 알림 히스토리 섹션 렌더링 (알림 없으면 빈 리스트)"""
     today_alerts = get_today_alerts()
-    if today_alerts:
-        lines.append("---\n")
-        lines.append(f"## 🚨 오늘 발생한 알림 ({len(today_alerts)}건)\n")
-        for a in today_alerts:
-            lines.append(f"- [{a['time']}] {a['message']}")
-        lines.append("")
+    if not today_alerts:
+        return []
+    lines = [
+        "---\n",
+        f"## 🚨 오늘 발생한 알림 ({len(today_alerts)}건)\n",
+    ]
+    for a in today_alerts:
+        lines.append(f"- [{a['time']}] {a['message']}")
+    lines.append("")
+    return lines
 
-    lines.append("---\n")
-    lines.append(f"*자동 생성 by investment-bot (closing) | {now.isoformat()}*\n")
 
+def generate_closing_report() -> str:
+    """장 마감 리포트 마크다운 생성"""
+    now = datetime.now(KST)
+    date_str = now.strftime("%Y-%m-%d")
+    time_str = now.strftime("%H:%M KST")
+
+    header = [
+        f"# 📈 장 마감 리포트 — {date_str}",
+        f"> 생성 시각: {time_str}\n",
+        "---\n",
+    ]
+
+    price_lines, totals = _render_price_section()
+    pnl_lines = _render_pnl_section(totals)
+    macro_lines = _render_macro_section()
+    alerts_lines = _render_alerts_section()
+    footer = ["---\n", f"*자동 생성 by investment-bot (closing) | {now.isoformat()}*\n"]
+
+    lines = header + price_lines + pnl_lines + macro_lines + alerts_lines + footer
     return "\n".join(lines)
 
 
@@ -194,7 +221,7 @@ def run():
     # 저장
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_path = OUTPUT_DIR / "closing_report.md"
-    with open(output_path, "w", encoding="utf-8") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         f.write(report)
 
     print(f"  📄 마감 리포트 저장: {output_path}")
@@ -204,7 +231,7 @@ def run():
     portfolio_path = OUTPUT_DIR / "portfolio_summary.json"
     if portfolio_path.exists():
         try:
-            with open(portfolio_path, encoding="utf-8") as f:
+            with portfolio_path.open(encoding="utf-8") as f:
                 portfolio_summary = json.load(f)
             conn = sqlite3.connect(str(DB_PATH))
             try:

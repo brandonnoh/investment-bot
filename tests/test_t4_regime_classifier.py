@@ -1,8 +1,8 @@
 """T4: 시장 레짐 분류기 테스트"""
 
 import json
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -159,8 +159,8 @@ def test_get_strategy_all_regimes():
 def test_run_saves_regime_json(tmp_path):
     """run()이 regime.json을 OUTPUT_DIR에 저장"""
     # Arrange
-    import config
     import analysis.regime_classifier as rc_module
+    import config
 
     original_output_dir = config.OUTPUT_DIR
     config.OUTPUT_DIR = tmp_path
@@ -185,7 +185,7 @@ def test_run_saves_regime_json(tmp_path):
         regime_path = tmp_path / "regime.json"
         assert regime_path.exists(), "regime.json이 생성되지 않음"
 
-        with open(regime_path, "r", encoding="utf-8") as f:
+        with open(regime_path, encoding="utf-8") as f:
             saved = json.load(f)
 
         assert "classified_at" in saved
@@ -201,8 +201,8 @@ def test_run_saves_regime_json(tmp_path):
 def test_run_detects_regime_change(tmp_path, capsys):
     """이전 레짐과 다르면 변경 메시지 출력"""
     # Arrange
-    import config
     import analysis.regime_classifier as rc_module
+    import config
 
     original_output_dir = config.OUTPUT_DIR
     config.OUTPUT_DIR = tmp_path

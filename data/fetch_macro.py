@@ -8,20 +8,20 @@
 import json
 import sqlite3
 import sys
-import urllib.request
 import urllib.error
-from datetime import datetime, timezone, timedelta
+import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import (
-    MACRO_INDICATORS,
     DB_PATH,
+    HTTP_RETRY_CONFIG,
+    MACRO_INDICATORS,
     OUTPUT_DIR,
     YAHOO_HEADERS,
     YAHOO_TIMEOUT,
-    HTTP_RETRY_CONFIG,
 )
 from db.init_db import init_db
 from utils.http import retry_request, validate_price_data
@@ -67,9 +67,9 @@ def fetch_yahoo_quote(ticker: str) -> dict:
             raise ValueError(f"데이터 없음: {ticker}")
         return result[0]["meta"]
     except urllib.error.URLError as e:
-        raise ConnectionError(f"네트워크 오류 ({ticker}): {e}")
+        raise ConnectionError(f"네트워크 오류 ({ticker}): {e}") from e
     except (KeyError, IndexError) as e:
-        raise ValueError(f"응답 파싱 실패 ({ticker}): {e}")
+        raise ValueError(f"응답 파싱 실패 ({ticker}): {e}") from e
 
 
 def collect_macro() -> list[dict]:
@@ -86,19 +86,13 @@ def collect_macro() -> list[dict]:
                 naver = fetch_naver_index(ticker)
                 value = naver["price"]
                 change_pct = naver["change_pct"]
-                prev_close = (
-                    round(value / (1 + change_pct / 100), 2) if change_pct else value
-                )
+                prev_close = round(value / (1 + change_pct / 100), 2) if change_pct else value
             else:
                 meta = fetch_yahoo_quote(ticker)
                 value = meta["regularMarketPrice"]
-                prev_close = meta.get(
-                    "chartPreviousClose", meta.get("previousClose", value)
-                )
+                prev_close = meta.get("chartPreviousClose", meta.get("previousClose", value))
                 change_pct = (
-                    round((value - prev_close) / prev_close * 100, 2)
-                    if prev_close
-                    else 0.0
+                    round((value - prev_close) / prev_close * 100, 2) if prev_close else 0.0
                 )
 
             record = {
@@ -173,16 +167,14 @@ def save_to_json(records: list[dict]):
         "count": len([r for r in records if r.get("value") is not None]),
         "indicators": records,
     }
-    with open(output_path, "w", encoding="utf-8") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"  📄 JSON 저장: {output_path}")
 
 
 def run():
     """매크로 지표 수집 파이프라인 실행"""
-    print(
-        f"\n🌍 매크로 지표 수집 시작 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}"
-    )
+    print(f"\n🌍 매크로 지표 수집 시작 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}")
 
     # DB 초기화 확인
     if not DB_PATH.exists():

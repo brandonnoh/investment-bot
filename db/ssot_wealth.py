@@ -6,9 +6,8 @@ SSoT Wealth — 자산/입금 관련 API
 
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List, Dict
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import DB_PATH
@@ -27,7 +26,7 @@ KST = timezone(timedelta(hours=9))
 # ══════════════════════════════════════════════════════════════
 
 
-def get_extra_assets(conn=None) -> List[Dict]:
+def get_extra_assets(conn=None) -> list[dict]:
     """비금융 자산 목록 반환"""
     own_conn = conn is None
     if own_conn:
@@ -179,7 +178,7 @@ def save_total_wealth_snapshot(
         conn.close()
 
 
-def get_total_wealth_history(days: int = 30, conn=None) -> List[Dict]:
+def get_total_wealth_history(days: int = 30, conn=None) -> list[dict]:
     """전체 자산 히스토리 조회"""
     own_conn = conn is None
     if own_conn:
@@ -221,7 +220,7 @@ def get_total_wealth_history(days: int = 30, conn=None) -> List[Dict]:
 # ══════════════════════════════════════════════════════════════
 
 
-def get_wealth_summary(conn=None) -> Dict:
+def get_wealth_summary(conn=None) -> dict:
     """전체 자산 요약"""
     from db.ssot import get_holdings
 

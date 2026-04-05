@@ -131,9 +131,8 @@ def _send_failure_alert(error_msg: str) -> None:
     """Claude 실행 실패 시 Discord 알림"""
     try:
         import json as _json
-        import urllib.request as _urllib
-
         import os
+        import urllib.request as _urllib
         webhook = os.environ.get(
             "DISCORD_WEBHOOK_URL",
             "https://discord.com/api/webhooks/1490306786870165624/0JjO5i_BNWCmIDnFJXQZ0OcDGeWdYsryKnUFGXvoKlqALza6mFPqcjbFz40fWltCIkRR",

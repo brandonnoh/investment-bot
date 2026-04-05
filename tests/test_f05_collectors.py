@@ -9,7 +9,7 @@ import sqlite3
 import sys
 from io import BytesIO
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -87,6 +87,7 @@ class TestFetchYahooQuote:
     def test_yahoo_네트워크_오류(self, mock_urlopen):
         """Yahoo API 네트워크 오류 시 ConnectionError"""
         import urllib.error
+
         from data.fetch_prices import fetch_yahoo_quote
 
         mock_urlopen.side_effect = urllib.error.URLError("timeout")
@@ -135,6 +136,7 @@ class TestFetchNaverPrice:
     def test_naver_네트워크_오류(self, mock_urlopen):
         """네이버 API 네트워크 오류 시 ConnectionError"""
         import urllib.error
+
         from data.fetch_prices import fetch_naver_price
 
         mock_urlopen.side_effect = urllib.error.URLError("timeout")
@@ -188,12 +190,11 @@ class TestKrStockFallback:
             "volume": 15000000,
         }
 
-        with patch.dict("os.environ", {"KIWOOM_APPKEY": "test_key"}):
-            with patch(
-                "data.fetch_gold_krx.fetch_kiwoom_stock",
-                side_effect=Exception("키움 장애"),
-            ):
-                result = _fetch_kr_stock("005930")
+        with patch.dict("os.environ", {"KIWOOM_APPKEY": "test_key"}), patch(
+            "data.fetch_gold_krx.fetch_kiwoom_stock",
+            side_effect=Exception("키움 장애"),
+        ):
+            result = _fetch_kr_stock("005930")
 
         assert result["price"] == 82000
         mock_naver.assert_called_once()

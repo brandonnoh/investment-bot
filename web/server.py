@@ -4,27 +4,27 @@
 ThreadingHTTPServer + SSE 실시간 업데이트
 """
 
-import sys
-import os
+import contextlib
 import json
-import time
 import queue
+import sys
 import threading
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
 # 프로젝트 루트를 모듈 경로에 추가
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from web.api import (
+    INTEL_DIR,
+    get_process_status,
     load_intel_data,
     load_md_file,
     run_background,
-    get_process_status,
-    INTEL_DIR,
 )
 
 PORT = 8421
@@ -37,6 +37,7 @@ _sse_lock = threading.Lock()
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     """다중 연결을 지원하는 ThreadingHTTPServer."""
+
     daemon_threads = True
 
 
@@ -81,6 +82,30 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
+    def _handle_api_data(self):
+        """인텔 데이터 JSON 응답"""
+        data = load_intel_data()
+        self.send_json(data)
+
+    def _handle_api_file(self, params: dict):
+        """파일 다운로드 요청 처리 (MD/JSON)"""
+        name = params.get("name", [""])[0]
+        if not name or "/" in name or "\\" in name:
+            self.send_json({"error": "잘못된 파일명"}, 400)
+            return
+        if name.endswith(".md"):
+            content = load_md_file(name)
+            body = content.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/markdown; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif name.endswith(".json"):
+            self.send_file(INTEL_DIR / name, "application/json; charset=utf-8")
+        else:
+            self.send_json({"error": "지원하지 않는 파일 형식"}, 400)
+
     def do_GET(self):
         """GET 요청 라우팅."""
         parsed = urlparse(self.path)
@@ -89,45 +114,18 @@ class MissionControlHandler(BaseHTTPRequestHandler):
 
         if path == "/":
             self.send_file(WEB_DIR / "index.html", "text/html; charset=utf-8")
-
         elif path == "/static/app.js":
             self.send_file(WEB_DIR / "static" / "app.js", "application/javascript; charset=utf-8")
-
         elif path == "/static/style.css":
             self.send_file(WEB_DIR / "static" / "style.css", "text/css; charset=utf-8")
-
         elif path == "/api/data":
-            data = load_intel_data()
-            self.send_json(data)
-
+            self._handle_api_data()
         elif path == "/api/file":
-            name = params.get("name", [""])[0]
-            if not name or "/" in name or "\\" in name:
-                self.send_json({"error": "잘못된 파일명"}, 400)
-                return
-            # MD 파일
-            if name.endswith(".md"):
-                content = load_md_file(name)
-                body = content.encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type", "text/markdown; charset=utf-8")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self.wfile.write(body)
-            # JSON 파일
-            elif name.endswith(".json"):
-                filepath = INTEL_DIR / name
-                self.send_file(filepath, "application/json; charset=utf-8")
-            else:
-                self.send_json({"error": "지원하지 않는 파일 형식"}, 400)
-
+            self._handle_api_file(params)
         elif path == "/api/status":
-            status = get_process_status()
-            self.send_json(status)
-
+            self.send_json(get_process_status())
         elif path == "/api/events":
             self._handle_sse()
-
         else:
             self.send_response(404)
             self.end_headers()
@@ -178,7 +176,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
                 try:
                     # 큐에서 이벤트 대기 (1초 타임아웃)
                     event = client_queue.get(timeout=1.0)
-                    msg = f"data: {event}\n\n".encode("utf-8")
+                    msg = f"data: {event}\n\n".encode()
                     self.wfile.write(msg)
                     self.wfile.flush()
                 except queue.Empty:
@@ -192,11 +190,8 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             # 클라이언트 연결 끊김
             pass
         finally:
-            with _sse_lock:
-                try:
-                    _sse_clients.remove(client_queue)
-                except ValueError:
-                    pass
+            with _sse_lock, contextlib.suppress(ValueError):
+                _sse_clients.remove(client_queue)
 
 
 def _broadcast_sse(event: str):
@@ -219,11 +214,7 @@ def _watch_intel_dir():
         try:
             if INTEL_DIR.exists():
                 # 디렉토리 내 모든 파일의 최신 mtime 계산
-                mtimes = [
-                    f.stat().st_mtime
-                    for f in INTEL_DIR.iterdir()
-                    if f.is_file()
-                ]
+                mtimes = [f.stat().st_mtime for f in INTEL_DIR.iterdir() if f.is_file()]
                 if mtimes:
                     current_mtime = max(mtimes)
                     if current_mtime > last_mtime:
@@ -240,11 +231,11 @@ def main():
     # 파일 감시 데몬 스레드 시작
     watcher = threading.Thread(target=_watch_intel_dir, daemon=True, name="intel-watcher")
     watcher.start()
-    print(f"[watcher] output/intel/ 감시 시작 (5초 간격)")
+    print("[watcher] output/intel/ 감시 시작 (5초 간격)")
 
     server = ThreadingHTTPServer(("", PORT), MissionControlHandler)
     print(f"[server] 미션컨트롤 대시보드: http://localhost:{PORT}")
-    print(f"[server] 종료: Ctrl+C")
+    print("[server] 종료: Ctrl+C")
 
     try:
         server.serve_forever()

@@ -9,24 +9,24 @@
 import json
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import PORTFOLIO_LEGACY as PORTFOLIO, DB_PATH, OUTPUT_DIR
-from db.init_db import init_db
-from data.fetch_news_sources import (  # noqa: F401  re-export
-    fetch_google_news_rss,
-    search_brave_news,
-    calculate_relevance,
-    BRAVE_API_KEY,
-)
+from config import DB_PATH, OUTPUT_DIR
+from config import PORTFOLIO_LEGACY as PORTFOLIO
 from data.fetch_news_db import (  # noqa: F401  re-export
     ensure_category_column,
     save_to_db,
 )
+from data.fetch_news_sources import (  # noqa: F401  re-export
+    BRAVE_API_KEY,
+    calculate_relevance,
+    fetch_google_news_rss,
+    search_brave_news,
+)
+from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))
 
@@ -99,7 +99,7 @@ def load_discovery_keywords() -> list[dict]:
     if not keywords_path.exists():
         return []
     try:
-        with open(keywords_path, encoding="utf-8") as f:
+        with keywords_path.open(encoding="utf-8") as f:
             data = json.load(f)
         kws = data.get("keywords", [])
         kws.sort(key=lambda k: k.get("priority", 99))
@@ -111,22 +111,16 @@ def load_discovery_keywords() -> list[dict]:
 # ── 뉴스 수집 ──
 
 
-def collect_news() -> tuple[list[dict], int, int]:
-    """하이브리드 뉴스 수집: RSS + Brave. (records, rss_count, brave_count) 반환"""
-    now = datetime.now(KST).isoformat()
-    all_news = []
-    seen_urls = set()
-    rss_count = 0
-    brave_count = 0
-
-    # 1. 종목별 뉴스 — RSS
+def _collect_rss_stock_news(now: str, seen_urls: set) -> tuple[list[dict], int]:
+    """종목별 RSS 뉴스 수집. (items, count) 반환"""
+    items = []
+    count = 0
     for stock in PORTFOLIO:
         ticker = stock["ticker"]
         name = stock["name"]
         keywords = TICKER_KEYWORDS.get(ticker)
         if not keywords:
             continue
-
         query = keywords[0]
         try:
             results = fetch_google_news_rss(query, count=3)
@@ -135,100 +129,132 @@ def collect_news() -> tuple[list[dict], int, int]:
                 if url in seen_urls:
                     continue
                 seen_urls.add(url)
-
-                news_item = {
-                    "title": article["title"],
-                    "summary": "",
-                    "source": article["source"],
-                    "url": url,
-                    "published_at": article["published_at"],
-                    "relevance_score": calculate_relevance(article["title"], keywords),
-                    "category": "stock",
-                    "tickers": [ticker],
-                    "ticker_name": name,
-                    "fetch_method": "rss",
-                    "timestamp": now,
-                }
-                all_news.append(news_item)
-                rss_count += 1
-
+                items.append(
+                    {
+                        "title": article["title"],
+                        "summary": "",
+                        "source": article["source"],
+                        "url": url,
+                        "published_at": article["published_at"],
+                        "relevance_score": calculate_relevance(
+                            article["title"], keywords
+                        ),
+                        "category": "stock",
+                        "tickers": [ticker],
+                        "ticker_name": name,
+                        "fetch_method": "rss",
+                        "timestamp": now,
+                    }
+                )
+                count += 1
             print(f"  ✅ [RSS] {name}: {len(results)}건")
-
         except Exception as e:
             print(f"  ❌ [RSS] {name}: {e}")
+    return items, count
 
-    # 2. 매크로 키워드 — 방식에 따라 분기
+
+def _collect_rss_macro_keyword(
+    kw: str, category: str, base_relevance: float, now: str, seen_urls: set
+) -> tuple[list[dict], int]:
+    """RSS 방식 단일 매크로 키워드 수집. (items, count) 반환"""
+    items = []
+    count = 0
+    results = fetch_google_news_rss(kw, count=3)
+    for article in results:
+        url = article.get("url", "")
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
+        items.append(
+            {
+                "title": article["title"],
+                "summary": "",
+                "source": article["source"],
+                "url": url,
+                "published_at": article["published_at"],
+                "relevance_score": base_relevance,
+                "category": category,
+                "tickers": [],
+                "ticker_name": kw,
+                "fetch_method": "rss",
+                "timestamp": now,
+            }
+        )
+        count += 1
+    print(f"  ✅ [RSS] {category} [{kw}]: {len(results)}건")
+    return items, count
+
+
+def _collect_brave_macro_keyword(
+    kw: str, category: str, base_relevance: float, now: str, seen_urls: set
+) -> tuple[list[dict], int]:
+    """Brave 방식 단일 매크로 키워드 수집. (items, count) 반환"""
+    items = []
+    count = 0
+    if not BRAVE_API_KEY:
+        print(f"  ⚠️  [Brave] {category} [{kw}]: API 키 없음 — 스킵")
+        return items, count
+    results = search_brave_news(kw, count=2)
+    for article in results:
+        url = article.get("url", "")
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
+        source = ""
+        meta_url = article.get("meta_url")
+        if isinstance(meta_url, dict):
+            source = meta_url.get("hostname", "")
+        items.append(
+            {
+                "title": article.get("title", ""),
+                "summary": article.get("description", ""),
+                "source": source,
+                "url": url,
+                "published_at": article.get("age", ""),
+                "relevance_score": base_relevance,
+                "category": category,
+                "tickers": [],
+                "ticker_name": kw,
+                "fetch_method": "brave",
+                "timestamp": now,
+            }
+        )
+        count += 1
+    print(f"  ✅ [Brave] {category} [{kw}]: {len(results)}건")
+    return items, count
+
+
+def _collect_macro_news(now: str, seen_urls: set) -> tuple[list[dict], int, int]:
+    """매크로 키워드 뉴스 수집 (RSS + Brave). (items, rss_count, brave_count) 반환"""
+    items = []
+    rss_count = 0
+    brave_count = 0
     for category, info in MACRO_KEYWORDS.items():
         base_relevance = info["relevance"]
         method = info["method"]
-
         for kw in info["keywords"]:
             try:
                 if method == "rss":
-                    results = fetch_google_news_rss(kw, count=3)
-                    for article in results:
-                        url = article.get("url", "")
-                        if url in seen_urls:
-                            continue
-                        seen_urls.add(url)
-
-                        news_item = {
-                            "title": article["title"],
-                            "summary": "",
-                            "source": article["source"],
-                            "url": url,
-                            "published_at": article["published_at"],
-                            "relevance_score": base_relevance,
-                            "category": category,
-                            "tickers": [],
-                            "ticker_name": kw,
-                            "fetch_method": "rss",
-                            "timestamp": now,
-                        }
-                        all_news.append(news_item)
-                        rss_count += 1
-
-                    print(f"  ✅ [RSS] {category} [{kw}]: {len(results)}건")
-
+                    new_items, cnt = _collect_rss_macro_keyword(
+                        kw, category, base_relevance, now, seen_urls
+                    )
+                    items.extend(new_items)
+                    rss_count += cnt
                 elif method == "brave":
-                    if not BRAVE_API_KEY:
-                        print(f"  ⚠️  [Brave] {category} [{kw}]: API 키 없음 — 스킵")
-                        continue
-
-                    results = search_brave_news(kw, count=2)
-                    for article in results:
-                        url = article.get("url", "")
-                        if url in seen_urls:
-                            continue
-                        seen_urls.add(url)
-
-                        source = ""
-                        meta_url = article.get("meta_url")
-                        if isinstance(meta_url, dict):
-                            source = meta_url.get("hostname", "")
-
-                        news_item = {
-                            "title": article.get("title", ""),
-                            "summary": article.get("description", ""),
-                            "source": source,
-                            "url": url,
-                            "published_at": article.get("age", ""),
-                            "relevance_score": base_relevance,
-                            "category": category,
-                            "tickers": [],
-                            "ticker_name": kw,
-                            "fetch_method": "brave",
-                            "timestamp": now,
-                        }
-                        all_news.append(news_item)
-                        brave_count += 1
-
-                    print(f"  ✅ [Brave] {category} [{kw}]: {len(results)}건")
-
+                    new_items, cnt = _collect_brave_macro_keyword(
+                        kw, category, base_relevance, now, seen_urls
+                    )
+                    items.extend(new_items)
+                    brave_count += cnt
             except Exception as e:
                 print(f"  ❌ [{method.upper()}] {category} [{kw}]: {e}")
+    return items, rss_count, brave_count
 
-    # 3. discovery_keywords.json 연동 — 종목 발굴 키워드도 뉴스 수집
+
+def _collect_discovery_news(now: str, seen_urls: set) -> tuple[list[dict], int]:
+    """discovery_keywords.json 연동 뉴스 수집. (items, count) 반환"""
+    items = []
+    count = 0
     discovery_kws = load_discovery_keywords()
     for kw_item in discovery_kws[:5]:  # 상위 5개만
         kw = kw_item.get("keyword", "")
@@ -242,24 +268,51 @@ def collect_news() -> tuple[list[dict], int, int]:
                 if url in seen_urls:
                     continue
                 seen_urls.add(url)
-                news_item = {
-                    "title": article["title"],
-                    "summary": "",
-                    "source": article["source"],
-                    "url": url,
-                    "published_at": article["published_at"],
-                    "relevance_score": 0.7,
-                    "category": f"discovery_{category}",
-                    "tickers": [],
-                    "ticker_name": kw,
-                    "fetch_method": "rss",
-                    "timestamp": now,
-                }
-                all_news.append(news_item)
-                rss_count += 1
+                items.append(
+                    {
+                        "title": article["title"],
+                        "summary": "",
+                        "source": article["source"],
+                        "url": url,
+                        "published_at": article["published_at"],
+                        "relevance_score": 0.7,
+                        "category": f"discovery_{category}",
+                        "tickers": [],
+                        "ticker_name": kw,
+                        "fetch_method": "rss",
+                        "timestamp": now,
+                    }
+                )
+                count += 1
             print(f"  ✅ [RSS] discovery [{kw[:20]}]: {len(results)}건")
         except Exception as e:
             print(f"  ❌ [RSS] discovery [{kw[:20]}]: {e}")
+    return items, count
+
+
+def collect_news() -> tuple[list[dict], int, int]:
+    """하이브리드 뉴스 수집: RSS + Brave. (records, rss_count, brave_count) 반환"""
+    now = datetime.now(KST).isoformat()
+    all_news = []
+    seen_urls: set = set()
+    rss_count = 0
+    brave_count = 0
+
+    # 1. 종목별 뉴스 — RSS
+    stock_items, stock_rss = _collect_rss_stock_news(now, seen_urls)
+    all_news.extend(stock_items)
+    rss_count += stock_rss
+
+    # 2. 매크로 키워드 — 방식에 따라 분기
+    macro_items, macro_rss, macro_brave = _collect_macro_news(now, seen_urls)
+    all_news.extend(macro_items)
+    rss_count += macro_rss
+    brave_count += macro_brave
+
+    # 3. discovery_keywords.json 연동 — 종목 발굴 키워드도 뉴스 수집
+    disc_items, disc_rss = _collect_discovery_news(now, seen_urls)
+    all_news.extend(disc_items)
+    rss_count += disc_rss
 
     # 관련도 높은 순으로 정렬
     all_news.sort(key=lambda x: x["relevance_score"], reverse=True)
@@ -267,7 +320,7 @@ def collect_news() -> tuple[list[dict], int, int]:
     return all_news, rss_count, brave_count
 
 
-def save_to_json(records: list[dict], ticker_sentiment: Optional[dict] = None):
+def save_to_json(records: list[dict], ticker_sentiment: dict | None = None):
     """뉴스를 JSON 파일로 출력 (감성 집계 포함)"""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_path = OUTPUT_DIR / "news.json"
@@ -279,7 +332,7 @@ def save_to_json(records: list[dict], ticker_sentiment: Optional[dict] = None):
     }
     if ticker_sentiment:
         output["ticker_sentiment"] = ticker_sentiment
-    with open(output_path, "w", encoding="utf-8") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"  📄 뉴스 JSON 저장: {output_path}")
 

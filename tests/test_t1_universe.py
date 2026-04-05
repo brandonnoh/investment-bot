@@ -1,8 +1,8 @@
 """T1: 유니버스 확장 테스트 — 코스피 200 + S&P 100"""
 
 import json
-import sys
 import os
+import sys
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -64,7 +64,7 @@ def _make_mock_result(ticker_info: dict) -> dict:
 
 def test_screen_universe_returns_top_n():
     """screen_universe가 상위 top_n개 반환 (month_return 기준 내림차순)"""
-    from analysis.screener import screen_universe, UNIVERSE_KOSPI200
+    from analysis.screener import UNIVERSE_KOSPI200, screen_universe
 
     sample = UNIVERSE_KOSPI200[:15]
     with patch("analysis.screener.analyze_ticker", side_effect=_make_mock_result):
@@ -78,7 +78,7 @@ def test_screen_universe_returns_top_n():
 
 def test_screen_universe_handles_failures():
     """일부 종목 실패해도 graceful degradation"""
-    from analysis.screener import screen_universe, UNIVERSE_SP100
+    from analysis.screener import UNIVERSE_SP100, screen_universe
 
     def mock_analyze(ticker_info):
         # 홀수 인덱스는 None 반환 (실패 시뮬레이션)
@@ -134,8 +134,8 @@ def test_generate_universe_section_format():
 
 def test_run_saves_screener_results_json(tmp_path):
     """run() 실행 후 screener_results.json 저장 확인"""
-    from analysis import screener
     import config
+    from analysis import screener
 
     orig_output = config.OUTPUT_DIR
     config.OUTPUT_DIR = tmp_path

@@ -7,31 +7,29 @@
 검색/추출 로직: data.fetch_opportunities_search
 """
 
+import contextlib
 import json
 import logging
-import os
 import sqlite3
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import config
 
 # 검색/추출 레이어 — re-export (외부 코드가 fetch_opportunities에서 직접 임포트 가능)
 from data.fetch_opportunities_search import (  # noqa: F401
+    extract_opportunities,
     search_brave,
     search_naver_news,
-    extract_opportunities,
 )
 
-try:
+with contextlib.suppress(ImportError):
     from data.ticker_master import (
         load_master_from_db,
     )
-except ImportError:
-    pass
 
 try:
     from analysis.fallback_keywords import ensure_fresh_keywords
@@ -139,9 +137,7 @@ def generate_json(keywords: list, opportunities: list) -> dict:
 
     # 평균 복합 점수 계산
     scores = [
-        opp["composite_score"]
-        for opp in opportunities
-        if opp.get("composite_score") is not None
+        opp["composite_score"] for opp in opportunities if opp.get("composite_score") is not None
     ]
     avg_score = round(sum(scores) / len(scores), 4) if scores else 0.0
 
@@ -158,6 +154,167 @@ def generate_json(keywords: list, opportunities: list) -> dict:
         "total_count": len(opportunities),
         "summary": summary,
     }
+
+
+def _load_keywords(kw_path: Path) -> tuple[list, str]:
+    """키워드 파일 로드. (keywords, generated_at) 반환.
+
+    Args:
+        kw_path: 키워드 JSON 파일 경로
+
+    Returns:
+        (키워드 리스트, 생성 시각 문자열) — 실패 시 ([], "")
+    """
+    try:
+        with kw_path.open() as f:
+            kw_data = json.load(f)
+    except Exception as e:
+        logger.error(f"키워드 파일 읽기 실패: {e}")
+        return [], ""
+    keywords = parse_keywords(kw_data)
+    generated_at = kw_data.get("generated_at", datetime.now(KST).isoformat())
+    return keywords, generated_at
+
+
+def _load_master(conn) -> list:
+    """종목 사전 로드. DB에 없으면 시드 데이터로 초기화.
+
+    Args:
+        conn: sqlite3.Connection
+
+    Returns:
+        종목 사전 리스트
+    """
+    try:
+        master = load_master_from_db(conn)
+    except Exception:
+        master = []
+    if not master:
+        try:
+            from data.ticker_master import run as init_master
+
+            master = init_master(conn)
+        except Exception as e:
+            logger.warning(f"종목 사전 초기화 실패: {e}")
+            master = []
+    return master
+
+
+def _process_keywords(keywords: list, master: list) -> list:
+    """키워드별 뉴스 검색 + 종목 추출 + 글로벌 중복 제거.
+
+    Args:
+        keywords: 키워드 딕셔너리 리스트
+        master: 종목 사전 리스트
+
+    Returns:
+        중복 제거된 종목 후보 리스트
+    """
+    search_count = config.OPPORTUNITY_CONFIG.get("search_count", 10)
+    all_opportunities = []
+    seen_tickers: set = set()
+
+    for kw_info in keywords:
+        keyword = kw_info["keyword"]
+        logger.info(f"🔍 키워드 검색: {keyword}")
+
+        all_news = search_brave(keyword, count=search_count) + search_naver_news(
+            keyword, count=search_count
+        )
+        if not all_news:
+            logger.info(f"  뉴스 없음: {keyword}")
+            continue
+
+        opps = extract_opportunities(all_news, master, keyword)
+        for opp in opps:
+            if opp["ticker"] not in seen_tickers:
+                seen_tickers.add(opp["ticker"])
+                all_opportunities.append(opp)
+
+    return all_opportunities
+
+
+def _apply_composite_scores(opportunities: list, out_dir: Path) -> None:
+    """복합 점수(감성 + 매크로) 계산 후 각 후보에 인플레이스 적용.
+
+    Args:
+        opportunities: 종목 후보 리스트 (인플레이스 수정)
+        out_dir: macro.json이 위치한 출력 디렉토리
+    """
+    try:
+        from analysis.composite_score import calculate_macro_direction
+
+        macro_path = out_dir / "macro.json"
+        macro_data = {}
+        if macro_path.exists():
+            with macro_path.open() as f:
+                macro_json = json.load(f)
+                for ind in macro_json.get("indicators", []):
+                    macro_data[ind["ticker"]] = {
+                        "value": ind.get("value"),
+                        "change_pct": ind.get("change_pct"),
+                    }
+        macro_direction = calculate_macro_direction(macro_data)
+
+        for opp in opportunities:
+            sentiment = opp.get("sentiment") or 0
+            sentiment_score = (sentiment + 1.0) / 2.0
+            macro_score = (macro_direction + 1.0) / 2.0
+            opp["composite_score"] = round(sentiment_score * 0.5 + macro_score * 0.5, 4)
+            opp["score_sentiment"] = round(sentiment_score, 4)
+            opp["score_macro"] = round(macro_score, 4)
+        logger.info(f"복합 점수 계산 완료: {len(opportunities)}건 (macro={macro_direction:.2f})")
+    except Exception as e:
+        logger.warning(f"복합 점수 계산 실패: {e}")
+
+
+def _fetch_discovery_prices(opportunities: list) -> None:
+    """Yahoo Finance에서 발굴 종목 현재가 수집 후 인플레이스 적용.
+
+    Args:
+        opportunities: 종목 후보 리스트 (인플레이스 수정)
+    """
+    try:
+        from data.fetch_prices import fetch_yahoo_quote as _fetch_quote
+
+        for opp in opportunities:
+            if opp.get("price_at_discovery") is None:
+                try:
+                    meta = _fetch_quote(opp["ticker"])
+                    opp["price_at_discovery"] = meta.get("regularMarketPrice")
+                except Exception:
+                    pass  # 가격 조회 실패 시 None 유지
+    except ImportError:
+        pass
+
+
+def _save_results(opportunities: list, keywords: list, out_dir: Path) -> None:
+    """발굴 결과를 JSON 파일로 저장.
+
+    Args:
+        opportunities: 종목 후보 리스트
+        keywords: 사용된 키워드 리스트
+        out_dir: 출력 디렉토리
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_data = generate_json(
+        [
+            {
+                "keyword": k["keyword"],
+                "category": k.get("category", ""),
+                "priority": k.get("priority", 5),
+            }
+            for k in keywords
+        ],
+        opportunities,
+    )
+    json_path = out_dir / "opportunities.json"
+    try:
+        with json_path.open("w", encoding="utf-8") as f:
+            json.dump(json_data, f, ensure_ascii=False, indent=2)
+        print(f"  ✅ 종목 발굴 완료: {len(opportunities)}건 → {json_path}")
+    except Exception as e:
+        logger.error(f"opportunities.json 저장 실패: {e}")
 
 
 def run(conn=None, keywords_path=None, output_dir=None) -> list:
@@ -187,19 +344,10 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
         logger.warning("Fallback 키워드 생성 실패 — 종목 발굴 건너뜀")
         return []
 
-    try:
-        with open(kw_path) as f:
-            kw_data = json.load(f)
-    except Exception as e:
-        logger.error(f"키워드 파일 읽기 실패: {e}")
-        return []
-
-    keywords = parse_keywords(kw_data)
+    keywords, generated_at = _load_keywords(kw_path)
     if not keywords:
         logger.info("키워드 없음 — 종목 발굴 건너뜀")
         return []
-
-    generated_at = kw_data.get("generated_at", datetime.now(KST).isoformat())
 
     # 2. DB 연결
     own_conn = False
@@ -209,19 +357,7 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
         own_conn = True
 
     # 3. 종목 사전 로드
-    try:
-        master = load_master_from_db(conn)
-    except Exception:
-        master = []
-    if not master:
-        # DB에 없으면 시드 데이터로 초기화
-        try:
-            from data.ticker_master import run as init_master
-
-            master = init_master(conn)
-        except Exception as e:
-            logger.warning(f"종목 사전 초기화 실패: {e}")
-            master = []
+    master = _load_master(conn)
 
     # 4. 키워드 DB 저장
     try:
@@ -230,84 +366,17 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
         logger.warning(f"키워드 DB 저장 실패: {e}")
 
     # 5. 키워드별 뉴스 검색 + 종목 추출
-    search_count = config.OPPORTUNITY_CONFIG.get("search_count", 10)
-    all_opportunities = []
-    seen_tickers = set()
-
-    for kw_info in keywords:
-        keyword = kw_info["keyword"]
-        logger.info(f"🔍 키워드 검색: {keyword}")
-
-        # Brave 검색
-        brave_results = search_brave(keyword, count=search_count)
-
-        # Naver 검색 (선택)
-        naver_results = search_naver_news(keyword, count=search_count)
-
-        # 합산
-        all_news = brave_results + naver_results
-
-        if not all_news:
-            logger.info(f"  뉴스 없음: {keyword}")
-            continue
-
-        # 종목 추출
-        opps = extract_opportunities(all_news, master, keyword)
-
-        # 글로벌 중복 제거
-        for opp in opps:
-            if opp["ticker"] not in seen_tickers:
-                seen_tickers.add(opp["ticker"])
-                all_opportunities.append(opp)
+    all_opportunities = _process_keywords(keywords, master)
 
     # 6. 후보 수 제한
     max_candidates = config.OPPORTUNITY_CONFIG.get("max_candidates", 100)
     all_opportunities = all_opportunities[:max_candidates]
 
-    # 6.5 복합 점수 계산 (기본 팩터만 — 감성 + 매크로)
-    try:
-        from analysis.composite_score import calculate_macro_direction
+    # 6.5 복합 점수 계산
+    _apply_composite_scores(all_opportunities, out_dir)
 
-        # 매크로 데이터 로드
-        macro_path = out_dir / "macro.json"
-        macro_data = {}
-        if macro_path.exists():
-            with open(macro_path) as f:
-                macro_json = json.load(f)
-                for ind in macro_json.get("indicators", []):
-                    macro_data[ind["ticker"]] = {
-                        "value": ind.get("value"),
-                        "change_pct": ind.get("change_pct"),
-                    }
-        macro_direction = calculate_macro_direction(macro_data)
-
-        for opp in all_opportunities:
-            sentiment = opp.get("sentiment") or 0
-            # 단순 점수: 감성(50%) + 매크로(50%)
-            sentiment_score = (sentiment + 1.0) / 2.0
-            macro_score = (macro_direction + 1.0) / 2.0
-            opp["composite_score"] = round(sentiment_score * 0.5 + macro_score * 0.5, 4)
-            opp["score_sentiment"] = round(sentiment_score, 4)
-            opp["score_macro"] = round(macro_score, 4)
-        logger.info(
-            f"복합 점수 계산 완료: {len(all_opportunities)}건 (macro={macro_direction:.2f})"
-        )
-    except Exception as e:
-        logger.warning(f"복합 점수 계산 실패: {e}")
-
-    # 6.9 price_at_discovery 수집 — Yahoo Finance 현재가
-    try:
-        from data.fetch_prices import fetch_yahoo_quote as _fetch_quote
-
-        for opp in all_opportunities:
-            if opp.get("price_at_discovery") is None:
-                try:
-                    meta = _fetch_quote(opp["ticker"])
-                    opp["price_at_discovery"] = meta.get("regularMarketPrice")
-                except Exception:
-                    pass  # 가격 조회 실패 시 None 유지
-    except ImportError:
-        pass
+    # 6.9 price_at_discovery 수집
+    _fetch_discovery_prices(all_opportunities)
 
     # 7. DB 저장
     if all_opportunities:
@@ -317,25 +386,7 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
             logger.warning(f"발굴 종목 DB 저장 실패: {e}")
 
     # 8. JSON 파일 저장
-    out_dir.mkdir(parents=True, exist_ok=True)
-    json_data = generate_json(
-        [
-            {
-                "keyword": k["keyword"],
-                "category": k.get("category", ""),
-                "priority": k.get("priority", 5),
-            }
-            for k in keywords
-        ],
-        all_opportunities,
-    )
-    json_path = out_dir / "opportunities.json"
-    try:
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(json_data, f, ensure_ascii=False, indent=2)
-        print(f"  ✅ 종목 발굴 완료: {len(all_opportunities)}건 → {json_path}")
-    except Exception as e:
-        logger.error(f"opportunities.json 저장 실패: {e}")
+    _save_results(all_opportunities, keywords, out_dir)
 
     if own_conn:
         conn.close()
