@@ -5,6 +5,10 @@ import { TabNav } from '@/components/TabNav'
 import { OverviewTab } from '@/components/tabs/OverviewTab'
 import { PortfolioTab } from '@/components/tabs/PortfolioTab'
 import { MarcusTab } from '@/components/tabs/MarcusTab'
+import { DiscoveryTab } from '@/components/tabs/DiscoveryTab'
+import { AlertsTab } from '@/components/tabs/AlertsTab'
+import { SystemTab } from '@/components/tabs/SystemTab'
+import { ServiceMapTab } from '@/components/tabs/ServiceMapTab'
 import { useMCStore } from '@/store/useMCStore'
 
 export default function Home() {
@@ -18,11 +22,10 @@ export default function Home() {
         {activeTab === 'overview' && <OverviewTab />}
         {activeTab === 'portfolio' && <PortfolioTab />}
         {activeTab === 'marcus' && <MarcusTab />}
-        {activeTab !== 'overview' && activeTab !== 'portfolio' && activeTab !== 'marcus' && (
-          <div className="text-muted-foreground text-sm font-mono p-8 text-center">
-            {activeTab} 탭 — 구현 예정
-          </div>
-        )}
+        {activeTab === 'discovery' && <DiscoveryTab />}
+        {activeTab === 'alerts' && <AlertsTab />}
+        {activeTab === 'system' && <SystemTab />}
+        {activeTab === 'service-map' && <ServiceMapTab />}
       </main>
     </div>
   )

@@ -1,5 +1,5 @@
 {
-  "summary": { "total": 9, "done": 6, "in_progress": 0, "pending": 3 },
+  "summary": { "total": 9, "done": 7, "in_progress": 0, "pending": 2 },
   "features": [
     {
       "id": "task-001",
@@ -131,7 +131,7 @@
     {
       "id": "task-007",
       "title": "발굴 탭 + 알림 탭 + 시스템 탭 + 서비스 맵 탭",
-      "status": "pending",
+      "status": "done",
       "priority": "medium",
       "affected_packages": ["web-next/src/components/tabs"],
       "tags": ["frontend", "design"],
