@@ -1,5 +1,5 @@
 {
-  "summary": { "total": 9, "done": 2, "in_progress": 0, "pending": 7 },
+  "summary": { "total": 9, "done": 3, "in_progress": 0, "pending": 6 },
   "features": [
     {
       "id": "task-001",
@@ -46,7 +46,7 @@
     {
       "id": "task-003",
       "title": "레이아웃: Header + 탭 네비게이션 + 글로벌 상태",
-      "status": "pending",
+      "status": "done",
       "priority": "critical",
       "affected_packages": ["web-next/src/components", "web-next/src/app"],
       "tags": ["frontend", "layout"],
