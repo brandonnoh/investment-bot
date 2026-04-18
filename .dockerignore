@@ -1,0 +1,39 @@
+# Next.js 빌드 아티팩트 (Docker 내에서 빌드)
+web-next/node_modules
+web-next/.next
+web-next/out
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# 데이터베이스/출력 (로컬 전용)
+db/history.db
+output/
+
+# 환경/토큰
+.env
+.kiwoom_token.json
+
+# 개발 도구
+.claude/
+.claude-logs/
+.ralph-state/
+.git/
+.gitignore
+.mcp.json
+.playwright-mcp/
+
+# macOS
+.DS_Store
+
+# 로그
+logs/*.log
+
+# 문서 (런타임 불필요)
+*.md
+docs/
+specs/

@@ -1,5 +1,5 @@
 {
-  "summary": { "total": 9, "done": 8, "in_progress": 0, "pending": 1 },
+  "summary": { "total": 9, "done": 9, "in_progress": 0, "pending": 0 },
   "features": [
     {
       "id": "task-001",
@@ -169,7 +169,7 @@
     {
       "id": "task-009",
       "title": "Flask 정적 빌드 서빙 + Docker 통합",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "affected_packages": ["web/server.py", "Dockerfile", "docker-compose.yml"],
       "tags": ["backend", "deploy"],
