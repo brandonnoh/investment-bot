@@ -1,5 +1,5 @@
 {
-  "summary": { "total": 9, "done": 3, "in_progress": 0, "pending": 6 },
+  "summary": { "total": 9, "done": 4, "in_progress": 0, "pending": 5 },
   "features": [
     {
       "id": "task-001",
@@ -67,7 +67,7 @@
     {
       "id": "task-004",
       "title": "개요 탭 — StatsStrip + Holdings 테이블 + 사이드바",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "affected_packages": ["web-next/src/components/tabs"],
       "tags": ["frontend", "design"],
