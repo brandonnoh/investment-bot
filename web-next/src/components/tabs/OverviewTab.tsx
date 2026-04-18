@@ -72,7 +72,7 @@ function HoldingsTable() {
       <CardHeader className="py-3 px-4">
         <CardTitle className="text-xs font-mono">보유 종목</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-0 overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-mc-border hover:bg-transparent">
@@ -93,7 +93,7 @@ function HoldingsTable() {
               </TableRow>
             ) : (
               holdings.map((h) => (
-                <TableRow key={h.ticker} className="border-mc-border">
+                <TableRow key={h.ticker} className="border-mc-border min-h-[44px]">
                   <TableCell className="text-xs">
                     <div className="font-medium">{h.name}</div>
                     <div className="text-muted-foreground font-mono">{h.ticker}</div>
@@ -144,8 +144,8 @@ function MarketSidebar() {
     : 'text-muted-foreground'
 
   return (
-    <div className="space-y-3">
-      <Card className="bg-mc-card border-mc-border">
+    <div className="flex gap-3 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+      <Card className="bg-mc-card border-mc-border min-w-[180px] shrink-0 lg:min-w-0 lg:shrink">
         <CardHeader className="py-2 px-3">
           <CardTitle className="text-xs font-mono">시장 국면</CardTitle>
         </CardHeader>
@@ -173,7 +173,7 @@ function MarketSidebar() {
         </CardContent>
       </Card>
 
-      <Card className="bg-mc-card border-mc-border">
+      <Card className="bg-mc-card border-mc-border min-w-[180px] shrink-0 lg:min-w-0 lg:shrink">
         <CardHeader className="py-2 px-3">
           <CardTitle className="text-xs font-mono">Fear & Greed</CardTitle>
         </CardHeader>
@@ -185,7 +185,7 @@ function MarketSidebar() {
       </Card>
 
       {macro.length > 0 && (
-        <Card className="bg-mc-card border-mc-border">
+        <Card className="bg-mc-card border-mc-border min-w-[180px] shrink-0 lg:min-w-0 lg:shrink">
           <CardHeader className="py-2 px-3">
             <CardTitle className="text-xs font-mono">매크로</CardTitle>
           </CardHeader>
@@ -210,7 +210,7 @@ export function OverviewTab() {
   return (
     <div className="space-y-4">
       <StatsStrip />
-      <div className="grid grid-cols-[1fr_260px] lg:grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
         <div className="space-y-4 order-2 lg:order-1">
           <HoldingsTable />
         </div>

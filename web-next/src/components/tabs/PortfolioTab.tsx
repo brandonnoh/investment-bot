@@ -39,7 +39,7 @@ export function PortfolioTab() {
       </div>
 
       {/* 차트 2개 */}
-      <div className="grid grid-cols-[3fr_2fr] lg:grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4">
         <Card className="bg-mc-card border-mc-border">
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-xs font-mono">수익률 추이</CardTitle>

@@ -43,16 +43,16 @@ export function Header() {
         <button
           onClick={handleRunPipeline}
           disabled={isRunningPipeline}
-          className="text-xs px-3 py-1.5 rounded border border-mc-border bg-mc-bg hover:border-gold/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-sm px-2 py-1.5 min-h-[36px] min-w-[36px] rounded border border-mc-border bg-mc-bg hover:border-gold/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
         >
-          {isRunningPipeline ? '\u27F3 \uC218\uC9D1 \uC911...' : '\u25B6 \uD30C\uC774\uD504\uB77C\uC778'}
+          {isRunningPipeline ? '\u27F3' : '\u25B6'}<span className="hidden sm:inline text-xs">{isRunningPipeline ? '\uC218\uC9D1 \uC911...' : '\uD30C\uC774\uD504\uB77C\uC778'}</span>
         </button>
         <button
           onClick={handleRunMarcus}
           disabled={isRunningMarcus}
-          className="text-xs px-3 py-1.5 rounded border border-gold/30 bg-gold/5 text-gold hover:bg-gold/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-sm px-2 py-1.5 min-h-[36px] min-w-[36px] rounded border border-gold/30 bg-gold/5 text-gold hover:bg-gold/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
         >
-          {isRunningMarcus ? '\u27F3 \uBD84\uC11D \uC911...' : '\u2726 AI \uBD84\uC11D'}
+          {isRunningMarcus ? '\u27F3' : '\u2726'}<span className="hidden sm:inline text-xs">{isRunningMarcus ? '\uBD84\uC11D \uC911...' : 'AI \uBD84\uC11D'}</span>
         </button>
       </div>
     </header>

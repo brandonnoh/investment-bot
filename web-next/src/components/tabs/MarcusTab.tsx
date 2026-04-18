@@ -33,9 +33,9 @@ export function MarcusTab() {
   }
 
   return (
-    <div className="grid grid-cols-[1fr_280px] sm:grid-cols-1 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-[280px_1fr] gap-4">
       {/* 메인: 마크다운 결과 */}
-      <Card className="bg-mc-card border-mc-border min-w-0 order-2 sm:order-1">
+      <Card className="bg-mc-card border-mc-border min-w-0 order-2 sm:order-2">
         <CardContent className="p-4">
           {marcusRunning ? (
             <div className="text-gold text-sm font-mono animate-pulse">
@@ -89,45 +89,47 @@ export function MarcusTab() {
       )}
 
       {/* 사이드: 이력 목록 */}
-      <div className="space-y-2 order-1 sm:order-2">
+      <div className="order-1 sm:order-1">
         <div className="text-xs text-muted-foreground font-mono mb-3">
           분석 이력
         </div>
         {history.length === 0 ? (
           <p className="text-xs text-muted-foreground">이력 없음</p>
         ) : (
-          history.map((h) => (
-            <button
-              key={h.date}
-              onClick={() => {
-                void loadDetail(h.date)
-              }}
-              className={`w-full text-left p-3 rounded border transition-colors ${
-                selectedDate === h.date
-                  ? 'border-gold bg-gold/8'
-                  : 'border-mc-border bg-mc-card hover:border-gold/30'
-              }`}
-            >
-              <div className="font-mono text-xs font-semibold">{h.date}</div>
-              <div className="flex gap-2 items-center mt-1">
-                {h.confidence_level !== undefined && (
-                  <span className="text-[10px] text-gold">
-                    {'★'.repeat(h.confidence_level)}
-                  </span>
-                )}
-                {h.stance && (
-                  <span className="text-[10px] text-muted-foreground">
-                    {h.stance}
-                  </span>
-                )}
-              </div>
-              {h.today_call && (
-                <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
-                  {h.today_call}
+          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-col sm:overflow-visible sm:pb-0 sm:space-y-2">
+            {history.map((h) => (
+              <button
+                key={h.date}
+                onClick={() => {
+                  void loadDetail(h.date)
+                }}
+                className={`min-w-[120px] sm:min-w-0 sm:w-full text-left p-3 rounded border transition-colors shrink-0 sm:shrink ${
+                  selectedDate === h.date
+                    ? 'border-gold bg-gold/8'
+                    : 'border-mc-border bg-mc-card hover:border-gold/30'
+                }`}
+              >
+                <div className="font-mono text-xs font-semibold">{h.date}</div>
+                <div className="flex gap-2 items-center mt-1">
+                  {h.confidence_level !== undefined && (
+                    <span className="text-[10px] text-gold">
+                      {'★'.repeat(h.confidence_level)}
+                    </span>
+                  )}
+                  {h.stance && (
+                    <span className="text-[10px] text-muted-foreground">
+                      {h.stance}
+                    </span>
+                  )}
                 </div>
-              )}
-            </button>
-          ))
+                {h.today_call && (
+                  <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2 hidden sm:block">
+                    {h.today_call}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         )}
       </div>
     </div>

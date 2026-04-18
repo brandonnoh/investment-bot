@@ -16,7 +16,7 @@ export function SystemTab() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 sm:grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {statusItems.map(item => (
           <Card key={item.label} className="bg-mc-card border-mc-border">
             <CardContent className="pt-3 pb-3">
@@ -33,7 +33,7 @@ export function SystemTab() {
             <CardTitle className="text-xs font-mono">Intel 파일</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {engine.intel_files.map(file => (
                 <Badge
                   key={file}

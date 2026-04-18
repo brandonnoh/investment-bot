@@ -20,7 +20,7 @@ export default function Home() {
       <div className="min-h-screen bg-mc-bg flex flex-col">
         <Header />
         <TabNav />
-        <main className="flex-1 p-4 max-w-[1400px] mx-auto w-full">
+        <main className="flex-1 p-4 pb-20 sm:pb-4 max-w-[1400px] mx-auto w-full">
           {activeTab === 'overview' && <OverviewTab />}
           {activeTab === 'portfolio' && <PortfolioTab />}
           {activeTab === 'marcus' && <MarcusTab />}
