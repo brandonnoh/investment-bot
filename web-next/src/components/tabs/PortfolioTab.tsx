@@ -31,9 +31,9 @@ export function PortfolioTab() {
   return (
     <div className="space-y-4">
       {/* 요약 카드 4개 */}
-      <div className="grid grid-cols-4 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <SummaryCard label="투자원금" value={`${fmtKrw(total?.invested_krw)}원`} />
-        <SummaryCard label="평가금액" value={`${fmtKrw(total?.total_value_krw)}원`} />
+        <SummaryCard label="평가금액" value={`${fmtKrw(total?.current_value_krw)}원`} />
         <SummaryCard label="총 손익" value={`${fmtKrw(total?.pnl_krw)}원`} color={pctColor(total?.pnl_pct)} />
         <SummaryCard label="수익률" value={fmtPct(total?.pnl_pct)} color={pctColor(total?.pnl_pct)} />
       </div>

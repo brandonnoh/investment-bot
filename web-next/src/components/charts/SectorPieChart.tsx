@@ -13,8 +13,8 @@ interface SectorEntry {
 export function SectorPieChart({ holdings }: { holdings: PriceItem[] }) {
   const sectorMap: Record<string, number> = {}
   holdings.forEach(h => {
-    const key = h.market ?? '기타'
-    sectorMap[key] = (sectorMap[key] ?? 0) + 1
+    const key = h.sector ?? h.market ?? '기타'  // 실제 필드: sector
+    sectorMap[key] = (sectorMap[key] ?? 0) + (h.current_value_krw ?? 1)
   })
   const data: SectorEntry[] = Object.entries(sectorMap).map(([name, value]) => ({ name, value }))
 

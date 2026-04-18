@@ -11,8 +11,8 @@ export function useProcessStatus() {
     { refreshInterval: 5_000, revalidateOnFocus: false },
   )
   return {
-    pipelineRunning: data?.pipeline_running ?? false,
-    marcusRunning: data?.marcus_running ?? false,
+    pipelineRunning: data?.pipeline?.running ?? false,
+    marcusRunning: data?.marcus?.running ?? false,
     data,
     error,
     isLoading,

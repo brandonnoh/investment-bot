@@ -14,7 +14,7 @@ function scoreColor(score: number): string {
 
 export function DiscoveryTab() {
   const { data } = useIntelData()
-  const opportunities = data?.opportunities ?? []
+  const opportunities = data?.opportunities?.opportunities ?? []  // 실제: data.opportunities.opportunities[]
 
   const chartData = opportunities.map(o => ({
     name: o.name ?? o.ticker,

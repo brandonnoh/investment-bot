@@ -6,7 +6,7 @@ import type { PortfolioHistory } from '@/types/api'
 export function PnlLineChart({ history }: { history: PortfolioHistory[] }) {
   const data = history.map(h => ({
     date: h.date.slice(5),  // MM-DD
-    pnl: +(h.pnl_pct ?? h.total_pnl_pct ?? 0).toFixed(2),
+    pnl: +(h.total_pnl_pct ?? 0).toFixed(2),  // 실제 필드: total_pnl_pct
   }))
 
   return (
