@@ -3,7 +3,7 @@
 import { useMCStore } from '@/store/useMCStore'
 import { useProcessStatus } from '@/hooks/useProcessStatus'
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8421'
+const BASE = process.env.NEXT_PUBLIC_API_BASE ?? ''
 
 export function Header() {
   const { pipelineRunning, marcusRunning, sseStatus, lastUpdated, setPipelineRunning, setMarcusRunning } = useMCStore()

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useMCStore } from '@/store/useMCStore'
 import { useMarcusLog } from '@/hooks/useMarcusLog'
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8421'
+const BASE = process.env.NEXT_PUBLIC_API_BASE ?? ''
 
 export function MarcusTab() {
   const { data: intel } = useIntelData()

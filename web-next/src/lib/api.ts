@@ -5,7 +5,11 @@ import type {
   ProcessStatus,
 } from '@/types/api'
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8421'
+// Flask가 정적 파일과 API 모두 서빙하므로 상대 경로 사용
+// NEXT_PUBLIC_API_BASE는 개발 모드(dev server)에서 로컬 Flask 연결 시에만 사용
+const BASE = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE
+  ? process.env.NEXT_PUBLIC_API_BASE
+  : ''
 
 async function apiFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`)
