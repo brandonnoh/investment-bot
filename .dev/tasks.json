@@ -1,5 +1,5 @@
 {
-  "summary": { "total": 9, "done": 1, "in_progress": 0, "pending": 8 },
+  "summary": { "total": 9, "done": 2, "in_progress": 0, "pending": 7 },
   "features": [
     {
       "id": "task-001",
@@ -25,7 +25,7 @@
     {
       "id": "task-002",
       "title": "API 타입 정의 + SWR 데이터 훅",
-      "status": "pending",
+      "status": "done",
       "priority": "critical",
       "affected_packages": ["web-next/src/lib", "web-next/src/hooks"],
       "tags": ["frontend", "api"],
