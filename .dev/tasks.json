@@ -1,5 +1,5 @@
 {
-  "summary": { "total": 9, "done": 7, "in_progress": 0, "pending": 2 },
+  "summary": { "total": 9, "done": 8, "in_progress": 0, "pending": 1 },
   "features": [
     {
       "id": "task-001",
@@ -150,7 +150,7 @@
     {
       "id": "task-008",
       "title": "SSE 실시간 연결 + 파이프라인/Marcus 실행 연동",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "affected_packages": ["web-next/src/hooks", "web-next/src/components"],
       "tags": ["frontend"],

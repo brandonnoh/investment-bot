@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory'
 import { useIntelData } from '@/hooks/useIntelData'
 import ReactMarkdown from 'react-markdown'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useMCStore } from '@/store/useMCStore'
+import { useMarcusLog } from '@/hooks/useMarcusLog'
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8421'
 
@@ -13,6 +14,7 @@ export function MarcusTab() {
   const { data: intel } = useIntelData()
   const { history } = useAnalysisHistory()
   const { marcusRunning } = useMCStore()
+  const logLines = useMarcusLog(marcusRunning)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
 
@@ -56,6 +58,35 @@ export function MarcusTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* 라이브 로그 뷰어 */}
+      {marcusRunning && logLines.length > 0 && (
+        <Card className="bg-mc-card border-mc-border mt-4 order-3 col-span-full">
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="text-xs font-mono">라이브 로그</CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-3">
+            <div className="font-mono text-xs space-y-0.5 max-h-48 overflow-y-auto">
+              {logLines.map((line, i) => (
+                <div
+                  key={i}
+                  className={
+                    line.includes('\u2705')
+                      ? 'text-mc-green'
+                      : line.includes('\u274C')
+                        ? 'text-mc-red'
+                        : line.includes('\u26A0')
+                          ? 'text-amber-400'
+                          : 'text-muted-foreground'
+                  }
+                >
+                  {line}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 사이드: 이력 목록 */}
       <div className="space-y-2 order-1 sm:order-2">
