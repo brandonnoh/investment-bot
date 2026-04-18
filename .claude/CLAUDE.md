@@ -146,3 +146,18 @@ Available skills:
 - `/setup-browser-cookies`, `/setup-deploy`, `/retro`, `/investigate`
 - `/document-release`, `/codex`, `/cso`, `/autoplan`
 - `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`
+
+## Deploy Configuration (configured by /setup-deploy)
+- Platform: Docker Compose (self-hosted, Mac mini)
+- Production URL: http://100.90.201.87:8421
+- Deploy workflow: docker compose up -d --build
+- Deploy status command: docker ps --filter name=investment-bot
+- Merge method: merge
+- Project type: web app (Python Flask, 미션컨트롤 대시보드)
+- Post-deploy health check: http://100.90.201.87:8421
+
+### Custom deploy hooks
+- Pre-merge: none
+- Deploy trigger: docker compose up -d --build (수동 실행)
+- Deploy status: docker ps --filter name=investment-bot --format "{{.Status}}"
+- Health check: http://localhost:8421

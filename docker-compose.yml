@@ -1,0 +1,13 @@
+services:
+  investment-bot:
+    build: .
+    container_name: investment-bot
+    restart: unless-stopped
+    ports:
+      - "8421:8421"
+    volumes:
+      - ./db:/app/db
+      - ./output:/app/output
+      - ./logs:/app/logs
+    env_file:
+      - .env
