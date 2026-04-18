@@ -1,5 +1,5 @@
 {
-  "summary": { "total": 9, "done": 4, "in_progress": 0, "pending": 5 },
+  "summary": { "total": 9, "done": 6, "in_progress": 0, "pending": 3 },
   "features": [
     {
       "id": "task-001",
@@ -89,7 +89,7 @@
     {
       "id": "task-005",
       "title": "포트폴리오 탭 — 손익 추이 차트 + 섹터 파이 차트",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "affected_packages": ["web-next/src/components/tabs"],
       "tags": ["frontend", "design"],
@@ -109,7 +109,7 @@
     {
       "id": "task-006",
       "title": "AI 분석 탭 — Marcus 결과 + 이력 사이드패널",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "affected_packages": ["web-next/src/components/tabs"],
       "tags": ["frontend", "design"],
