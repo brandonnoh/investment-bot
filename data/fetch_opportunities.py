@@ -318,7 +318,18 @@ def _save_results(opportunities: list, keywords: list, out_dir: Path) -> None:
 
 
 def run(conn=None, keywords_path=None, output_dir=None) -> list:
-    """종목 발굴 파이프라인 실행.
+    """종목 발굴 — value_screener 기반 (섹터 스크리닝)으로 위임."""
+    try:
+        from analysis.value_screener import run as screener_run
+
+        return screener_run()
+    except Exception as e:
+        print(f"  ⚠️  value_screener 실패, legacy로 폴백: {e}")
+        return _legacy_run(conn=conn, keywords_path=keywords_path, output_dir=output_dir)
+
+
+def _legacy_run(conn=None, keywords_path=None, output_dir=None) -> list:
+    """기존 Brave 키워드 검색 기반 종목 발굴 (fallback용).
 
     1. discovery_keywords.json 읽기
     2. 키워드별 Brave/Naver 뉴스 검색
@@ -336,8 +347,8 @@ def run(conn=None, keywords_path=None, output_dir=None) -> list:
     kw_path = Path(keywords_path) if keywords_path else KEYWORDS_PATH
     out_dir = Path(output_dir) if output_dir else OUTPUT_DIR
 
-    # 1. 키워드 freshness 확인 (없거나 25h 경과 시 fallback 자동 생성)
-    if ensure_fresh_keywords is not None:
+    # 1. 키워드 freshness 확인 — 기본 경로일 때만 fallback 자동 생성
+    if keywords_path is None and ensure_fresh_keywords is not None:
         ensure_fresh_keywords(kw_path, out_dir)
 
     if not kw_path.exists():
