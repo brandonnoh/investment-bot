@@ -11,3 +11,14 @@ services:
       - ./logs:/app/logs
     env_file:
       - .env
+
+  mc-web:
+    build: ./web-next
+    container_name: mc-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PYTHON_API_URL=http://investment-bot:8421
+    depends_on:
+      - investment-bot
