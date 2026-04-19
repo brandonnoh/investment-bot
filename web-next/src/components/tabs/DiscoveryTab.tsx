@@ -49,7 +49,7 @@ export function DiscoveryTab() {
         <CardHeader className="py-3 px-4">
           <CardTitle className="text-xs font-mono">발굴 종목</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-mc-border hover:bg-transparent">

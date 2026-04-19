@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAnalysisHistory } from '@/hooks/useAnalysisHistory'
 import { useIntelData } from '@/hooks/useIntelData'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useMCStore } from '@/store/useMCStore'
 import { useMarcusLog } from '@/hooks/useMarcusLog'
@@ -49,7 +50,22 @@ export function MarcusTab() {
               prose-code:text-gold prose-code:bg-mc-bg prose-code:px-1 prose-code:rounded
               prose-blockquote:border-l-gold prose-blockquote:text-muted-foreground"
             >
-              <ReactMarkdown>{currentMd}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  table: ({ children }) => (
+                    <div className="overflow-x-auto my-2">
+                      <table className="w-full text-xs border-collapse">{children}</table>
+                    </div>
+                  ),
+                  th: ({ children }) => (
+                    <th className="border border-mc-border px-2 py-1 text-left text-gold bg-mc-bg font-mono">{children}</th>
+                  ),
+                  td: ({ children }) => (
+                    <td className="border border-mc-border px-2 py-1">{children}</td>
+                  ),
+                }}
+              >{currentMd}</ReactMarkdown>
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">
