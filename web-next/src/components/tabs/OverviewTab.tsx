@@ -206,16 +206,132 @@ function MarketSidebar() {
   )
 }
 
+function PortfolioHero() {
+  const { data } = useIntelData()
+  const total = data?.portfolio_summary?.total
+
+  return (
+    <Card className="bg-mc-card border-mc-border">
+      <CardContent className="pt-5 pb-5 px-5">
+        <div className="text-xs text-muted-foreground font-mono">포트폴리오 평가금액</div>
+        <div className="text-4xl font-mono font-bold mt-2 text-foreground">
+          {fmtKrw(total?.current_value_krw)}<span className="text-2xl text-muted-foreground ml-1">원</span>
+        </div>
+        <div className={`flex items-center gap-3 mt-2 ${pctColor(total?.pnl_pct)}`}>
+          <span className="text-2xl font-mono font-bold">{fmtPct(total?.pnl_pct)}</span>
+          <span className="text-base font-mono">{fmtKrw(total?.pnl_krw)}원</span>
+        </div>
+        <div className="text-xs text-muted-foreground font-mono mt-2">
+          투자원금 {fmtKrw(total?.invested_krw)}원
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function MarketBar() {
+  const { data } = useIntelData()
+  const regime = data?.regime
+  const supply = data?.supply_data
+  const fg = supply?.fear_greed?.score
+  const cashRatio = regime?.strategy?.cash_ratio
+
+  const fgColor = fg !== undefined
+    ? fg <= 25 ? 'text-mc-red'
+    : fg <= 45 ? 'text-amber'
+    : 'text-mc-green'
+    : 'text-muted-foreground'
+
+  return (
+    <div className="bg-mc-card border border-mc-border rounded-lg px-4 py-2.5 flex items-center gap-0 overflow-x-auto">
+      <span className="text-gold text-xs font-mono font-bold whitespace-nowrap">{regime?.regime ?? '—'}</span>
+      {regime?.confidence && (
+        <>
+          <span className="text-mc-border mx-2 text-xs">·</span>
+          <span className="text-muted-foreground text-xs font-mono whitespace-nowrap">신뢰 {(regime.confidence * 100).toFixed(0)}%</span>
+        </>
+      )}
+      {fg !== undefined && (
+        <>
+          <span className="text-mc-border mx-2 text-xs">·</span>
+          <span className={`text-xs font-mono whitespace-nowrap ${fgColor}`}>Fear {fg}</span>
+        </>
+      )}
+      {regime?.vix !== undefined && (
+        <>
+          <span className="text-mc-border mx-2 text-xs">·</span>
+          <span className="text-muted-foreground text-xs font-mono whitespace-nowrap">VIX {regime.vix.toFixed(1)}</span>
+        </>
+      )}
+      {cashRatio != null && (
+        <>
+          <span className="text-mc-border mx-2 text-xs">·</span>
+          <span className="text-muted-foreground text-xs font-mono whitespace-nowrap">현금 {(cashRatio * 100).toFixed(0)}%</span>
+        </>
+      )}
+    </div>
+  )
+}
+
+function MobileHoldingsList() {
+  const { data, isLoading } = useIntelData()
+  const holdings = data?.portfolio_summary?.holdings ?? []
+
+  if (isLoading) return <div className="text-muted-foreground text-xs p-4">로딩 중...</div>
+
+  return (
+    <Card className="bg-mc-card border-mc-border">
+      <CardHeader className="py-3 px-4">
+        <CardTitle className="text-xs font-mono">보유 종목</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-2">
+        {holdings.length === 0 ? (
+          <div className="text-center text-muted-foreground text-xs py-6">보유 종목 없음</div>
+        ) : (
+          <div className="divide-y divide-mc-border">
+            {holdings.map(h => (
+              <div key={h.ticker} className="flex items-center justify-between py-3.5 min-h-[56px]">
+                <div>
+                  <div className="text-sm font-medium">{h.name}</div>
+                  <div className="text-xs text-muted-foreground font-mono">{h.ticker}</div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-sm font-mono font-bold ${pctColor(h.pnl_pct)}`}>
+                    {fmtPct(h.pnl_pct)}
+                  </div>
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {h.price?.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function OverviewTab() {
   return (
-    <div className="space-y-4">
-      <StatsStrip />
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
-        <div className="space-y-4 order-2 lg:order-1">
-          <HoldingsTable />
-        </div>
-        <div className="order-1 lg:order-2">
-          <MarketSidebar />
+    <div className="space-y-3">
+      {/* 모바일 전용 레이아웃 (lg 미만) */}
+      <div className="lg:hidden space-y-3">
+        <PortfolioHero />
+        <MarketBar />
+        <MobileHoldingsList />
+      </div>
+
+      {/* 데스크탑 전용 레이아웃 (lg 이상) */}
+      <div className="hidden lg:block space-y-4">
+        <StatsStrip />
+        <div className="grid grid-cols-[1fr_260px] gap-4">
+          <div className="space-y-4">
+            <HoldingsTable />
+          </div>
+          <div>
+            <MarketSidebar />
+          </div>
         </div>
       </div>
     </div>
