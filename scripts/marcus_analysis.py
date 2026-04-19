@@ -79,8 +79,8 @@ def validate_marcus_output(md_text: str) -> dict:
     # 2. 필수 요소 체크 (섹션 헤더 대신 키 문구로 검증)
     if "오늘의 판단" not in md_text:
         errors.append("필수 요소 누락: 오늘의 판단 블록")
-    if "포트폴리오" not in md_text:
-        errors.append("필수 요소 누락: 포트폴리오 테이블")
+    if "포트폴리오" not in md_text and "내 종목" not in md_text:
+        errors.append("필수 요소 누락: 포트폴리오/종목 테이블")
     if "매크로" not in md_text and "시장 지표" not in md_text:
         errors.append("필수 요소 누락: 시장 지표")
 

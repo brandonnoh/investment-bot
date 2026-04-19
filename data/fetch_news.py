@@ -30,6 +30,25 @@ from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))
 
+
+def _load_dynamic_keywords() -> list[str]:
+    """Marcus가 생성한 오늘의 동적 키워드 로드 (없으면 빈 리스트)"""
+    path = OUTPUT_DIR / "search_keywords.json"
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        today = datetime.now(KST).strftime("%Y-%m-%d")
+        if data.get("date") != today:
+            return []  # 오늘 생성된 것만 사용
+        keywords = data.get("keywords", [])
+        if keywords:
+            print(f"  📌 동적 키워드 {len(keywords)}개 로드: {keywords[:3]}...")
+        return keywords
+    except Exception:
+        return []
+
+
 # ── RSS로 수집할 종목 키워드 ──
 TICKER_KEYWORDS = {
     "005930.KS": ["삼성전자 주가", "삼성전자 실적", "삼성전자 HBM"],
@@ -136,9 +155,7 @@ def _collect_rss_stock_news(now: str, seen_urls: set) -> tuple[list[dict], int]:
                         "source": article["source"],
                         "url": url,
                         "published_at": article["published_at"],
-                        "relevance_score": calculate_relevance(
-                            article["title"], keywords
-                        ),
+                        "relevance_score": calculate_relevance(article["title"], keywords),
                         "category": "stock",
                         "tickers": [ticker],
                         "ticker_name": name,
@@ -290,6 +307,41 @@ def _collect_discovery_news(now: str, seen_urls: set) -> tuple[list[dict], int]:
     return items, count
 
 
+def _collect_dynamic_keyword_news(now: str, seen_urls: set) -> tuple[list[dict], int]:
+    """Marcus 동적 키워드로 RSS 뉴스 수집. (items, count) 반환"""
+    items = []
+    count = 0
+    dynamic_keywords = _load_dynamic_keywords()
+    for kw in dynamic_keywords:
+        try:
+            results = fetch_google_news_rss(kw, count=3)
+            for article in results:
+                url = article.get("url", "")
+                if url in seen_urls:
+                    continue
+                seen_urls.add(url)
+                items.append(
+                    {
+                        "title": article["title"],
+                        "summary": "",
+                        "source": article["source"],
+                        "url": url,
+                        "published_at": article["published_at"],
+                        "relevance_score": 0.85,
+                        "category": "marcus_dynamic",
+                        "tickers": [],
+                        "ticker_name": kw,
+                        "fetch_method": "rss",
+                        "timestamp": now,
+                    }
+                )
+                count += 1
+            print(f"  ✅ [RSS] dynamic [{kw[:25]}]: {len(results)}건")
+        except Exception as e:
+            print(f"  ❌ [RSS] dynamic [{kw[:25]}]: {e}")
+    return items, count
+
+
 def collect_news() -> tuple[list[dict], int, int]:
     """하이브리드 뉴스 수집: RSS + Brave. (records, rss_count, brave_count) 반환"""
     now = datetime.now(KST).isoformat()
@@ -313,6 +365,11 @@ def collect_news() -> tuple[list[dict], int, int]:
     disc_items, disc_rss = _collect_discovery_news(now, seen_urls)
     all_news.extend(disc_items)
     rss_count += disc_rss
+
+    # 4. Marcus 동적 키워드 — 오늘 생성된 키워드로 추가 수집
+    dynamic_items, dynamic_rss = _collect_dynamic_keyword_news(now, seen_urls)
+    all_news.extend(dynamic_items)
+    rss_count += dynamic_rss
 
     # 관련도 높은 순으로 정렬
     all_news.sort(key=lambda x: x["relevance_score"], reverse=True)

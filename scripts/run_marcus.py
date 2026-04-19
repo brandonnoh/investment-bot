@@ -5,9 +5,12 @@ launchd → 매일 05:30 KST 실행 (평일)
 """
 
 import json
+import re
 import shutil
+import sqlite3
 import subprocess
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -182,8 +185,8 @@ def _assemble_prompt(
 ### 발굴 기회
 {opportunities}
 
-출력 파일: {OUTPUT_FILE}
-위 형식에 맞게 분석 결과를 작성하세요.
+위 prompt.md의 출력 형식(## RISK FIRST, ## MARKET REGIME, ## PORTFOLIO REVIEW, ## OPPORTUNITIES, ## TODAY'S CALL 섹션 포함)에 맞게 분석 결과를 **그대로 stdout에 출력**하세요.
+파일 저장이나 도구 사용 없이 텍스트만 출력하세요.
 """
 
 
@@ -208,6 +211,62 @@ def _send_failure_alert(error_msg: str) -> None:
         _urllib.urlopen(req, timeout=15)
     except Exception:
         pass
+
+
+def _build_keyword_prompt(analysis_snippet: str) -> str:
+    """키워드 추출용 Claude 프롬프트 생성"""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    return (
+        "다음 분석 결과를 바탕으로, 오늘 추가로 수집해야 할 뉴스 검색 키워드 8개를 "
+        "JSON으로만 출력해.\n"
+        f'형식: {{"date": "{today}", "keywords": ["키워드1", ...], '
+        '"reason": "왜 이 키워드들이 중요한지 한줄"}\n\n'
+        f"분석:\n{analysis_snippet}"
+    )
+
+
+def _parse_keyword_json(raw: str) -> dict | None:
+    """Claude 응답에서 JSON 블록 추출 및 파싱"""
+    # ```json ... ``` 블록 또는 { ... } 직접 파싱
+    m = re.search(r"\{[\s\S]*\"keywords\"[\s\S]*\}", raw)
+    if not m:
+        return None
+    try:
+        return json.loads(m.group(0))
+    except json.JSONDecodeError:
+        return None
+
+
+def _generate_search_keywords(analysis: str, macro: str, portfolio: str) -> None:
+    """Marcus 분석 결과에서 오늘의 동적 검색 키워드 추출"""
+    print("  🔑 동적 검색 키워드 생성 중...")
+    try:
+        snippet = analysis[:500]
+        prompt = _build_keyword_prompt(snippet)
+        result = subprocess.run(
+            [CLAUDE_BIN, "--dangerously-skip-permissions", "-p", prompt],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=str(PROJECT_ROOT),
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            print("  ⚠️  키워드 생성 실패: Claude 응답 없음")
+            return
+        parsed = _parse_keyword_json(result.stdout.strip())
+        if not parsed or "keywords" not in parsed:
+            print("  ⚠️  키워드 JSON 파싱 실패")
+            return
+        # 날짜 보정
+        parsed["date"] = datetime.now(KST).strftime("%Y-%m-%d")
+        out_path = INTEL_DIR / "search_keywords.json"
+        out_path.write_text(json.dumps(parsed, ensure_ascii=False, indent=2), encoding="utf-8")
+        kws = parsed["keywords"]
+        print(f"  ✅ 키워드 {len(kws)}개 저장: {kws[:3]}...")
+    except subprocess.TimeoutExpired:
+        print("  ⚠️  키워드 생성 타임아웃 (60초)")
+    except Exception as e:
+        print(f"  ⚠️  키워드 생성 실패: {e}")
 
 
 def run():
@@ -267,7 +326,7 @@ def run():
     claude_output = ""
     try:
         result = subprocess.run(
-            [CLAUDE_BIN, "--dangerously-skip-permissions", "--print", "-p", prompt],
+            [CLAUDE_BIN, "--dangerously-skip-permissions", "-p", prompt],
             capture_output=True,
             text=True,
             timeout=300,
@@ -303,6 +362,9 @@ def run():
         print(f"  ❌ 파일 저장 실패: {e}")
         _send_failure_alert(f"파일 저장 실패: {e}")
         return
+
+    # ── STEP 6.3: 동적 검색 키워드 생성 ──
+    _generate_search_keywords(claude_output, macro, portfolio_summary)
 
     # ── STEP 6.5: DB 저장 ──
     _save_to_db(claude_output)
