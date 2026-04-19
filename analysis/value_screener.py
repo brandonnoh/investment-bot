@@ -100,6 +100,21 @@ def _calc_composite_score(metrics: dict) -> float:
 
 # ── 캐시 로드 ──
 
+UNIVERSE_CACHE_PATH = OUTPUT_DIR / "universe_cache.json"
+
+
+def _load_universe_cache() -> dict[str, dict]:
+    """universe_cache.json 로드 (없으면 빈 dict)"""
+    if not UNIVERSE_CACHE_PATH.exists():
+        return {}
+    try:
+        data = json.loads(
+            UNIVERSE_CACHE_PATH.read_text(encoding="utf-8"),
+        )
+        return data.get("stocks", {})
+    except (json.JSONDecodeError, KeyError):
+        return {}
+
 
 def _load_fundamentals_cache() -> dict[str, dict]:
     """fundamentals.json에서 티커별 캐시 딕셔너리 반환"""
@@ -155,8 +170,12 @@ def _fetch_stock_metrics(
     conn,
     ticker: str,
     cache: dict[str, dict],
+    uni_cache: dict[str, dict] | None = None,
 ) -> dict:
-    """단일 종목 RSI + PER/PBR/ROE + 52주 범위 수집"""
+    """단일 종목 RSI + PER/PBR/ROE + 52주 범위 수집
+
+    조회 우선순위: universe_cache → fundamentals 캐시 → Yahoo Finance
+    """
     metrics: dict = {"ticker": ticker}
 
     # RSI (DB)
@@ -173,13 +192,12 @@ def _fetch_stock_metrics(
     except Exception:
         metrics["pos_52w_pct"] = None
 
-    # PER/PBR/ROE (캐시 우선 → Yahoo Finance 폴백)
-    fund = cache.get(ticker)
-    if not fund:
-        try:
-            fund = fetch_yahoo_financials(ticker) or {}
-        except Exception:
-            fund = {}
+    # PER/PBR/ROE (universe_cache → fundamentals → Yahoo)
+    fund = _resolve_fundamentals(
+        ticker,
+        cache,
+        uni_cache,
+    )
 
     metrics["per"] = fund.get("per")
     metrics["pbr"] = fund.get("pbr")
@@ -190,6 +208,30 @@ def _fetch_stock_metrics(
     )
 
     return metrics
+
+
+def _resolve_fundamentals(
+    ticker: str,
+    cache: dict[str, dict],
+    uni_cache: dict[str, dict] | None,
+) -> dict:
+    """PER/PBR/ROE 조회: universe_cache → fundamentals → Yahoo"""
+    # 1. universe_cache.json 우선
+    if uni_cache:
+        entry = uni_cache.get(ticker)
+        if entry and entry.get("per") is not None:
+            return entry
+
+    # 2. fundamentals.json 캐시
+    fund = cache.get(ticker)
+    if fund and fund.get("per") is not None:
+        return fund
+
+    # 3. Yahoo Finance 직접 호출
+    try:
+        return fetch_yahoo_financials(ticker) or {}
+    except Exception:
+        return {}
 
 
 # ── 대상 종목 수집 ──
@@ -315,6 +357,7 @@ def run() -> list:
         print("  대상 종목 없음")
         return []
 
+    uni_cache = _load_universe_cache()
     cache = _load_fundamentals_cache()
     conn = sqlite3.connect(str(DB_PATH))
 
@@ -324,6 +367,7 @@ def run() -> list:
             conn,
             item["ticker"],
             cache,
+            uni_cache,
         )
         result = _screen_ticker(metrics, item["sector"])
         if result:
