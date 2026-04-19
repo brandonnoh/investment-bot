@@ -48,15 +48,54 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 
   --color-gold: #c9a93a;
-  --color-mc-bg: #0c0b0a;
-  --color-mc-card: #131210;
-  --color-mc-border: #2a2420;
+  --color-mc-bg: var(--mc-bg);
+  --color-mc-card: var(--mc-card);
+  --color-mc-border: var(--mc-border);
   --color-mc-green: #4dca7e;
   --color-mc-red: #e05656;
   --color-amber: #e09b3d;
 }
 
 :root {
+  --background: 0 0% 97%;
+  --foreground: 30 15% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 30 15% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 30 15% 15%;
+  --primary: 43 60% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 30 10% 92%;
+  --secondary-foreground: 30 15% 15%;
+  --muted: 30 10% 92%;
+  --muted-foreground: 30 10% 40%;
+  --accent: 30 10% 92%;
+  --accent-foreground: 30 15% 15%;
+  --destructive: 0 70% 55%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 25 20% 85%;
+  --input: 25 20% 85%;
+  --ring: 43 60% 45%;
+  --radius: 0.5rem;
+  --chart-1: 43 60% 45%;
+  --chart-2: 150 50% 40%;
+  --chart-3: 0 70% 55%;
+  --chart-4: 30 80% 50%;
+  --chart-5: 200 50% 45%;
+  --sidebar: 0 0% 96%;
+  --sidebar-foreground: 30 15% 15%;
+  --sidebar-primary: 43 60% 45%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 30 10% 90%;
+  --sidebar-accent-foreground: 30 15% 15%;
+  --sidebar-border: 25 20% 82%;
+  --sidebar-ring: 43 60% 45%;
+  --mc-bg: #f8f6f3;
+  --mc-card: #ffffff;
+  --mc-border: #e8e0d8;
+}
+
+.dark {
   --background: 0 0% 5%;
   --foreground: 30 20% 88%;
   --card: 30 10% 7%;
@@ -76,7 +115,6 @@
   --border: 25 20% 15%;
   --input: 25 20% 15%;
   --ring: 43 60% 51%;
-  --radius: 0.5rem;
   --chart-1: 43 60% 51%;
   --chart-2: 150 50% 50%;
   --chart-3: 0 70% 60%;
@@ -90,6 +128,9 @@
   --sidebar-accent-foreground: 30 20% 88%;
   --sidebar-border: 25 20% 15%;
   --sidebar-ring: 43 60% 51%;
+  --mc-bg: #0c0b0a;
+  --mc-card: #131210;
+  --mc-border: #2a2420;
 }
 
 @layer base {

@@ -1,13 +1,21 @@
 'use client'
 
+import { useTheme } from 'next-themes'
 import { useMCStore } from '@/store/useMCStore'
 import { useProcessStatus } from '@/hooks/useProcessStatus'
+import { useEffect, useState } from 'react'
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE ?? ''
 
 export function Header() {
   const { pipelineRunning, marcusRunning, sseStatus, lastUpdated, setPipelineRunning, setMarcusRunning } = useMCStore()
   const { pipelineRunning: pipelineActive, marcusRunning: marcusActive } = useProcessStatus()
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const isRunningPipeline = pipelineRunning || pipelineActive
   const isRunningMarcus = marcusRunning || marcusActive
@@ -40,6 +48,15 @@ export function Header() {
         {lastUpdated && <span className="text-xs text-muted-foreground hidden sm:block">{lastUpdated}</span>}
       </div>
       <div className="flex items-center gap-2">
+        {mounted && (
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="text-sm px-2 py-1.5 min-h-[36px] min-w-[36px] rounded border border-mc-border bg-mc-bg hover:border-gold/50 transition-colors flex items-center justify-center"
+            title="테마 전환"
+          >
+            {theme === 'dark' ? '\u2600' : '\uD83C\uDF19'}
+          </button>
+        )}
         <button
           onClick={handleRunPipeline}
           disabled={isRunningPipeline}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
+import { ThemeProvider } from '@/components/ThemeProvider'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -29,9 +30,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ko" className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
-      <body className="bg-[#0c0b0a] text-[#e2d9d0] antialiased">
-        {children}
+    <html lang="ko" className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+      <body className="bg-background text-foreground antialiased">
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )
