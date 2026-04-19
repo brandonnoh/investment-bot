@@ -26,15 +26,54 @@ export function MarcusTab() {
     try {
       const res = await fetch(`${BASE}/api/analysis-history?date=${date}`)
       if (!res.ok) throw new Error('fetch failed')
-      const d = (await res.json()) as { analysis?: string }
-      setDetail(d?.analysis ?? '')
+      const d = (await res.json()) as { content?: string; analysis?: string }
+      setDetail(d?.content ?? d?.analysis ?? '')
     } catch {
       setDetail('')
     }
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[280px_1fr] gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-[260px_1fr] gap-4">
+      {/* 사이드: 이력 목록 */}
+      <div className="order-1 sm:order-1">
+        <div className="text-xs text-muted-foreground font-mono mb-3">분석 이력</div>
+        {history.length === 0 ? (
+          <p className="text-xs text-muted-foreground">이력 없음</p>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-col sm:overflow-visible sm:pb-0 sm:space-y-2">
+            {history.map((h) => (
+              <button
+                key={h.date}
+                onClick={() => { void loadDetail(h.date) }}
+                className={`min-w-[120px] sm:min-w-0 sm:w-full text-left p-3 rounded border transition-colors shrink-0 sm:shrink ${
+                  selectedDate === h.date
+                    ? 'border-gold bg-gold/10'
+                    : 'border-mc-border bg-mc-card hover:border-gold/40'
+                }`}
+              >
+                <div className="font-mono text-xs font-semibold">{h.date}</div>
+                <div className="flex gap-2 items-center mt-1">
+                  {h.confidence_level !== undefined && (
+                    <span className="text-[10px] text-gold">
+                      {'★'.repeat(h.confidence_level)}
+                    </span>
+                  )}
+                  {h.stance && (
+                    <span className="text-[10px] text-muted-foreground">{h.stance}</span>
+                  )}
+                </div>
+                {h.today_call && (
+                  <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2 hidden sm:block">
+                    {h.today_call}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* 메인: 마크다운 결과 */}
       <Card className="bg-mc-card border-mc-border min-w-0 order-2 sm:order-2">
         <CardContent className="p-4">
@@ -43,34 +82,60 @@ export function MarcusTab() {
               AI 분석 실행 중...
             </div>
           ) : currentMd ? (
-            <div
-              className="prose prose-invert prose-sm max-w-none text-foreground
-              prose-headings:text-gold prose-headings:font-mono
-              prose-h1:text-base prose-h1:font-bold prose-h1:mb-1
-              prose-h2:text-sm prose-h2:font-semibold prose-h2:mb-1
-              prose-h3:text-xs prose-h3:font-semibold prose-h3:uppercase prose-h3:tracking-wider prose-h3:text-gold/70 prose-h3:mb-1 prose-h3:mt-4
-              prose-strong:text-foreground
-              prose-code:text-gold prose-code:bg-mc-bg prose-code:px-1 prose-code:rounded
-              prose-blockquote:border-l-2 prose-blockquote:border-gold prose-blockquote:bg-gold/5 prose-blockquote:rounded-r prose-blockquote:px-3 prose-blockquote:py-2 prose-blockquote:text-foreground prose-blockquote:not-italic
-              prose-li:my-0.5"
-            >
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  table: ({ children }) => (
-                    <div className="overflow-x-auto my-2">
-                      <table className="w-full text-xs border-collapse">{children}</table>
-                    </div>
-                  ),
-                  th: ({ children }) => (
-                    <th className="border border-mc-border px-2 py-1 text-left text-gold bg-mc-bg font-mono">{children}</th>
-                  ),
-                  td: ({ children }) => (
-                    <td className="border border-mc-border px-2 py-1">{children}</td>
-                  ),
-                }}
-              >{currentMd}</ReactMarkdown>
-            </div>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => (
+                  <h1 className="text-base font-bold text-gold font-mono mb-2 mt-0">{children}</h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className="text-sm font-semibold text-gold font-mono mb-1 mt-3">{children}</h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="text-[10px] font-semibold text-gold/60 uppercase tracking-widest mb-2 mt-4">{children}</h3>
+                ),
+                p: ({ children }) => (
+                  <p className="text-sm text-foreground mb-2 leading-relaxed">{children}</p>
+                ),
+                blockquote: ({ children }) => (
+                  <div className="border-l-2 border-gold bg-gold/5 rounded-r px-3 py-2 my-2 text-sm text-foreground">
+                    {children}
+                  </div>
+                ),
+                ul: ({ children }) => (
+                  <ul className="space-y-1.5 my-2 list-none pl-0">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="space-y-1 my-2 list-decimal list-inside">{children}</ol>
+                ),
+                li: ({ children }) => (
+                  <li className="text-sm text-foreground leading-snug">{children}</li>
+                ),
+                hr: () => (
+                  <hr className="border-mc-border my-3" />
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-semibold text-foreground">{children}</strong>
+                ),
+                em: ({ children }) => (
+                  <em className="italic text-muted-foreground">{children}</em>
+                ),
+                table: ({ children }) => (
+                  <div className="overflow-x-auto my-3">
+                    <table className="w-full text-xs border-collapse">{children}</table>
+                  </div>
+                ),
+                th: ({ children }) => (
+                  <th className="border border-mc-border px-2 py-1.5 text-left text-gold bg-mc-bg font-mono font-semibold">{children}</th>
+                ),
+                td: ({ children }) => (
+                  <td className="border border-mc-border px-2 py-1.5 text-foreground">{children}</td>
+                ),
+                code: ({ children }) => (
+                  <code className="text-gold bg-mc-bg px-1 rounded text-xs font-mono">{children}</code>
+                ),
+              }}
+            >{currentMd}</ReactMarkdown>
           ) : (
             <p className="text-muted-foreground text-sm">
               분석 결과 없음 — 헤더의 AI 분석 버튼을 눌러 실행하세요.
@@ -91,13 +156,10 @@ export function MarcusTab() {
                 <div
                   key={i}
                   className={
-                    line.includes('\u2705')
-                      ? 'text-mc-green'
-                      : line.includes('\u274C')
-                        ? 'text-mc-red'
-                        : line.includes('\u26A0')
-                          ? 'text-amber-400'
-                          : 'text-muted-foreground'
+                    line.includes('\u2705') ? 'text-mc-green'
+                    : line.includes('\u274C') ? 'text-mc-red'
+                    : line.includes('\u26A0') ? 'text-amber-400'
+                    : 'text-muted-foreground'
                   }
                 >
                   {line}
@@ -107,51 +169,6 @@ export function MarcusTab() {
           </CardContent>
         </Card>
       )}
-
-      {/* 사이드: 이력 목록 */}
-      <div className="order-1 sm:order-1">
-        <div className="text-xs text-muted-foreground font-mono mb-3">
-          분석 이력
-        </div>
-        {history.length === 0 ? (
-          <p className="text-xs text-muted-foreground">이력 없음</p>
-        ) : (
-          <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-col sm:overflow-visible sm:pb-0 sm:space-y-2">
-            {history.map((h) => (
-              <button
-                key={h.date}
-                onClick={() => {
-                  void loadDetail(h.date)
-                }}
-                className={`min-w-[120px] sm:min-w-0 sm:w-full text-left p-3 rounded border transition-colors shrink-0 sm:shrink ${
-                  selectedDate === h.date
-                    ? 'border-gold bg-gold/8'
-                    : 'border-mc-border bg-mc-card hover:border-gold/30'
-                }`}
-              >
-                <div className="font-mono text-xs font-semibold">{h.date}</div>
-                <div className="flex gap-2 items-center mt-1">
-                  {h.confidence_level !== undefined && (
-                    <span className="text-[10px] text-gold">
-                      {'★'.repeat(h.confidence_level)}
-                    </span>
-                  )}
-                  {h.stance && (
-                    <span className="text-[10px] text-muted-foreground">
-                      {h.stance}
-                    </span>
-                  )}
-                </div>
-                {h.today_call && (
-                  <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2 hidden sm:block">
-                    {h.today_call}
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }
