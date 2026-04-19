@@ -66,6 +66,8 @@ def notify_marcus_complete(md_path: Path) -> None:
             print(f"  ⚠️  marcus-analysis.md 없음: {md_path}")
             return
 
+        import re as _re
+
         md_text = md_path.read_text(encoding="utf-8")
         sections = extract_sections(md_text)
         confidence = extract_confidence_level(md_text)
@@ -74,13 +76,18 @@ def notify_marcus_complete(md_path: Path) -> None:
         level = confidence if confidence else 0
         stars = "★" * level + "☆" * (5 - level)
 
-        # TODAY'S CALL 섹션 추출
-        todays_call = sections.get("TODAY'S CALL", "분석 내용 없음")
-        # 1500자 이내로 자르기 (헤더 공간 확보)
+        # TODAY'S CALL — ## 섹션 우선, 없으면 **TODAY'S CALL:** bold 패턴으로 폴백
+        todays_call = sections.get("TODAY'S CALL", "")
+        if not todays_call:
+            m = _re.search(r"\*\*TODAY'S CALL[^*]*\*\*[:\s]*(.+)", md_text)
+            if m:
+                todays_call = m.group(1).strip()
+        if not todays_call:
+            todays_call = "분석 내용 없음"
         if len(todays_call) > 1500:
             todays_call = todays_call[:1497] + "..."
 
-        message = f"📊 마커스 분석 완료\n확신레벨: {stars}\n\n> {todays_call}"
+        message = f"📊 AI 분석 완료\n확신레벨: {stars}\n\n{todays_call}"
         ok = _send_discord(message)
         if ok:
             print("  📡 마커스 분석 Discord 전송 완료")

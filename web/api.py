@@ -141,6 +141,18 @@ def run_background(name: str, cmd: list) -> dict:
         return {"ok": False, "error": str(e)}
 
 
+def load_log_tail(log_path: Path, lines: int = 80) -> dict:
+    """로그 파일 마지막 N줄 반환."""
+    if not log_path.exists():
+        return {"lines": [], "exists": False}
+    try:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+        all_lines = text.splitlines()
+        return {"lines": all_lines[-lines:], "exists": True, "total": len(all_lines)}
+    except Exception as e:
+        return {"lines": [f"로그 읽기 실패: {e}"], "exists": True}
+
+
 def get_process_status() -> dict:
     """실행 중인 프로세스 상태 딕셔너리 반환."""
     processes = ["pipeline", "marcus"]

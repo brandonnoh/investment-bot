@@ -3,6 +3,27 @@
  * SSE 구독, 데이터 렌더링, Chart.js 초기화
  */
 
+// Chart.js 전역 다크 테마 설정
+Chart.defaults.color = '#9a8e84';
+Chart.defaults.borderColor = '#2a2420';
+Chart.defaults.plugins.legend.labels.color = '#9a8e84';
+Chart.defaults.plugins.legend.labels.font = { family: "'Space Grotesk', system-ui, sans-serif", size: 11 };
+
+// 다크 tooltip 공통 옵션 (각 차트에 직접 주입)
+const TOOLTIP_DARK = {
+  backgroundColor: '#1a1714',
+  borderColor: '#2a2420',
+  borderWidth: 1,
+  titleColor: '#e2d9d0',
+  bodyColor: '#c8bfb5',
+  padding: 10,
+  cornerRadius: 4,
+  displayColors: true,
+  boxPadding: 4,
+  titleFont: { family: "'Space Grotesk', sans-serif", size: 12, weight: '600' },
+  bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+};
+
 // 전역 Alpine.js 스토어
 document.addEventListener('alpine:init', () => {
   Alpine.store('mc', {
@@ -45,6 +66,17 @@ document.addEventListener('alpine:init', () => {
     analysisHistory: [],
     selectedAnalysis: null,
 
+    // AI 분석 진행 상태
+    marcusLog: [],
+    aiSteps: [],       // 완료된 step 번호 배열
+    aiCurrentStep: 0,  // 현재 실행 중인 step
+    _logPollTimer: null,
+    aiStepDefs: [
+      'JSON 데이터 로드', '실시간 시세 수집', '페르소나 로드',
+      '프롬프트 조립', 'Claude 실행', '결과 저장',
+      '검증', 'Discord 알림', '완료'
+    ],
+
     // 차트 인스턴스
     _charts: {},
 
@@ -84,7 +116,7 @@ document.addEventListener('alpine:init', () => {
         this.data = raw;
         this.parseData(raw);
         this.lastUpdated = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-        this.$nextTick(() => this.renderCharts(raw));
+        Alpine.nextTick(() => this.renderCharts(raw));
       } catch (e) {
         console.error('[mc] 데이터 로드 실패:', e);
       }
@@ -182,10 +214,18 @@ document.addEventListener('alpine:init', () => {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              ...TOOLTIP_DARK,
+              callbacks: {
+                label: (ctx) => ` ${ctx.parsed.y}%`
+              }
+            }
+          },
           scales: {
-            x: { ticks: { color: '#5a504a', font: { size: 11 } }, grid: { color: '#2a2420' } },
-            y: { ticks: { color: '#5a504a', font: { size: 11 } }, grid: { color: '#2a2420' } }
+            x: { ticks: { color: '#5a504a', font: { family: "'JetBrains Mono', monospace", size: 10 } }, grid: { color: '#2a2420' } },
+            y: { ticks: { color: '#5a504a', font: { family: "'JetBrains Mono', monospace", size: 10 } }, grid: { color: '#2a2420' } }
           }
         }
       });
@@ -231,10 +271,21 @@ document.addEventListener('alpine:init', () => {
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          cutout: '65%',
           plugins: {
             legend: {
               position: 'right',
-              labels: { color: '#9a8e84', font: { size: 11 }, padding: 10, boxWidth: 12 }
+              labels: { color: '#9a8e84', font: { family: "'Space Grotesk', system-ui, sans-serif", size: 11 }, padding: 10, boxWidth: 12 }
+            },
+            tooltip: {
+              ...TOOLTIP_DARK,
+              callbacks: {
+                label: (ctx) => {
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: ${pct}%`;
+                }
+              }
             }
           }
         }
@@ -274,14 +325,22 @@ document.addEventListener('alpine:init', () => {
           indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              ...TOOLTIP_DARK,
+              callbacks: {
+                label: (ctx) => ` 점수: ${ctx.parsed.x}/100`
+              }
+            }
+          },
           scales: {
             x: {
               min: 0, max: 100,
-              ticks: { color: '#5a504a', font: { size: 11 } },
+              ticks: { color: '#5a504a', font: { family: "'JetBrains Mono', monospace", size: 10 } },
               grid: { color: '#2a2420' }
             },
-            y: { ticks: { color: '#e2d9d0', font: { size: 11 } }, grid: { display: false } }
+            y: { ticks: { color: '#e2d9d0', font: { family: "'Space Grotesk', system-ui, sans-serif", size: 11 } }, grid: { display: false } }
           }
         }
       });
@@ -332,6 +391,9 @@ document.addEventListener('alpine:init', () => {
     async runMarcus() {
       if (this.marcusRunning) return;
       this.marcusRunning = true;
+      this.marcusLog = [];
+      this.aiSteps = [];
+      this.aiCurrentStep = 0;
       try {
         const res = await fetch('/api/run-marcus', { method: 'POST' });
         const data = await res.json();
@@ -339,13 +401,63 @@ document.addEventListener('alpine:init', () => {
           alert(data.error ?? 'AI 분석 실행 실패');
           this.marcusRunning = false;
         } else {
-          // 완료 후 이력 갱신 (30초 대기)
-          setTimeout(() => this.fetchAnalysisHistory(), 30000);
+          this.startLogPoll();
         }
       } catch (e) {
         alert('서버 오류: ' + e.message);
         this.marcusRunning = false;
       }
+    },
+
+    // 로그 폴링 시작
+    startLogPoll() {
+      if (this._logPollTimer) clearInterval(this._logPollTimer);
+      this._logPollTimer = setInterval(() => this.pollMarcusLog(), 2000);
+    },
+
+    // 로그 폴링 중단
+    stopLogPoll() {
+      if (this._logPollTimer) {
+        clearInterval(this._logPollTimer);
+        this._logPollTimer = null;
+      }
+    },
+
+    // 로그 한 번 가져오기
+    async pollMarcusLog() {
+      try {
+        const res = await fetch('/api/logs?name=marcus&lines=100');
+        if (!res.ok) return;
+        const data = await res.json();
+        this.marcusLog = data.lines ?? [];
+
+        // [N/9] 패턴 파싱 → 완료 step 추출
+        const done = new Set();
+        let current = 0;
+        for (const line of this.marcusLog) {
+          const m = line.match(/\[(\d+)\/9\]/);
+          if (m) {
+            const n = parseInt(m[1]);
+            done.add(n);
+            if (n > current) current = n;
+          }
+        }
+        this.aiSteps = [...done];
+        this.aiCurrentStep = current;
+
+        // 프로세스 종료 감지 — 로그 완료 마커 우선
+        const finished = this.marcusLog.some(l =>
+          l.includes('실행기 종료') || l.includes('=== 마커스 분석 실행기 종료') || l.includes('[9/9]')
+        );
+        if (finished) {
+          this.marcusRunning = false;
+          this.aiCurrentStep = 9;
+          this.aiSteps = [1,2,3,4,5,6,7,8,9];
+          this.stopLogPoll();
+          this.fetchAnalysisHistory();
+          this.fetchData();
+        }
+      } catch (_) {}
     },
 
     // 숫자 포맷 헬퍼

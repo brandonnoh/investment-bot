@@ -58,31 +58,31 @@
   <button class="tab" :class="$store.mc.tab === 'overview' ? 'active' : ''"
           @click="$store.mc.tab = 'overview'; $nextTick(() => $store.mc.renderCharts($store.mc.data))">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-    개요
+    <span class="tab-label">개요</span>
   </button>
   <!-- 포트폴리오 -->
   <button class="tab" :class="$store.mc.tab === 'portfolio' ? 'active' : ''"
           @click="$store.mc.tab = 'portfolio'; $nextTick(() => $store.mc.renderCharts($store.mc.data))">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-    포트폴리오
+    <span class="tab-label">포트폴리오</span>
   </button>
   <!-- AI 분석 -->
   <button class="tab" :class="$store.mc.tab === 'marcus' ? 'active' : ''"
           @click="$store.mc.tab = 'marcus'; $store.mc.fetchAnalysisHistory()">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-    AI 분석
+    <span class="tab-label">AI 분석</span>
   </button>
   <!-- 발굴 -->
   <button class="tab" :class="$store.mc.tab === 'discovery' ? 'active' : ''"
           @click="$store.mc.tab = 'discovery'; $nextTick(() => $store.mc.renderCharts($store.mc.data))">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    발굴
+    <span class="tab-label">발굴</span>
   </button>
   <!-- 알림 -->
   <button class="tab" :class="$store.mc.tab === 'alerts' ? 'active' : ''"
           @click="$store.mc.tab = 'alerts'">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-    알림
+    <span class="tab-label">알림</span>
     <span x-show="$store.mc.alerts.length > 0"
           style="background:var(--red);color:#fff;font-family:var(--mono);font-size:10px;padding:0 5px;border-radius:10px;line-height:16px"
           x-text="$store.mc.alerts.length"></span>
@@ -91,13 +91,13 @@
   <button class="tab" :class="$store.mc.tab === 'system' ? 'active' : ''"
           @click="$store.mc.tab = 'system'">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
-    시스템
+    <span class="tab-label">시스템</span>
   </button>
   <!-- 서비스 맵 -->
   <button class="tab" :class="$store.mc.tab === 'map' ? 'active' : ''"
           @click="$store.mc.tab = 'map'">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
-    서비스 맵
+    <span class="tab-label">서비스 맵</span>
   </button>
 </nav>
 
@@ -405,34 +405,38 @@
   <!-- ═══ TAB: AI 분석 ════════════════════════════════════ -->
   <div x-show="$store.mc.tab === 'marcus'">
 
-    <div class="col-70-30" style="gap:12px">
+    <div class="ai-layout">
 
-      <!-- 왼쪽: 분석 내용 -->
-      <div>
+      <!-- ── 왼쪽: 분석 내용 ─────────────────────────────── -->
+      <div class="ai-main">
         <div class="section">
-          <div class="sec-label" x-text="$store.mc.selectedAnalysis ? $store.mc.selectedAnalysis.date + ' 분석' : '최신 분석'"></div>
+          <div class="sec-label" style="display:flex;justify-content:space-between;align-items:center">
+            <span x-text="$store.mc.selectedAnalysis ? $store.mc.selectedAnalysis.date + ' 분석' : '최신 분석'"></span>
+            <button x-show="$store.mc.selectedAnalysis" class="btn" style="font-size:10px;padding:2px 8px"
+                    @click="$store.mc.selectedAnalysis = null">최신으로</button>
+          </div>
           <div class="panel">
             <div class="panel-body">
-              <template x-if="$store.mc.selectedAnalysis && $store.mc.selectedAnalysis.content">
+              <template x-if="$store.mc.selectedAnalysis?.content">
                 <div class="md" x-html="$store.mc.renderMarkdown($store.mc.selectedAnalysis.content)"></div>
               </template>
               <template x-if="!$store.mc.selectedAnalysis && $store.mc.marcusMd">
                 <div class="md" x-html="$store.mc.renderMarkdown($store.mc.marcusMd)"></div>
               </template>
               <div x-show="!$store.mc.selectedAnalysis && !$store.mc.marcusMd" class="empty">
-                분석 데이터 없음 — 상단 'AI 분석' 버튼으로 실행하세요
+                분석 없음 — 오른쪽 패널에서 실행하세요
               </div>
             </div>
           </div>
         </div>
 
-        <!-- CIO 브리핑 (접기) -->
+        <!-- CIO 브리핑 -->
         <div class="section" x-show="$store.mc.cioBriefingMd && !$store.mc.selectedAnalysis">
           <div class="panel">
             <div class="panel-body">
               <div class="acc-hd" @click="$el.parentElement.querySelector('.acc-bd').classList.toggle('hidden')">
                 <span>CIO 브리핑</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               <div class="acc-bd">
                 <div class="md" x-html="$store.mc.renderMarkdown($store.mc.cioBriefingMd)"></div>
@@ -442,8 +446,73 @@
         </div>
       </div>
 
-      <!-- 오른쪽: 날짜별 이력 -->
-      <div>
+      <!-- ── 오른쪽: 실행 패널 + 이력 ───────────────────── -->
+      <div class="ai-side">
+
+        <!-- 실행 컨트롤 -->
+        <div class="section">
+          <div class="sec-label">AI 분석 실행</div>
+          <div class="panel">
+            <div class="panel-body">
+
+              <!-- 실행 버튼 -->
+              <button class="btn btn-primary" style="width:100%;justify-content:center"
+                      :disabled="$store.mc.marcusRunning"
+                      @click="$store.mc.runMarcus()">
+                <template x-if="!$store.mc.marcusRunning">
+                  <span style="display:flex;align-items:center;gap:6px">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    분석 실행
+                  </span>
+                </template>
+                <template x-if="$store.mc.marcusRunning">
+                  <span style="display:flex;align-items:center;gap:6px">
+                    <span class="spin"></span> 분석 중 (약 2~5분)
+                  </span>
+                </template>
+              </button>
+
+              <!-- 진행 단계 -->
+              <div x-show="$store.mc.marcusRunning || $store.mc.aiSteps.length" style="margin-top:12px">
+                <div class="ai-steps">
+                  <template x-for="(step, i) in $store.mc.aiStepDefs" :key="i">
+                    <div class="ai-step" :class="{
+                      'done': $store.mc.aiSteps.includes(i+1),
+                      'active': $store.mc.aiCurrentStep === i+1
+                    }">
+                      <div class="ai-step-dot">
+                        <template x-if="$store.mc.aiSteps.includes(i+1) && $store.mc.aiCurrentStep !== i+1">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        </template>
+                        <template x-if="$store.mc.aiCurrentStep === i+1">
+                          <span class="spin" style="width:8px;height:8px;border-width:1.5px"></span>
+                        </template>
+                        <span x-show="!$store.mc.aiSteps.includes(i+1) && $store.mc.aiCurrentStep !== i+1"
+                              x-text="i+1" style="font-size:8px"></span>
+                      </div>
+                      <div class="ai-step-label" x-text="step"></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- 실행 로그 -->
+              <div x-show="$store.mc.marcusLog.length > 0" style="margin-top:10px">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:4px">실행 로그</div>
+                <div class="ai-log" x-ref="logBox">
+                  <template x-for="(line, i) in $store.mc.marcusLog" :key="i">
+                    <div class="ai-log-line"
+                         :class="line.startsWith('  ❌') ? 'err' : line.startsWith('  ✅') ? 'ok' : line.startsWith('  ⚠️') ? 'warn' : ''"
+                         x-text="line"></div>
+                  </template>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- 이력 목록 -->
         <div class="section">
           <div class="sec-label">분석 이력</div>
           <div class="panel">
@@ -455,17 +524,20 @@
                      @click="$store.mc.selectAnalysis(item.date)">
                   <div class="analysis-date" x-text="item.date"></div>
                   <div class="analysis-meta">
-                    <span x-show="item.confidence_level" class="badge-blue" x-text="'★'.repeat(item.confidence_level || 0)"></span>
-                    <span x-show="item.regime" class="muted" style="font-size:11px" x-text="item.regime?.split(' ')[0]"></span>
+                    <span x-show="item.confidence_level" class="badge-blue"
+                          x-text="'★'.repeat(item.confidence_level || 0)"></span>
+                    <span x-show="item.regime" class="muted" style="font-size:10px"
+                          x-text="item.regime?.split(' ')[0]"></span>
                   </div>
-                  <div x-show="item.today_call" class="analysis-call muted" x-text="item.today_call?.slice(0,60) + '…'"></div>
+                  <div x-show="item.today_call" class="analysis-call muted"
+                       x-text="(item.today_call || '').slice(0,55) + '…'"></div>
                 </div>
               </template>
             </div>
           </div>
         </div>
-      </div>
 
+      </div>
     </div>
 
   </div>
@@ -728,11 +800,13 @@
         <div class="stat-label">파이프라인</div>
         <div class="stat-value" :class="$store.mc.engineStatus?.pipeline_ok ? 'green' : 'red'"
              x-text="$store.mc.engineStatus?.pipeline_ok ? 'OK' : 'ERROR'"></div>
+        <div class="stat-sub" x-text="$store.mc.pipelineRunning ? '실행 중' : '대기'"></div>
       </div>
       <div class="stat-item">
         <div class="stat-label">총 오류</div>
         <div class="stat-value" :class="($store.mc.engineStatus?.total_errors ?? 0) > 0 ? 'red' : 'green'"
              x-text="$store.mc.engineStatus?.total_errors ?? 0"></div>
+        <div class="stat-sub" x-text="Object.keys($store.mc.engineStatus?.modules ?? {}).length + '개 모듈'"></div>
       </div>
       <div class="stat-item">
         <div class="stat-label">가동일수</div>
@@ -741,63 +815,6 @@
       <div class="stat-item">
         <div class="stat-label">DB 크기</div>
         <div class="stat-value muted" x-text="($store.mc.engineStatus?.db_size_mb ?? 0).toFixed(2) + ' MB'"></div>
-      </div>
-    </div>
-
-    <!-- Fear & Greed + Regime detail -->
-    <div class="col-2 section">
-      <div class="panel">
-        <div class="panel-head">Fear &amp; Greed Index</div>
-        <div class="fg-wrap">
-          <div class="fg-score" :class="$store.mc.fearGreedColor($store.mc.supplyData?.fear_greed?.score)"
-               x-text="$store.mc.supplyData?.fear_greed?.score ?? '-'"></div>
-          <div class="fg-label" :class="$store.mc.fearGreedColor($store.mc.supplyData?.fear_greed?.score)"
-               x-text="$store.mc.supplyData?.fear_greed?.rating ?? '-'"></div>
-          <div class="pbar">
-            <div class="pbar-fill"
-                 :style="{
-                   width: ($store.mc.supplyData?.fear_greed?.score ?? 0) + '%',
-                   background: ($store.mc.supplyData?.fear_greed?.score ?? 50) <= 25 ? 'var(--red)' :
-                               ($store.mc.supplyData?.fear_greed?.score ?? 50) <= 45 ? 'var(--amber)' :
-                               ($store.mc.supplyData?.fear_greed?.score ?? 50) <= 55 ? 'var(--gold)' : 'var(--green)'
-                 }"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-top:4px;font-family:var(--mono)">
-            <span>공포</span><span>탐욕</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head">시장 국면</div>
-        <div class="panel-body">
-          <div class="kv">
-            <span class="kv-k">국면</span>
-            <span class="kv-v" :class="$store.mc.regimeColor($store.mc.regime?.regime)"
-                  x-text="$store.mc.regime?.regime ?? '-'"></span>
-          </div>
-          <div class="kv">
-            <span class="kv-k">신뢰도</span>
-            <span class="kv-v" x-text="$store.mc.regime?.confidence != null ? ($store.mc.regime.confidence*100).toFixed(0)+'%' : '-'"></span>
-          </div>
-          <div class="kv">
-            <span class="kv-k">VIX</span>
-            <span class="kv-v" :class="($store.mc.regime?.vix ?? 0) > 30 ? 'red' : ($store.mc.regime?.vix ?? 0) > 20 ? 'yellow' : 'green'"
-                  x-text="$store.mc.fmtNum($store.mc.regime?.vix, 2)"></span>
-          </div>
-          <div class="kv">
-            <span class="kv-k">전략 스탠스</span>
-            <span class="kv-v" x-text="$store.mc.regime?.strategy?.stance ?? '-'"></span>
-          </div>
-          <div class="kv">
-            <span class="kv-k">현금 비중</span>
-            <span class="kv-v" x-text="$store.mc.regime?.strategy?.cash_ratio != null ? ($store.mc.regime.strategy.cash_ratio*100).toFixed(0)+'%' : '-'"></span>
-          </div>
-          <div class="kv">
-            <span class="kv-k">선호 섹터</span>
-            <span class="kv-v" style="font-size:11px" x-text="($store.mc.regime?.strategy?.preferred_sectors ?? []).join(', ') || '-'"></span>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -815,7 +832,86 @@
             </div>
           </div>
         </template>
-        <div x-show="Object.keys($store.mc.engineStatus?.modules ?? {}).length === 0" class="empty">모듈 데이터 없음</div>
+        <div x-show="Object.keys($store.mc.engineStatus?.modules ?? {}).length === 0" class="empty">
+          <div class="empty-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+          </div>
+          파이프라인 미실행 -- 상단 버튼으로 실행하세요
+        </div>
+      </div>
+    </div>
+
+    <!-- Cron schedule -->
+    <div class="section">
+      <div class="sec-label">크론 스케줄 (launchd)</div>
+      <div class="cron-grid">
+
+        <div class="cron-card">
+          <div class="cron-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+          <div class="cron-info">
+            <div class="cron-name">파이프라인</div>
+            <div class="cron-schedule">수동 실행 (대시보드 / CLI)</div>
+            <div class="cron-desc">수집 + 분석 + 리포트 전체 파이프라인</div>
+          </div>
+        </div>
+
+        <div class="cron-card">
+          <div class="cron-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/></svg>
+          </div>
+          <div class="cron-info">
+            <div class="cron-name">AI 분석 (Marcus)</div>
+            <div class="cron-schedule">평일 05:30 KST</div>
+            <div class="cron-desc">Claude CLI + Intel JSON 조합 투자 분석 리포트</div>
+          </div>
+        </div>
+
+        <div class="cron-card">
+          <div class="cron-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="cron-info">
+            <div class="cron-name">Jarvis 브리핑</div>
+            <div class="cron-schedule">평일 07:30 KST</div>
+            <div class="cron-desc">CIO 관점 투자 브리핑 + Discord 전송</div>
+          </div>
+        </div>
+
+        <div class="cron-card">
+          <div class="cron-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <div class="cron-info">
+            <div class="cron-name">알림 감시</div>
+            <div class="cron-schedule">상시 (alerts_watch.py)</div>
+            <div class="cron-desc">DB 변화 감지 후 Discord 즉시 전송</div>
+          </div>
+        </div>
+
+        <div class="cron-card">
+          <div class="cron-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div class="cron-info">
+            <div class="cron-name">월말 적립</div>
+            <div class="cron-schedule">매월 말일 23:59</div>
+            <div class="cron-desc">월 적립금 DB 자동 반영</div>
+          </div>
+        </div>
+
+        <div class="cron-card">
+          <div class="cron-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          </div>
+          <div class="cron-info">
+            <div class="cron-name">Universe Cache</div>
+            <div class="cron-schedule">주 1회 (일요일)</div>
+            <div class="cron-desc">KOSPI200 / S&P100 종목 유니버스 캐시 갱신</div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -903,29 +999,37 @@
             <div class="pf-step">
               <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
               <div class="pf-label">DB 초기화</div>
+              <div class="pf-sub">init_db</div>
             </div>
             <div class="pf-arrow">→</div>
             <div class="pf-step">
               <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-              <div class="pf-label">데이터 수집</div>
-              <div class="pf-sub">6개 소스</div>
+              <div class="pf-label">수집</div>
+              <div class="pf-sub">prices/macro/news/supply</div>
             </div>
             <div class="pf-arrow">→</div>
             <div class="pf-step">
               <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
               <div class="pf-label">레짐 분류</div>
+              <div class="pf-sub">regime_classifier</div>
+            </div>
+            <div class="pf-arrow">→</div>
+            <div class="pf-step">
+              <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+              <div class="pf-label">분석</div>
+              <div class="pf-sub">sector_intel + screener</div>
             </div>
             <div class="pf-arrow">→</div>
             <div class="pf-step">
               <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-              <div class="pf-label">분석</div>
-              <div class="pf-sub">기술·포트폴리오·스크리너</div>
+              <div class="pf-label">포트폴리오</div>
+              <div class="pf-sub">portfolio + alerts</div>
             </div>
             <div class="pf-arrow">→</div>
             <div class="pf-step">
               <div class="pf-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
               <div class="pf-label">리포트</div>
-              <div class="pf-sub">일일·마감</div>
+              <div class="pf-sub">daily/weekly/closing</div>
             </div>
             <div class="pf-arrow">→</div>
             <div class="pf-step pf-step--action">
@@ -953,32 +1057,32 @@
         <ul class="smap-list">
           <li>
             <div class="smap-name">fetch_prices</div>
-            <div class="smap-desc">포트폴리오 종목 실시간 주가 (KR 8 + US 3)</div>
+            <div class="smap-desc">Yahoo Finance + 네이버금융 폴백. 포트폴리오 종목 실시간 시세</div>
             <span class="smap-out">prices.json</span>
           </li>
           <li>
             <div class="smap-name">fetch_macro</div>
-            <div class="smap-desc">매크로 지표 8개 — KOSPI·KOSDAQ·환율·WTI·금·VIX</div>
+            <div class="smap-desc">KOSPI/KOSDAQ/원달러/WTI/금/VIX 등 매크로 8종</div>
             <span class="smap-out">macro.json</span>
           </li>
           <li>
             <div class="smap-name">fetch_news</div>
-            <div class="smap-desc">RSS + Brave Search 뉴스 수집 (종목·매크로·지정학)</div>
+            <div class="smap-desc">RSS + Brave Search 뉴스 수집 + 감성 스코어링</div>
             <span class="smap-out">news.json</span>
           </li>
           <li>
             <div class="smap-name">fetch_fundamentals</div>
-            <div class="smap-desc">DART·네이버금융 PER·PBR·ROE·EPS 수집</div>
+            <div class="smap-desc">DART/네이버금융 PER/PBR/ROE/EPS + 부채비율</div>
             <span class="smap-out">fundamentals.json</span>
           </li>
           <li>
             <div class="smap-name">fetch_supply</div>
-            <div class="smap-desc">KRX 외국인·기관 순매매 + Fear &amp; Greed Index</div>
+            <div class="smap-desc">KRX 외국인/기관 순매매 + CNN Fear &amp; Greed Index</div>
             <span class="smap-out">supply_data.json</span>
           </li>
           <li>
             <div class="smap-name">fetch_opportunities</div>
-            <div class="smap-desc">키워드 기반 신규 종목 발굴 (Brave/Naver 검색)</div>
+            <div class="smap-desc">discovery_keywords 기반 신규 종목 발굴 (Brave/Naver)</div>
             <span class="smap-out">opportunities.json</span>
           </li>
         </ul>
@@ -989,52 +1093,57 @@
         <div class="smap-hd">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
           <span>분석 엔진</span>
-          <span class="badge-blue">9</span>
+          <span class="badge-blue">10</span>
         </div>
         <ul class="smap-list">
           <li>
-            <div class="smap-name">price_analysis</div>
-            <div class="smap-desc">기술 분석 — MA50·MA200·RSI·52주 고저·변동성</div>
-            <span class="smap-out">price_analysis.json</span>
-          </li>
-          <li>
             <div class="smap-name">regime_classifier</div>
-            <div class="smap-desc">시장 레짐 분류 — BULL·BEAR·INFLATIONARY·STAGFLATION</div>
+            <div class="smap-desc">BULL/BEAR/INFLATIONARY/STAGFLATION 레짐 자동 분류</div>
             <span class="smap-out">regime.json</span>
           </li>
           <li>
-            <div class="smap-name">alerts</div>
-            <div class="smap-desc">임계값 기반 알림 — 급등락·환율·VIX·유가</div>
-            <span class="smap-out">alerts.json</span>
+            <div class="smap-name">sector_intel</div>
+            <div class="smap-desc">섹터별 자금 흐름 분석 + 순위 산출</div>
+            <span class="smap-out">내부 참조</span>
+          </li>
+          <li>
+            <div class="smap-name">value_screener</div>
+            <div class="smap-desc">가치 스크리너 — PER/PBR/ROE 기반 저평가 종목 선별</div>
+            <span class="smap-out">내부 참조</span>
+          </li>
+          <li>
+            <div class="smap-name">price_analysis</div>
+            <div class="smap-desc">기술 분석 — MA50/MA200/RSI/52주 고저/변동성</div>
+            <span class="smap-out">price_analysis.json</span>
           </li>
           <li>
             <div class="smap-name">screener</div>
-            <div class="smap-desc">종목 스크리너 — 섹터별 주목 종목 선별</div>
+            <div class="smap-desc">KOSPI200 + S&amp;P100 유니버스 종합 스크리닝</div>
             <span class="smap-out">screener_results.json</span>
           </li>
           <li>
+            <div class="smap-name">alerts</div>
+            <div class="smap-desc">임계값 알림 — 급등락/환율/VIX/유가 돌파</div>
+            <span class="smap-out">alerts.json</span>
+          </li>
+          <li>
             <div class="smap-name">portfolio</div>
-            <div class="smap-desc">포트폴리오 평가손익·섹터 비중·리스크 지표</div>
+            <div class="smap-desc">포트폴리오 평가손익/섹터 비중/리스크/환율 손익</div>
             <span class="smap-out">portfolio_summary.json</span>
           </li>
           <li>
             <div class="smap-name">composite_score</div>
-            <div class="smap-desc">6팩터 복합 점수 — 가치·퀄리티·모멘텀·성장·수급·리스크</div>
-            <span class="smap-out">—</span>
-          </li>
-          <li>
-            <div class="smap-name">sentiment</div>
-            <div class="smap-desc">뉴스 감성 분석 — 키워드 기반 -1.0 ~ +1.0 스코어</div>
-            <span class="smap-out">—</span>
+            <div class="smap-desc">6팩터 복합 점수 (가치/퀄리티/모멘텀/성장/수급/리스크)</div>
+            <span class="smap-out">내부 참조</span>
           </li>
           <li>
             <div class="smap-name">performance</div>
-            <div class="smap-desc">성과 추적 — 1주·1개월 수익률, 월별 성과 리포트</div>
+            <div class="smap-desc">1주/1개월 수익률 추적 + 적중률 리포트</div>
             <span class="smap-out">performance_report.json</span>
           </li>
           <li>
             <div class="smap-name">simulation</div>
-            <div class="smap-desc">포트폴리오 시뮬레이션 — 리밸런싱 시나리오</div>
+            <div class="smap-desc">리밸런싱 시나리오 시뮬레이션</div>
             <span class="smap-out">simulation_report.json</span>
           </li>
         </ul>
@@ -1043,24 +1152,24 @@
       <!-- 리포트 -->
       <div class="smap-card">
         <div class="smap-hd">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <span>리포트</span>
           <span class="badge-blue">3</span>
         </div>
         <ul class="smap-list">
           <li>
             <div class="smap-name">daily report</div>
-            <div class="smap-desc">파이프라인 완료 후 자동 생성 — 포트폴리오·매크로·알림 요약</div>
+            <div class="smap-desc">파이프라인 완료 후 자동 생성. 포트폴리오/매크로/알림 요약</div>
             <span class="smap-out">daily_report.md</span>
           </li>
           <li>
             <div class="smap-name">weekly report</div>
-            <div class="smap-desc">주간 성과·섹터 로테이션·신규 종목 추천 (--weekly 플래그)</div>
+            <div class="smap-desc">주간 성과/섹터 로테이션/종목 추천. <code>--weekly</code> 플래그</div>
             <span class="smap-out">weekly_report.md</span>
           </li>
           <li>
             <div class="smap-name">closing report</div>
-            <div class="smap-desc">장 마감 후 OHLC + 최종 손익 요약 (수동 실행)</div>
+            <div class="smap-desc">장 마감 후 OHLC + 최종 손익 요약</div>
             <span class="smap-out">closing_report.md</span>
           </li>
         </ul>
@@ -1075,8 +1184,8 @@
         </div>
         <ul class="smap-list">
           <li>
-            <div class="smap-name">Marcus 분석</div>
-            <div class="smap-desc">Claude CLI → Intel JSON 조합 → 투자 분석 리포트 생성. RISK FIRST·MARKET REGIME·TODAY'S CALL 포함</div>
+            <div class="smap-name">run_marcus (AI 분석)</div>
+            <div class="smap-desc">Claude CLI + Intel JSON 조합. RISK FIRST / MARKET REGIME / TODAY'S CALL 포함 분석 리포트</div>
             <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
               <span class="smap-out">marcus-analysis.md</span>
               <button class="btn btn-xs btn-primary" :disabled="$store.mc.marcusRunning" @click="$store.mc.runMarcus(); $store.mc.tab='marcus'">
@@ -1086,45 +1195,40 @@
             </div>
           </li>
           <li>
-            <div class="smap-name">Jarvis 브리핑</div>
-            <div class="smap-desc">매일 07:30 KST 자동 실행 — CIO 관점 투자 브리핑 생성 (launchd 배치)</div>
+            <div class="smap-name">run_jarvis (CIO 브리핑)</div>
+            <div class="smap-desc">평일 07:30 KST 자동 실행. CIO 관점 투자 브리핑 + Discord 전송</div>
             <span class="smap-out">cio-briefing.md</span>
           </li>
         </ul>
       </div>
 
-      <!-- 배치 / 크론 -->
+      <!-- 캐시/유틸 -->
       <div class="smap-card">
         <div class="smap-hd">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span>배치 / 크론 (launchd)</span>
-          <span class="badge-blue">5</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span>캐시 / 유틸</span>
+          <span class="badge-blue">4</span>
         </div>
         <ul class="smap-list">
           <li>
-            <div class="smap-name">파이프라인</div>
-            <div class="smap-desc">수동 실행 (대시보드 버튼 또는 <code>python3 run_pipeline.py</code>)</div>
-            <span class="smap-out badge-green">상시</span>
+            <div class="smap-name">universe_cache</div>
+            <div class="smap-desc">KOSPI200 / S&amp;P100 종목 유니버스 캐시. 주간 갱신</div>
+            <span class="smap-out">cache/*.json</span>
           </li>
           <li>
-            <div class="smap-name">Marcus 분석</div>
-            <div class="smap-desc">평일 05:30 KST 자동 실행 → AI 분석 탭에 저장</div>
-            <span class="smap-out">com.investment-bot.marcus.plist</span>
+            <div class="smap-name">dynamic_holdings</div>
+            <div class="smap-desc">자동 보유 종목 후보 제안 (추가/제거)</div>
+            <span class="smap-out">holdings_proposal.json</span>
           </li>
           <li>
-            <div class="smap-name">Jarvis 브리핑</div>
-            <div class="smap-desc">평일 07:30 KST 자동 실행 → Discord 알림</div>
-            <span class="smap-out">com.investment-bot.jarvis.plist</span>
+            <div class="smap-name">ticker_master</div>
+            <div class="smap-desc">종목코드 마스터 데이터 (KR/US 통합)</div>
+            <span class="smap-out">내부 참조</span>
           </li>
           <li>
-            <div class="smap-name">알림 감시</div>
-            <div class="smap-desc">alerts_watch.py 상시 실행 — DB 변화 감지 → Discord 즉시 전송</div>
-            <span class="smap-out badge-green">상시</span>
-          </li>
-          <li>
-            <div class="smap-name">월말 적립</div>
-            <div class="smap-desc">매월 마지막 날 23:59 — 월 적립금 DB 자동 반영</div>
-            <span class="smap-out">com.investment-bot.deposit.plist</span>
+            <div class="smap-name">discord_notify</div>
+            <div class="smap-desc">Discord 알림 전송 유틸. 비서실/재테크 채널</div>
+            <span class="smap-out">외부 전송</span>
           </li>
         </ul>
       </div>
@@ -1137,16 +1241,15 @@
           <span class="badge-blue">10</span>
         </div>
         <ul class="smap-list smap-list--db">
-          <li><div class="smap-name">prices</div><div class="smap-desc">실시간 주가 — 10분 해상도, 3개월 보존</div></li>
-          <li><div class="smap-name">prices_daily</div><div class="smap-desc">일봉 집계 — OHLCV, 영구 보존</div></li>
-          <li><div class="smap-name">macro / macro_daily</div><div class="smap-desc">매크로 지표 원시 + 일봉</div></li>
-          <li><div class="smap-name">news</div><div class="smap-desc">뉴스 기사 + 감성 점수</div></li>
-          <li><div class="smap-name">alerts</div><div class="smap-desc">발생 알림 이력</div></li>
-          <li><div class="smap-name">portfolio_history</div><div class="smap-desc">일별 포트폴리오 스냅샷</div></li>
+          <li><div class="smap-name">prices / prices_daily</div><div class="smap-desc">실시간 주가(10분, 3개월 보존) + 일봉(OHLCV, 영구)</div></li>
+          <li><div class="smap-name">macro / macro_daily</div><div class="smap-desc">매크로 지표 원시 + 일봉 집계</div></li>
           <li><div class="smap-name">holdings / transactions</div><div class="smap-desc">보유 종목 + 매매 내역 (SSoT)</div></li>
-          <li><div class="smap-name">opportunities</div><div class="smap-desc">발굴 종목 + 복합 점수</div></li>
-          <li><div class="smap-name">fundamentals</div><div class="smap-desc">PER·PBR·ROE·EPS + 외국인 수급</div></li>
-          <li><div class="smap-name">analysis_history</div><div class="smap-desc">AI 분석 일자별 이력</div></li>
+          <li><div class="smap-name">portfolio_history</div><div class="smap-desc">일별 포트폴리오 스냅샷 (총자산/손익/환율)</div></li>
+          <li><div class="smap-name">news</div><div class="smap-desc">뉴스 기사 + 감성 점수 + 카테고리</div></li>
+          <li><div class="smap-name">alerts</div><div class="smap-desc">발생 알림 이력 + 알림 여부</div></li>
+          <li><div class="smap-name">opportunities</div><div class="smap-desc">발굴 종목 + 복합 점수 + 발굴 키워드</div></li>
+          <li><div class="smap-name">fundamentals</div><div class="smap-desc">PER/PBR/ROE/EPS + 외국인 수급</div></li>
+          <li><div class="smap-name">analysis_history</div><div class="smap-desc">AI 분석 일자별 이력 (전문 + 메타)</div></li>
         </ul>
       </div>
 
@@ -1163,12 +1266,12 @@
             <div class="intel-item" title="뉴스 + 감성"><span class="intel-name">news.json</span><span class="muted">뉴스</span></div>
             <div class="intel-item" title="포트폴리오 평가손익"><span class="intel-name">portfolio_summary.json</span><span class="muted">포트폴리오</span></div>
             <div class="intel-item" title="시장 레짐"><span class="intel-name">regime.json</span><span class="muted">레짐</span></div>
-            <div class="intel-item" title="MA·RSI·모멘텀"><span class="intel-name">price_analysis.json</span><span class="muted">기술분석</span></div>
+            <div class="intel-item" title="MA/RSI/모멘텀"><span class="intel-name">price_analysis.json</span><span class="muted">기술분석</span></div>
             <div class="intel-item" title="임계값 초과 알림"><span class="intel-name">alerts.json</span><span class="muted">알림</span></div>
             <div class="intel-item" title="스크리너 결과"><span class="intel-name">screener_results.json</span><span class="muted">스크리너</span></div>
             <div class="intel-item" title="신규 발굴 종목"><span class="intel-name">opportunities.json</span><span class="muted">발굴</span></div>
-            <div class="intel-item" title="PER·PBR·ROE"><span class="intel-name">fundamentals.json</span><span class="muted">펀더멘탈</span></div>
-            <div class="intel-item" title="외국인·기관 수급"><span class="intel-name">supply_data.json</span><span class="muted">수급</span></div>
+            <div class="intel-item" title="PER/PBR/ROE"><span class="intel-name">fundamentals.json</span><span class="muted">펀더멘탈</span></div>
+            <div class="intel-item" title="외국인/기관 수급"><span class="intel-name">supply_data.json</span><span class="muted">수급</span></div>
             <div class="intel-item" title="성과 추적"><span class="intel-name">performance_report.json</span><span class="muted">성과</span></div>
             <div class="intel-item" title="시뮬레이션"><span class="intel-name">simulation_report.json</span><span class="muted">시뮬</span></div>
             <div class="intel-item" title="엔진 모듈 상태"><span class="intel-name">engine_status.json</span><span class="muted">엔진상태</span></div>
