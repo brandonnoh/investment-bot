@@ -81,8 +81,8 @@ def validate_marcus_output(md_text: str) -> dict:
         errors.append("필수 요소 누락: 오늘의 판단 블록")
     if "포트폴리오" not in md_text:
         errors.append("필수 요소 누락: 포트폴리오 테이블")
-    if "매크로" not in md_text:
-        errors.append("필수 요소 누락: 매크로 지표")
+    if "매크로" not in md_text and "시장 지표" not in md_text:
+        errors.append("필수 요소 누락: 시장 지표")
 
     # 3. 면책 조항 체크
     if "면책" not in md_text and "투자 조언이 아닙니다" not in md_text:
