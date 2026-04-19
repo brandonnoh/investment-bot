@@ -178,11 +178,15 @@ def _fetch_stock_metrics(
     """
     metrics: dict = {"ticker": ticker}
 
-    # RSI (DB)
+    # RSI (1순위: DB, 2순위: universe_cache)
     try:
         metrics["rsi"] = calc_rsi(conn, ticker)
     except Exception:
         metrics["rsi"] = None
+    if metrics["rsi"] is None and uni_cache:
+        cached = uni_cache.get(ticker)
+        if cached:
+            metrics["rsi"] = cached.get("rsi")
 
     # 52주 범위 (DB)
     try:

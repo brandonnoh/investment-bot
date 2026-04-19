@@ -28,20 +28,51 @@ KST = timezone(timedelta(hours=9))
 OUTPUT_DIR = PROJECT_ROOT / "output" / "intel"
 CACHE_PATH = OUTPUT_DIR / "universe_cache.json"
 SLEEP_BETWEEN = 0.3
+RSI_PERIOD = 14
+
+
+# ── RSI 계산 ──
+
+
+def _calc_rsi_from_prices(closes: list[float]) -> float | None:
+    """종가 리스트로 RSI(14) 계산 — 최소 RSI_PERIOD+1개 필요"""
+    if len(closes) < RSI_PERIOD + 1:
+        return None
+    deltas = [closes[i] - closes[i - 1] for i in range(1, len(closes))]
+    gains = [d if d > 0 else 0 for d in deltas]
+    losses = [-d if d < 0 else 0 for d in deltas]
+    avg_gain = sum(gains[:RSI_PERIOD]) / RSI_PERIOD
+    avg_loss = sum(losses[:RSI_PERIOD]) / RSI_PERIOD
+    for i in range(RSI_PERIOD, len(deltas)):
+        avg_gain = (avg_gain * (RSI_PERIOD - 1) + gains[i]) / RSI_PERIOD
+        avg_loss = (avg_loss * (RSI_PERIOD - 1) + losses[i]) / RSI_PERIOD
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return round(100 - 100 / (1 + rs), 2)
 
 
 # ── yfinance 수집 ──
 
 
 def _fetch_ticker_info(ticker: str) -> dict | None:
-    """yfinance로 단일 종목 PER/PBR/ROE 수집"""
+    """yfinance로 단일 종목 PER/PBR/ROE + RSI 수집"""
     try:
         import yfinance as yf  # noqa: PLC0415
 
-        info = yf.Ticker(ticker).info
+        tk = yf.Ticker(ticker)
+        info = tk.info
         if not info or info.get("regularMarketPrice") is None:
             return None
-        return _extract_metrics(info)
+        metrics = _extract_metrics(info)
+        # 최근 1개월 종가로 RSI 계산
+        try:
+            hist = tk.history(period="1mo")
+            closes = hist["Close"].dropna().tolist()
+            metrics["rsi"] = _calc_rsi_from_prices(closes)
+        except Exception:
+            metrics["rsi"] = None
+        return metrics
     except Exception:
         return None
 
@@ -87,6 +118,7 @@ def _build_stock_entry(
         "per": fetched.get("per"),
         "pbr": fetched.get("pbr"),
         "roe": fetched.get("roe"),
+        "rsi": fetched.get("rsi"),
         "sector": sector,
     }
 
