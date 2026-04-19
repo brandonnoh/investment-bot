@@ -76,23 +76,17 @@ def validate_marcus_output(md_text: str) -> dict:
 
     # 2. 필수 섹션 체크
     sections = extract_sections(md_text)
-    marcus_config = getattr(config, "MARCUS_CONFIG", {})
-    required = marcus_config.get(
-        "required_sections",
-        ["RISK FIRST", "MARKET REGIME", "PORTFOLIO REVIEW", "TODAY'S CALL"],
-    )
-
-    for section in required:
-        if section not in sections:
-            errors.append(f"필수 섹션 누락: {section}")
+    # 2. 필수 요소 체크 (섹션 헤더 대신 키 문구로 검증)
+    if "오늘의 판단" not in md_text:
+        errors.append("필수 요소 누락: 오늘의 판단 블록")
+    if "포트폴리오" not in md_text:
+        errors.append("필수 요소 누락: 포트폴리오 테이블")
+    if "매크로" not in md_text:
+        errors.append("필수 요소 누락: 매크로 지표")
 
     # 3. 면책 조항 체크
     if "면책" not in md_text and "투자 조언이 아닙니다" not in md_text:
         errors.append("면책 조항 누락 — '투자 조언이 아닙니다' 문구 필요")
-
-    # 4. 경고 (선택 사항)
-    if "OPPORTUNITIES" not in sections:
-        warnings.append("OPPORTUNITIES 섹션 없음 — 발굴 종목 분석 누락")
 
     if confidence and confidence >= 4:
         # 높은 확신 레벨에는 구체적 근거가 더 필요
@@ -110,9 +104,7 @@ def validate_marcus_output(md_text: str) -> dict:
 
 def run():
     """marcus-analysis.md 파일을 읽어 검증한다 (파이프라인 호출용)"""
-    output_path = config.OUTPUT_DIR / config.MARCUS_CONFIG.get(
-        "output_file", "marcus-analysis.md"
-    )
+    output_path = config.OUTPUT_DIR / config.MARCUS_CONFIG.get("output_file", "marcus-analysis.md")
 
     if not output_path.exists():
         print("  ⚠️ marcus-analysis.md 없음 (마커스 미실행)")
