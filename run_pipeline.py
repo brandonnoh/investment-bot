@@ -38,7 +38,7 @@ from utils.engine_status import (  # noqa: E402
     EngineStatus,
     record_module_status,
 )
-from utils.engine_status import (
+from utils.engine_status import (  # noqa: E402
     run as save_engine_status,
 )
 from utils.schema import validate_all_outputs  # noqa: E402
@@ -60,6 +60,7 @@ def _collect_data(engine: EngineStatus):
 
     _collect_fundamentals(engine)
     _collect_supply()
+    _run_sector_intel()
     _collect_opportunities(engine)
 
 
@@ -70,9 +71,7 @@ def _collect_fundamentals(engine: EngineStatus):
 
         fund_results = fetch_fundamentals()
         if fund_results:
-            record_module_status(
-                engine, "fetch_fundamentals", fund_results, success_key="ticker"
-            )
+            record_module_status(engine, "fetch_fundamentals", fund_results, success_key="ticker")
         print(f"  펀더멘탈: {len(fund_results)}개 종목")
     except Exception as e:
         print(f"  ⚠️ fetch_fundamentals 실패: {e}")
@@ -92,6 +91,18 @@ def _collect_supply():
         print(f"  ⚠️ fetch_supply 실패: {e}")
 
 
+def _run_sector_intel():
+    """섹터 인텔리전스: macro/news/regime → sector_scores.json"""
+    try:
+        from analysis.sector_intel import run as run_sector_intel
+
+        result = run_sector_intel()
+        top = result.get("sectors", [{}])[0]
+        print(f"  섹터 점수화: top={top.get('name')}({top.get('score')})")
+    except Exception as e:
+        print(f"  ⚠️ sector_intel 실패: {e}")
+
+
 def _collect_opportunities(engine: EngineStatus):
     """Phase 4: 종목 발굴"""
     try:
@@ -99,9 +110,7 @@ def _collect_opportunities(engine: EngineStatus):
 
         opp_results = fetch_opportunities()
         if opp_results:
-            record_module_status(
-                engine, "fetch_opportunities", opp_results, success_key="ticker"
-            )
+            record_module_status(engine, "fetch_opportunities", opp_results, success_key="ticker")
         print(f"  종목 발굴: {len(opp_results)}개 후보")
     except Exception as e:
         print(f"  ⚠️ fetch_opportunities 실패: {e}")
