@@ -1,10 +1,7 @@
-/** 금액을 축약 형식으로 포맷 (예: 1.2M, 350K) */
+/** 금액을 천단위 콤마 형식으로 포맷 (예: 47,312,450) */
 export function fmtKrw(v?: number): string {
   if (v === undefined || v === null) return '—'
-  const abs = Math.abs(v)
-  if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
-  if (abs >= 1_000) return `${(v / 1_000).toFixed(0)}K`
-  return v.toFixed(0)
+  return Math.round(v).toLocaleString('ko-KR')
 }
 
 /** 퍼센트를 부호 포함 형식으로 포맷 (예: +1.23%) */
