@@ -46,9 +46,13 @@ export function MarcusTab() {
             <div
               className="prose prose-invert prose-sm max-w-none text-foreground
               prose-headings:text-gold prose-headings:font-mono
+              prose-h1:text-base prose-h1:font-bold prose-h1:mb-1
+              prose-h2:text-sm prose-h2:font-semibold prose-h2:mb-1
+              prose-h3:text-xs prose-h3:font-semibold prose-h3:uppercase prose-h3:tracking-wider prose-h3:text-gold/70 prose-h3:mb-1 prose-h3:mt-4
               prose-strong:text-foreground
               prose-code:text-gold prose-code:bg-mc-bg prose-code:px-1 prose-code:rounded
-              prose-blockquote:border-l-gold prose-blockquote:text-muted-foreground"
+              prose-blockquote:border-l-2 prose-blockquote:border-gold prose-blockquote:bg-gold/5 prose-blockquote:rounded-r prose-blockquote:px-3 prose-blockquote:py-2 prose-blockquote:text-foreground prose-blockquote:not-italic
+              prose-li:my-0.5"
             >
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
