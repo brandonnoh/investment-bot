@@ -19,6 +19,7 @@ export interface PriceItem {
   pnl_pct?: number
   stock_pnl_krw?: number
   fx_pnl_krw?: number
+  timestamp?: string
 }
 
 export interface MacroItem {

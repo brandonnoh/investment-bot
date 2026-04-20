@@ -2,6 +2,7 @@
 
 import { useIntelData } from '@/hooks/useIntelData'
 import { fmtKrw, fmtPct, pctColor } from '@/lib/format'
+import { SyncBadge } from '@/components/SyncBadge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -64,13 +65,16 @@ function StatsStrip() {
 function HoldingsTable() {
   const { data, isLoading } = useIntelData()
   const holdings = data?.portfolio_summary?.holdings ?? []
+  const priceTs = data?.prices?.prices?.[0]?.timestamp
 
   if (isLoading) return <div className="text-muted-foreground text-xs p-4">로딩 중...</div>
 
   return (
     <Card className="bg-mc-card border-mc-border">
       <CardHeader className="py-3 px-4">
-        <CardTitle className="text-xs font-mono">보유 종목</CardTitle>
+        <CardTitle className="text-xs font-mono">
+          보유 종목<SyncBadge timestamp={priceTs} />
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-0 overflow-x-auto">
         <Table>

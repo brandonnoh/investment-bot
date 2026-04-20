@@ -5,12 +5,14 @@ import { SectorPieChart } from '@/components/charts/SectorPieChart'
 import { AssetTypeBar } from '@/components/charts/AssetTypeBar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { fmtKrw, fmtPct, pctColor } from '@/lib/format'
+import { SyncBadge } from '@/components/SyncBadge'
 
 export function PortfolioTab() {
   const { data } = useIntelData()
   const total = data?.portfolio_summary?.total
   const history = data?.portfolio_summary?.history ?? []
   const holdings = data?.portfolio_summary?.holdings ?? []
+  const updatedAt = data?.portfolio_summary?.updated_at
 
   return (
     <div className="space-y-4">
@@ -35,7 +37,7 @@ export function PortfolioTab() {
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4">
         <Card className="bg-mc-card border-mc-border">
           <CardHeader className="py-3 px-4">
-            <CardTitle className="text-xs font-mono">수익률 추이</CardTitle>
+            <CardTitle className="text-xs font-mono">수익률 추이<SyncBadge timestamp={updatedAt} /></CardTitle>
           </CardHeader>
           <CardContent>
             <PnlLineChart history={history} />

@@ -2,6 +2,7 @@
 import { useWealthData } from '@/hooks/useWealthData'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { fmtKrw } from '@/lib/format'
+import { SyncBadge } from '@/components/SyncBadge'
 
 const TYPE_COLOR: Record<string, string> = {
   '부동산': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
@@ -34,7 +35,9 @@ export function WealthTab() {
       {/* Hero */}
       <Card className="bg-mc-card border-mc-border">
         <CardContent className="pt-5 pb-5 px-5">
-          <div className="text-xs text-muted-foreground mb-1">전체 자산</div>
+          <div className="text-xs text-muted-foreground mb-1">
+            전체 자산<SyncBadge timestamp={data.last_updated} />
+          </div>
           <div className="text-3xl font-mono font-bold">
             {fmtKrw(data.total_wealth_krw)}<span className="text-lg font-normal text-muted-foreground ml-1">원</span>
           </div>

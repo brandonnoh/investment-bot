@@ -223,6 +223,7 @@ def load_wealth_data(days: int = 60) -> dict:
         total_wealth = investment_total + extra_total
         monthly_recurring = sum(a.get("monthly_deposit_krw", 0) for a in extra_assets)
 
+        last_updated = portfolio_data.get("updated_at")
         return {
             "total_wealth_krw": total_wealth,
             "investment_krw": investment_total,
@@ -232,6 +233,7 @@ def load_wealth_data(days: int = 60) -> dict:
             "monthly_recurring_krw": monthly_recurring,
             "extra_assets": extra_assets,
             "wealth_history": wealth_history,
+            "last_updated": last_updated,
         }
     except Exception as e:
         print(f"[api] wealth 데이터 로드 실패: {e}")
