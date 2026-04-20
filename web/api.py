@@ -11,6 +11,8 @@ import subprocess
 import threading
 from pathlib import Path
 
+from web.portfolio_refresh import refresh_portfolio_with_live_prices
+
 # 프로젝트 루트
 PROJECT_ROOT = Path(__file__).parent.parent
 INTEL_DIR = PROJECT_ROOT / "output" / "intel"
@@ -65,6 +67,15 @@ def load_intel_data() -> dict:
     for md_filename in MD_FILES:
         key = md_filename.replace(".md", "").replace("-", "_")
         result[key] = load_md_file(md_filename)
+
+    # portfolio_summary를 prices.json 최신 가격으로 실시간 재계산
+    if result.get("portfolio_summary") and result.get("prices"):
+        try:
+            result["portfolio_summary"] = refresh_portfolio_with_live_prices(
+                result["portfolio_summary"], result["prices"]
+            )
+        except Exception as e:
+            print(f"[api] portfolio 가격 갱신 실패: {e}")
 
     return result
 

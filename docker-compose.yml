@@ -9,6 +9,7 @@ services:
       - ./db:/app/db
       - ./output:/app/output
       - ./logs:/app/logs
+      - ./docs:/app/docs
     env_file:
       - .env
 

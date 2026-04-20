@@ -34,6 +34,9 @@ MONTHLY_PLIST="com.investment-bot.monthly-deposit.plist"
 MARCUS_PLIST="com.investment-bot.marcus.plist"
 JARVIS_PLIST="com.investment-bot.jarvis.plist"
 DASHBOARD_PLIST="com.investment-bot.dashboard.plist"
+PRICES_KRX_PLIST="com.investment-bot.prices-krx.plist"
+PRICES_US_PLIST="com.investment-bot.prices-us.plist"
+NEWS_MORNING_PLIST="com.investment-bot.news-morning.plist"
 
 info "=== investment-bot LaunchAgent 설치 시작 ==="
 info "프로젝트 루트: $PROJECT_ROOT"
@@ -97,6 +100,24 @@ info "  복사됨: $JARVIS_PLIST (Jarvis 07:30 KST 브리핑)"
 
 cp "$LAUNCHD_DIR/$DASHBOARD_PLIST" "$LAUNCH_AGENTS_DIR/$DASHBOARD_PLIST"
 info "  복사됨: $DASHBOARD_PLIST (미션컨트롤 웹 서버 상시 실행)"
+
+# 장중 가격 갱신 plist: 환경변수 치환 후 복사
+TMP_PRICES_KRX=$(mktemp /tmp/com.investment-bot.prices-krx.XXXXXX.plist)
+TMP_PRICES_US=$(mktemp /tmp/com.investment-bot.prices-us.XXXXXX.plist)
+TMP_NEWS_MORNING=$(mktemp /tmp/com.investment-bot.news-morning.XXXXXX.plist)
+trap 'rm -f "$TMP_PIPELINE" "$TMP_PRICES_KRX" "$TMP_PRICES_US" "$TMP_NEWS_MORNING"' EXIT
+
+for SRC_PLIST in "$PRICES_KRX_PLIST" "$PRICES_US_PLIST" "$NEWS_MORNING_PLIST"; do
+    TMP_VAR="TMP_$(echo "$SRC_PLIST" | sed 's/com\.investment-bot\.\(.*\)\.plist/\1/' | tr '[:lower:]-' '[:upper:]_')"
+    TMP_FILE="${!TMP_VAR}"
+    sed \
+        -e "s|__KIWOOM_APPKEY__|${KIWOOM_APPKEY:-}|g" \
+        -e "s|__KIWOOM_SECRETKEY__|${KIWOOM_SECRETKEY:-}|g" \
+        -e "s|__BRAVE_API_KEY__|${BRAVE_API_KEY:-}|g" \
+        "$LAUNCHD_DIR/$SRC_PLIST" > "$TMP_FILE"
+    cp "$TMP_FILE" "$LAUNCH_AGENTS_DIR/$SRC_PLIST"
+    info "  복사됨: $SRC_PLIST (환경변수 치환 포함)"
+done
 echo ""
 
 # ── 3단계: launchctl load 로 서비스 등록 ────────────────────────
@@ -104,7 +125,7 @@ info "[3/4] launchctl 로 서비스 등록"
 
 # macOS 버전에 따라 launchctl 문법이 다름 (Monterey 이상: bootstrap/bootout)
 # 하위 호환을 위해 load/unload 사용
-for PLIST in "$PIPELINE_PLIST" "$ALERTS_PLIST" "$MONTHLY_PLIST" "$MARCUS_PLIST" "$JARVIS_PLIST" "$DASHBOARD_PLIST"; do
+for PLIST in "$PIPELINE_PLIST" "$ALERTS_PLIST" "$MONTHLY_PLIST" "$MARCUS_PLIST" "$JARVIS_PLIST" "$DASHBOARD_PLIST" "$PRICES_KRX_PLIST" "$PRICES_US_PLIST" "$NEWS_MORNING_PLIST"; do
     FULL_PATH="$LAUNCH_AGENTS_DIR/$PLIST"
     LABEL="${PLIST%.plist}"  # 확장자 제거 → Label 값
 
@@ -141,6 +162,9 @@ echo "  수동 실행 (테스트용):"
 echo "    launchctl start com.investment-bot.pipeline"
 echo "    launchctl start com.investment-bot.alerts-watch"
 echo "    launchctl start com.investment-bot.monthly-deposit"
+echo "    launchctl start com.investment-bot.prices-krx"
+echo "    launchctl start com.investment-bot.prices-us"
+echo "    launchctl start com.investment-bot.news-morning"
 echo ""
 echo "  서비스 중지:"
 echo "    launchctl stop com.investment-bot.alerts-watch"
@@ -149,8 +173,14 @@ echo "  서비스 제거:"
 echo "    launchctl unload ~/Library/LaunchAgents/com.investment-bot.pipeline.plist"
 echo "    launchctl unload ~/Library/LaunchAgents/com.investment-bot.alerts-watch.plist"
 echo "    launchctl unload ~/Library/LaunchAgents/com.investment-bot.monthly-deposit.plist"
+echo "    launchctl unload ~/Library/LaunchAgents/com.investment-bot.prices-krx.plist"
+echo "    launchctl unload ~/Library/LaunchAgents/com.investment-bot.prices-us.plist"
+echo "    launchctl unload ~/Library/LaunchAgents/com.investment-bot.news-morning.plist"
 echo ""
 echo "  로그 확인:"
 echo "    tail -f $PROJECT_ROOT/logs/launchd_pipeline.log"
 echo "    tail -f $PROJECT_ROOT/logs/launchd_alerts.log"
 echo "    tail -f $PROJECT_ROOT/logs/launchd_monthly.log"
+echo "    tail -f $PROJECT_ROOT/logs/launchd_prices_krx.log"
+echo "    tail -f $PROJECT_ROOT/logs/launchd_prices_us.log"
+echo "    tail -f $PROJECT_ROOT/logs/launchd_news_morning.log"
