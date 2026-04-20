@@ -28,6 +28,8 @@ jobs:
       - name: investment-bot 배포
         run: |
           docker cp web/. investment-bot:/app/web/
+          docker cp scripts/. investment-bot:/app/scripts/
+          docker cp run_pipeline.py investment-bot:/app/run_pipeline.py
           docker compose restart investment-bot
 
       - name: 헬스 체크

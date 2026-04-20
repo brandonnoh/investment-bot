@@ -10,6 +10,7 @@ services:
       - ./output:/app/output
       - ./logs:/app/logs
       - ./docs:/app/docs
+      - ~/.claude:/root/.claude:ro
     env_file:
       - .env
 
