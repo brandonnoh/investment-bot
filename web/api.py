@@ -36,6 +36,9 @@ INTEL_FILES = [
     "holdings_proposal.json",
     "performance_report.json",
     "simulation_report.json",
+    "sector_scores.json",
+    "proactive_alerts.json",
+    "correction_notes.json",
 ]
 
 # 읽을 마크다운 파일 목록
