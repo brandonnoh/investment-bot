@@ -68,6 +68,7 @@ output/intel/ → 자비스가 읽는 유일한 인터페이스
 - **`output/intel/`이 자비스와의 유일한 인터페이스**
 - **Graceful degradation**: 개별 실패 시 로깅 후 계속 진행, 파이프라인 중단 금지
 - **alerts.json은 알림 있을 때만 생성**, 없으면 삭제
+- **새 분석 모듈 추가 시 `web/api.py`의 INTEL_FILES 목록도 반드시 함께 추가** (누락 시 `/api/data`로 조회 불가)
 
 ## 코드 규칙
 
