@@ -62,9 +62,10 @@ export function Header() {
   useCompletionToast(isRunningMarcus, 'AI 분석')
 
   const lastUpdatedLabel = (() => {
-    if (data?.last_updated) {
+    const ts = data?.last_updated ?? data?.engine_status?.updated_at
+    if (ts) {
       try {
-        return new Date(data.last_updated).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) + ' 기준'
+        return new Date(ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) + ' 기준'
       } catch { /* fallback */ }
     }
     return lastUpdated || null
