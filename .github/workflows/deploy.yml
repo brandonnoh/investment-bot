@@ -16,7 +16,7 @@ jobs:
       - name: Next.js 빌드
         working-directory: web-next
         run: |
-          npm ci
+          npm install
           npm run build
 
       - name: mc-web 배포
