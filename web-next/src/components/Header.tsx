@@ -49,7 +49,7 @@ export function Header() {
         <span className="font-mono font-bold text-gold text-sm tracking-wider">MISSION CTRL</span>
         <div className={`w-2 h-2 rounded-full ${sseStatus === 'connected' ? 'bg-mc-green shadow-[0_0_6px_#4dca7e]' : 'bg-mc-red'}`} />
         {lastUpdatedLabel && (
-          <span className="text-xs text-muted-foreground hidden sm:block">{lastUpdatedLabel}</span>
+          <span className="text-xs text-muted-foreground">{lastUpdatedLabel}</span>
         )}
       </div>
       <div className="flex items-center gap-2">
