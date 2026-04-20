@@ -73,8 +73,12 @@ def notify_marcus_complete(md_path: Path) -> None:
         level = confidence if confidence else 0
         stars = "★" * level + "☆" * (5 - level)
 
-        # TODAY'S CALL — ## 섹션 우선, 없으면 **TODAY'S CALL:** bold 패턴으로 폴백
+        # TODAY'S CALL — ## 섹션 우선, 없으면 한국어 블록쿼트, 마지막으로 영어 bold 패턴
         todays_call = sections.get("TODAY'S CALL", "")
+        if not todays_call:
+            m = _re.search(r"> \*\*오늘의 판단:\*\*\s*(.+)", md_text)
+            if m:
+                todays_call = m.group(1).strip()
         if not todays_call:
             m = _re.search(r"\*\*TODAY'S CALL[^*]*\*\*[:\s]*(.+)", md_text)
             if m:

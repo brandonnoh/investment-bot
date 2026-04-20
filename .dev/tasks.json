@@ -1,191 +1,108 @@
 {
-  "summary": { "total": 9, "done": 9, "in_progress": 0, "pending": 0 },
+  "summary": { "total": 5, "done": 0, "in_progress": 0, "pending": 5 },
   "features": [
     {
-      "id": "task-001",
-      "title": "Next.js 프로젝트 초기화 + shadcn/ui 설치",
-      "status": "done",
+      "id": "sector-map",
+      "title": "섹터 → 종목 매핑 + 매크로 신호 룰셋",
+      "status": "pending",
       "priority": "critical",
-      "affected_packages": ["web-next"],
-      "tags": ["frontend", "setup"],
+      "affected_packages": ["analysis"],
+      "tags": ["python", "engine"],
       "acceptance_criteria": [
-        "web-next/ 디렉토리에 Next.js 15 + TypeScript 프로젝트 존재",
-        "package.json에 shadcn/ui, tailwindcss, recharts, swr 포함",
-        "npx shadcn init 완료 — components.json 존재",
-        "next build 성공 (타입 에러 없음)",
-        "tailwind.config.ts에 warm dark 테마 색상 정의 (--bg:#0c0b0a, --gold:#c9a93a 등)",
-        "next.config.ts에 output: 'export' 설정"
+        "analysis/sector_map.py 생성",
+        "SECTOR_MAP 딕셔너리: 10개 섹터 × KR/US 종목 리스트 (섹터당 최소 5종목)",
+        "MACRO_SECTOR_RULES 딕셔너리: VIX/유가/환율 신호 → 섹터 유리/불리 룰셋",
+        "python3 -c 'from analysis.sector_map import SECTOR_MAP, MACRO_SECTOR_RULES; print(len(SECTOR_MAP))' 출력 10",
+        "ruff check analysis/sector_map.py 오류 없음"
       ],
       "test_scenarios": [
-        "cd web-next && npm run build 성공",
-        "out/ 디렉토리 생성 확인"
+        "SECTOR_MAP['반도체'] 에 'NVDA', '005930.KS' 포함",
+        "MACRO_SECTOR_RULES['vix_high']['unfavorable'] 에 '성장주' 포함"
       ],
       "depends_on": []
     },
     {
-      "id": "task-002",
-      "title": "API 타입 정의 + SWR 데이터 훅",
-      "status": "done",
+      "id": "sector-intel",
+      "title": "매크로/뉴스/레짐 기반 섹터 점수화 → sector_scores.json",
+      "status": "pending",
       "priority": "critical",
-      "affected_packages": ["web-next/src/lib", "web-next/src/hooks"],
-      "tags": ["frontend", "api"],
+      "affected_packages": ["analysis"],
+      "tags": ["python", "engine"],
       "acceptance_criteria": [
-        "web-next/src/types/api.ts 존재 — IntelData, PortfolioSummary, PriceItem, MacroItem, Alert, RegimeData, SupplyData, Opportunity 타입 정의",
-        "web-next/src/lib/api.ts 존재 — FLASK_BASE_URL 환경변수 기반, fetchIntelData() 함수",
-        "web-next/src/hooks/useIntelData.ts 존재 — SWR 30초 폴링, isLoading/isError 반환",
-        "web-next/src/hooks/useProcessStatus.ts 존재 — 5초 폴링",
-        "any 타입 사용 없음",
-        "tsc --noEmit 통과"
+        "analysis/sector_intel.py 생성 (run() 함수 노출)",
+        "macro.json + regime.json + news.json 입력 → output/intel/sector_scores.json 출력",
+        "sector_scores.json 구조: {updated_at, sectors: [{name, score, signal, reasoning, top_tickers}]}",
+        "sectors는 score 내림차순 정렬",
+        "python3 analysis/sector_intel.py 실행 시 sector_scores.json 생성",
+        "ruff check analysis/sector_intel.py 오류 없음"
       ],
       "test_scenarios": [
-        "tsc --noEmit 성공",
-        "타입 파일 grep으로 any 없음 확인"
+        "VIX 급등 + 유가 급락 → 방산/금 섹터 상위 랭크",
+        "news.json에 '반도체' 키워드 다수 → 반도체 섹터 점수 상승"
       ],
-      "depends_on": ["task-001"]
+      "depends_on": ["sector-map"]
     },
     {
-      "id": "task-003",
-      "title": "레이아웃: Header + 탭 네비게이션 + 글로벌 상태",
-      "status": "done",
-      "priority": "critical",
-      "affected_packages": ["web-next/src/components", "web-next/src/app"],
-      "tags": ["frontend", "layout"],
-      "acceptance_criteria": [
-        "web-next/src/app/layout.tsx — 루트 레이아웃, 다크 배경, Space Grotesk + JetBrains Mono 폰트",
-        "web-next/src/components/Header.tsx — MISSION CTRL 브랜드, 파이프라인 버튼, AI 분석 버튼, 실시간 연결 dot",
-        "web-next/src/components/TabNav.tsx — 7개 탭(개요/포트폴리오/AI분석/발굴/알림/시스템/서비스맵), 모바일에서 아이콘만 표시",
-        "web-next/src/store/useMCStore.ts — Zustand 스토어: tab, pipelineRunning, marcusRunning, lastUpdated",
-        "모바일(480px) 탭 아이콘만 표시 (tab-label hidden)",
-        "next build 성공"
-      ],
-      "test_scenarios": [
-        "next build 성공",
-        "Header 컴포넌트 render 확인"
-      ],
-      "depends_on": ["task-002"]
-    },
-    {
-      "id": "task-004",
-      "title": "개요 탭 — StatsStrip + Holdings 테이블 + 사이드바",
-      "status": "done",
+      "id": "value-screener",
+      "title": "상위 섹터 종목 RSI/PER/PBR 스크리닝 → opportunities.json",
+      "status": "pending",
       "priority": "high",
-      "affected_packages": ["web-next/src/components/tabs"],
-      "tags": ["frontend", "design"],
+      "affected_packages": ["analysis"],
+      "tags": ["python", "engine"],
       "acceptance_criteria": [
-        "web-next/src/components/tabs/OverviewTab.tsx 존재",
-        "StatsStrip: 포트폴리오 손익 / 평균 일변동 / 시장 국면 / 활성 알림 4개 카드",
-        "HoldingsTable: 종목명/현재가/등락/평균단가/평가손익/통화 컬럼, shadcn Table 사용",
-        "사이드바: 시장국면 카드(국면/신뢰도/VIX/현금비중) + Fear&Greed 프로그레스바 + 매크로 4개",
-        "수익 색상: 양수=green(#4dca7e), 음수=red(#e05656), 0=muted",
-        "모바일: 사이드바가 테이블 위로 이동 (order 변경)",
-        "next build 성공"
+        "analysis/value_screener.py 생성 (run() 함수 노출)",
+        "sector_scores.json 상위 3 섹터 → sector_map에서 종목 리스트 추출",
+        "각 종목 DB prices_daily에서 RSI 계산 (analysis.price_analysis_momentum.calc_rsi 재사용)",
+        "Yahoo Finance에서 PER/PBR/52주범위 fetch (urllib.request 사용)",
+        "스크리닝: RSI<35 OR (PBR<1.2 AND ROE>8) OR 52주 저점 대비 -25% 이하",
+        "output/intel/opportunities.json 출력 (updated_at, keywords, opportunities, summary 포함)",
+        "opportunities 각 항목에 screen_reason, sector 필드 포함",
+        "python3 analysis/value_screener.py 실행 시 opportunities.json 생성",
+        "ruff check analysis/value_screener.py 오류 없음"
       ],
       "test_scenarios": [
-        "next build 성공",
-        "모바일 뷰에서 사이드바가 상단에 위치"
+        "RSI 28 종목 → screen_reason에 '과매도' 포함",
+        "PBR 0.8 + ROE 12% 종목 → screen_reason에 '저평가' 포함"
       ],
-      "depends_on": ["task-003"]
+      "depends_on": ["sector-map", "sector-intel"]
     },
     {
-      "id": "task-005",
-      "title": "포트폴리오 탭 — 손익 추이 차트 + 섹터 파이 차트",
-      "status": "done",
+      "id": "opp-refactor",
+      "title": "fetch_opportunities.py를 value_screener 위임으로 교체",
+      "status": "pending",
       "priority": "high",
-      "affected_packages": ["web-next/src/components/tabs"],
-      "tags": ["frontend", "design"],
+      "affected_packages": ["data"],
+      "tags": ["python", "engine"],
       "acceptance_criteria": [
-        "web-next/src/components/tabs/PortfolioTab.tsx 존재",
-        "손익 추이 LineChart (Recharts): x=날짜, y=손익률(%), 골드 라인",
-        "섹터 파이 PieChart (Recharts): 섹터별 비중",
-        "포트폴리오 요약 카드: 총 투자원금 / 평가금액 / 총손익(원) / 총손익(%)",
-        "holdings 개별 카드 또는 테이블",
-        "next build 성공"
+        "data/fetch_opportunities.py의 run() 함수 최상단에서 analysis.value_screener.run() 호출 후 반환",
+        "기존 Brave 텍스트 매칭 로직(_process_keywords 등)은 _legacy_run() 함수로 이름 변경하여 보존",
+        "python3 data/fetch_opportunities.py 실행 시 opportunities.json 생성",
+        "ruff check data/fetch_opportunities.py 오류 없음"
       ],
       "test_scenarios": [
-        "next build 성공"
+        "run() 호출 → value_screener.run() 위임 확인",
+        "_legacy_run() 직접 호출 시 기존 Brave 검색 동작"
       ],
-      "depends_on": ["task-004"]
+      "depends_on": ["value-screener"]
     },
     {
-      "id": "task-006",
-      "title": "AI 분석 탭 — Marcus 결과 + 이력 사이드패널",
-      "status": "done",
-      "priority": "high",
-      "affected_packages": ["web-next/src/components/tabs"],
-      "tags": ["frontend", "design"],
-      "acceptance_criteria": [
-        "web-next/src/components/tabs/MarcusTab.tsx 존재",
-        "2컬럼 레이아웃: 메인(마크다운 결과) + 사이드(이력 목록)",
-        "이력 목록: 날짜/확신레벨/스탠스 표시, 클릭 시 메인에 로드",
-        "분석 중 단계 표시 (Step 진행 표시: 데이터수집→분석→완료)",
-        "라이브 로그 뷰어 (분석 실행 중)",
-        "마크다운 렌더링 (react-markdown 또는 dangerouslySetInnerHTML)",
-        "모바일: 사이드패널이 상단으로",
-        "next build 성공"
-      ],
-      "test_scenarios": [
-        "next build 성공"
-      ],
-      "depends_on": ["task-004"]
-    },
-    {
-      "id": "task-007",
-      "title": "발굴 탭 + 알림 탭 + 시스템 탭 + 서비스 맵 탭",
-      "status": "done",
+      "id": "pipeline-wire",
+      "title": "run_pipeline.py에 sector_intel 단계 통합",
+      "status": "pending",
       "priority": "medium",
-      "affected_packages": ["web-next/src/components/tabs"],
-      "tags": ["frontend", "design"],
+      "affected_packages": ["root"],
+      "tags": ["python"],
       "acceptance_criteria": [
-        "DiscoveryTab.tsx: 발굴 종목 테이블 (종목명/티커/복합점수/발굴키워드), 퀀트 스코어 Bar 차트",
-        "AlertsTab.tsx: 알림 목록 (level별 색상 — critical/warning/info), shadcn Badge",
-        "SystemTab.tsx: 엔진 상태 카드(마지막 수집/에러 횟수/DB 용량), intel 파일 목록 그리드",
-        "ServiceMapTab.tsx: 3컬럼 그리드 (수집/분석/배치/리포트/DB), 모바일 1컬럼",
-        "next build 성공"
+        "run_pipeline.py의 _collect_opportunities() 호출 직전에 sector_intel.run() 호출",
+        "sector_intel import 실패 시 graceful skip (⚠️ 로그만, 파이프라인 계속)",
+        "python3 run_pipeline.py 실행 시 '섹터 점수화:' 문자열이 출력에 포함",
+        "ruff check run_pipeline.py 오류 없음"
       ],
       "test_scenarios": [
-        "next build 성공"
+        "파이프라인 실행 로그에 '섹터 점수화:' 출력",
+        "sector_intel 실패해도 파이프라인 계속 진행"
       ],
-      "depends_on": ["task-005", "task-006"]
-    },
-    {
-      "id": "task-008",
-      "title": "SSE 실시간 연결 + 파이프라인/Marcus 실행 연동",
-      "status": "done",
-      "priority": "high",
-      "affected_packages": ["web-next/src/hooks", "web-next/src/components"],
-      "tags": ["frontend"],
-      "acceptance_criteria": [
-        "web-next/src/hooks/useSSE.ts 존재 — /api/events SSE 연결, 메시지 수신 시 SWR 캐시 무효화",
-        "Header 파이프라인 버튼: POST /api/run-pipeline, 실행 중 disabled + 스피너",
-        "Header AI 분석 버튼: POST /api/run-marcus, 실행 중 disabled + 스피너",
-        "실시간 dot: SSE 연결 시 green glow, 끊김 시 red",
-        "next build 성공"
-      ],
-      "test_scenarios": [
-        "next build 성공"
-      ],
-      "depends_on": ["task-007"]
-    },
-    {
-      "id": "task-009",
-      "title": "Flask 정적 빌드 서빙 + Docker 통합",
-      "status": "done",
-      "priority": "high",
-      "affected_packages": ["web/server.py", "Dockerfile", "docker-compose.yml"],
-      "tags": ["backend", "deploy"],
-      "acceptance_criteria": [
-        "web-next/package.json build 스크립트: next build → out/ 생성",
-        "web/server.py가 web-next/out/ 정적 파일 서빙 (기존 web/index.html 대신)",
-        "Dockerfile: npm install + next build 단계 추가",
-        "docker compose up -d --build 후 http://localhost:8421 접속 시 Next.js 앱 표시",
-        "모든 /api/* 경로는 기존대로 Flask가 처리"
-      ],
-      "test_scenarios": [
-        "docker compose up -d --build 성공",
-        "curl http://localhost:8421 → 200 OK",
-        "curl http://localhost:8421/api/data → JSON 반환"
-      ],
-      "depends_on": ["task-008"]
+      "depends_on": ["sector-intel", "opp-refactor"]
     }
   ]
 }
