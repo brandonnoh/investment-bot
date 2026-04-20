@@ -11,6 +11,7 @@ services:
       - ./logs:/app/logs
       - ./docs:/app/docs
       - ~/.claude:/root/.claude:ro
+      - ~/.claude.json:/root/.claude.json:ro
     env_file:
       - .env
 

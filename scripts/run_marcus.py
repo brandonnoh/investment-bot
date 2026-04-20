@@ -294,7 +294,7 @@ def _call_claude_json(prompt: str, timeout: int = 60) -> dict | None:
     """Claude CLI 호출 후 JSON 파싱. 실패 시 None."""
     try:
         result = subprocess.run(
-            [CLAUDE_BIN, "--dangerously-skip-permissions", "--output-format", "json", "-p", prompt],
+            [CLAUDE_BIN, "--output-format", "json", "-p", prompt],
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -417,7 +417,7 @@ def run():
     claude_output = ""
     try:
         result = subprocess.run(
-            [CLAUDE_BIN, "--dangerously-skip-permissions", "--output-format", "json", "-p", prompt],
+            [CLAUDE_BIN, "--output-format", "json", "-p", prompt],
             capture_output=True,
             text=True,
             timeout=300,
