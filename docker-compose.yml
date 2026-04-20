@@ -21,5 +21,6 @@ services:
       - "3000:3000"
     environment:
       - PYTHON_API_URL=http://investment-bot:8421
+      - HOSTNAME=0.0.0.0
     depends_on:
       - investment-bot

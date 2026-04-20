@@ -42,21 +42,16 @@ _CONTENT_TYPES: dict[str, str] = {
     ".json": "application/json; charset=utf-8",
     ".png": "image/png",
     ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".gif": "image/gif",
     ".svg": "image/svg+xml",
     ".ico": "image/x-icon",
-    ".woff": "font/woff",
     ".woff2": "font/woff2",
     ".ttf": "font/ttf",
     ".txt": "text/plain; charset=utf-8",
     ".webp": "image/webp",
     ".map": "application/json",
 }
-# Next.js 빌드 우선, 없으면 기존 web/ 폴백
 _NEXT_OUT = Path(__file__).parent.parent / "web-next" / "out"
-_LEGACY_DIR = Path(__file__).parent
-WEB_DIR = _NEXT_OUT if _NEXT_OUT.exists() else _LEGACY_DIR
+WEB_DIR = _NEXT_OUT
 
 # SSE 클라이언트 큐 관리
 _sse_clients: list[queue.Queue] = []
@@ -137,21 +132,17 @@ class MissionControlHandler(BaseHTTPRequestHandler):
 
     def _serve_static(self, path: str):
         """정적 파일 서빙 + SPA 폴백."""
-        # 경로 순회 공격 방지
         safe = Path(path.lstrip("/"))
         if ".." in safe.parts:
             self.send_response(403)
             self.end_headers()
             return
-
-        # "/" 요청은 index.html
         file_path = WEB_DIR / "index.html" if path == "/" else WEB_DIR / safe
         if file_path.is_file():
             ext = file_path.suffix.lower()
             ct = _CONTENT_TYPES.get(ext, "application/octet-stream")
             self.send_file(file_path, ct)
         else:
-            # SPA 폴백: 파일이 없으면 index.html 반환
             index = WEB_DIR / "index.html"
             if index.is_file():
                 self.send_file(index, "text/html; charset=utf-8")
