@@ -1,0 +1,38 @@
+name: Deploy to Mac mini
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Next.js 빌드
+        working-directory: web-next
+        run: |
+          npm ci
+          npm run build
+
+      - name: mc-web 배포
+        run: |
+          docker cp web-next/.next/standalone/. mc-web:/app/
+          docker cp web-next/.next/static/. mc-web:/app/.next/static/
+          docker restart mc-web
+
+      - name: investment-bot 배포
+        run: |
+          docker cp web/. investment-bot:/app/web/
+          docker compose restart investment-bot
+
+      - name: 헬스 체크
+        run: |
+          sleep 5
+          curl -sf http://localhost:3000 -o /dev/null || (echo "mc-web 헬스체크 실패" && exit 1)
+          curl -sf http://localhost:8421/api/status -o /dev/null || (echo "Flask API 헬스체크 실패" && exit 1)
+          echo "배포 성공"
