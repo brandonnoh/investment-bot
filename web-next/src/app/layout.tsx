@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body className="bg-background text-foreground antialiased">
         <ThemeProvider>
           {children}
+          <Toaster position="bottom-center" richColors />
         </ThemeProvider>
       </body>
     </html>
