@@ -185,6 +185,48 @@ def load_analysis_history(limit: int = 30) -> list[dict]:
         return []
 
 
+def load_wealth_data(days: int = 60) -> dict:
+    """전재산(투자 + 비금융 자산) 요약 데이터 반환."""
+    import sys as _sys
+
+    _sys.path.insert(0, str(PROJECT_ROOT))
+    try:
+        from db.ssot_wealth import get_extra_assets, get_total_wealth_history
+
+        extra_assets = get_extra_assets()
+        wealth_history = get_total_wealth_history(days=days)
+
+        # 투자 포트폴리오 데이터 로드
+        portfolio_path = INTEL_DIR / "portfolio_summary.json"
+        portfolio_data = {}
+        if portfolio_path.exists():
+            with portfolio_path.open(encoding="utf-8") as f:
+                portfolio_data = json.load(f)
+
+        total_info = portfolio_data.get("total", {})
+        investment_total = total_info.get("current_value_krw", 0)
+        investment_pnl = total_info.get("pnl_krw", 0)
+        investment_pnl_pct = total_info.get("pnl_pct", 0)
+
+        extra_total = sum(a["current_value_krw"] for a in extra_assets)
+        total_wealth = investment_total + extra_total
+        monthly_recurring = sum(a.get("monthly_deposit_krw", 0) for a in extra_assets)
+
+        return {
+            "total_wealth_krw": total_wealth,
+            "investment_krw": investment_total,
+            "investment_pnl_krw": investment_pnl,
+            "investment_pnl_pct": investment_pnl_pct,
+            "extra_assets_krw": extra_total,
+            "monthly_recurring_krw": monthly_recurring,
+            "extra_assets": extra_assets,
+            "wealth_history": wealth_history,
+        }
+    except Exception as e:
+        print(f"[api] wealth 데이터 로드 실패: {e}")
+        return {"error": str(e)}
+
+
 def load_analysis_detail(date: str) -> dict | None:
     """특정 날짜의 전체 분석 내용 조회."""
     if not DB_PATH.exists():

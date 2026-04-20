@@ -28,6 +28,7 @@ from web.api import (
     load_intel_data,
     load_log_tail,
     load_md_file,
+    load_wealth_data,
     run_background,
 )
 
@@ -180,6 +181,9 @@ class MissionControlHandler(BaseHTTPRequestHandler):
                 self.send_json(result if result else {})
             else:
                 self.send_json(load_analysis_history())
+        elif path == "/api/wealth":
+            days = int(params.get("days", ["60"])[0])
+            self.send_json(load_wealth_data(days))
         elif path == "/api/logs":
             name = params.get("name", ["marcus"])[0]
             lines = int(params.get("lines", ["80"])[0])
