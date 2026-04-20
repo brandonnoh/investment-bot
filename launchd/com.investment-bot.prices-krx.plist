@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- KRX 장중 가격 갱신 LaunchAgent -->
-<!-- 평일(월~금) KST 09:10~15:10, 매시간 실행 -->
-<!-- KST → UTC: -9h. UTC 00:10, 01:10, 02:10, 03:10, 04:10, 05:10, 06:10 -->
-<!-- install.sh가 __PLACEHOLDER__ 값을 실제 환경변수로 치환함 -->
+<!-- KRX + 미국장 가격 갱신 LaunchAgent -->
+<!-- 10분(600초)마다 실행, 장중 여부는 refresh_prices.py가 스스로 판단하여 조기 종료 -->
 <plist version="1.0">
 <dict>
 
@@ -37,84 +35,9 @@
         <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     </dict>
 
-    <!-- 실행 스케줄: 평일(월=1 ~ 금=5) UTC 00:10~06:10 = KST 09:10~15:10 -->
-    <key>StartCalendarInterval</key>
-    <array>
-        <!-- 월요일 UTC 00:10 = KST 09:10 -->
-        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 월요일 UTC 01:10 = KST 10:10 -->
-        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>1</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 월요일 UTC 02:10 = KST 11:10 -->
-        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>2</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 월요일 UTC 03:10 = KST 12:10 -->
-        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 월요일 UTC 04:10 = KST 13:10 -->
-        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>4</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 월요일 UTC 05:10 = KST 14:10 -->
-        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 월요일 UTC 06:10 = KST 15:10 -->
-        <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
-
-        <!-- 화요일 UTC 00:10 = KST 09:10 -->
-        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 화요일 UTC 01:10 = KST 10:10 -->
-        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>1</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 화요일 UTC 02:10 = KST 11:10 -->
-        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>2</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 화요일 UTC 03:10 = KST 12:10 -->
-        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 화요일 UTC 04:10 = KST 13:10 -->
-        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>4</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 화요일 UTC 05:10 = KST 14:10 -->
-        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 화요일 UTC 06:10 = KST 15:10 -->
-        <dict><key>Weekday</key><integer>2</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
-
-        <!-- 수요일 UTC 00:10 = KST 09:10 -->
-        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 수요일 UTC 01:10 = KST 10:10 -->
-        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>1</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 수요일 UTC 02:10 = KST 11:10 -->
-        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>2</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 수요일 UTC 03:10 = KST 12:10 -->
-        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 수요일 UTC 04:10 = KST 13:10 -->
-        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>4</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 수요일 UTC 05:10 = KST 14:10 -->
-        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 수요일 UTC 06:10 = KST 15:10 -->
-        <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
-
-        <!-- 목요일 UTC 00:10 = KST 09:10 -->
-        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 목요일 UTC 01:10 = KST 10:10 -->
-        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>1</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 목요일 UTC 02:10 = KST 11:10 -->
-        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>2</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 목요일 UTC 03:10 = KST 12:10 -->
-        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 목요일 UTC 04:10 = KST 13:10 -->
-        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>4</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 목요일 UTC 05:10 = KST 14:10 -->
-        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 목요일 UTC 06:10 = KST 15:10 -->
-        <dict><key>Weekday</key><integer>4</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
-
-        <!-- 금요일 UTC 00:10 = KST 09:10 -->
-        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>0</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 금요일 UTC 01:10 = KST 10:10 -->
-        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>1</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 금요일 UTC 02:10 = KST 11:10 -->
-        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>2</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 금요일 UTC 03:10 = KST 12:10 -->
-        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 금요일 UTC 04:10 = KST 13:10 -->
-        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>4</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 금요일 UTC 05:10 = KST 14:10 -->
-        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>5</integer><key>Minute</key><integer>10</integer></dict>
-        <!-- 금요일 UTC 06:10 = KST 15:10 -->
-        <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>6</integer><key>Minute</key><integer>10</integer></dict>
-    </array>
+    <!-- 실행 스케줄: 10분(600초)마다 반복 -->
+    <key>StartInterval</key>
+    <integer>600</integer>
 
     <!-- 표준 출력/에러 → 같은 로그 파일 -->
     <key>StandardOutPath</key>
