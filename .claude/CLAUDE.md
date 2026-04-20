@@ -82,12 +82,13 @@ output/intel/ → 자비스가 읽는 유일한 인터페이스
 
 ## 현재 개발 단계
 
-**Phase 1 완료**: config, fetch_prices, fetch_macro, alerts, daily report, pipeline runner
-**Phase 2 완료**: fetch_news (RSS+Brave), screener, portfolio, weekly report, Kiwoom API
-**Phase 2.5 완료**: alerts_watch (실시간), closing report, realtime.py, 시스템 이벤트 트리거
-**Phase 3 (진행 중)**: 기술 분석(price_analysis), 포트폴리오 이력, 뉴스 감성, 환율 손익
+**전체 완료 (32/32)**: 모든 Phase 완료
+- Phase 1: config, fetch_prices, fetch_macro, alerts, daily report, pipeline runner
+- Phase 2: fetch_news, screener, portfolio, weekly report, Kiwoom API
+- Phase 2.5: alerts_watch, closing report, realtime.py, 시스템 이벤트 트리거
+- Phase 3: price_analysis, 포트폴리오 이력, 뉴스 감성, 환율 손익, sector_intel, regime_classifier, value_screener, proactive_alerts, self_correction, composite_score, simulation, dynamic_holdings, performance
 
-## DB 스키마 (db/init_db.py)
+## DB 스키마 (db/init_db_schema.py)
 
 ### 원시 테이블 (10분 해상도, 3개월 보존)
 - `prices`: ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source
@@ -101,6 +102,15 @@ output/intel/ → 자비스가 읽는 유일한 인터페이스
 - `news`: title, summary, source, url, published_at, relevance_score, sentiment, tickers, category
 - `alerts`: level, event_type, ticker, message, value, threshold, triggered_at, notified
 - `portfolio_history`: date, total_value_krw, total_invested_krw, total_pnl_krw, total_pnl_pct, fx_rate, fx_pnl_krw, holdings_snapshot
+- `analysis_history`: date, regime, confidence_level, today_call, summary, raw_content, model
+- `ticker_master`: ticker, name, market, sector, last_updated
+- `agent_keywords`: keyword, category, weight, source
+- `opportunities`: 종목 발굴 후보 (ticker, name, score 등)
+- `fundamentals`: 기업 펀더멘털 데이터
+- `holdings`: 현재 보유 종목
+- `transactions`: 거래 내역
+- `extra_assets`: 비금융 자산 (부동산, 현금 등)
+- `total_wealth_history`: 전재산 이력 (금융+비금융 통합)
 
 ## 환경 변수
 ```bash
@@ -128,7 +138,7 @@ KIWOOM_SECRETKEY=xxx     # 키움증권 REST API (선택)
 5. 실패 시: LESSONS.md에 교훈 기록
 
 참고 파일:
-- `prd.md` — 태스크 체크리스트 (15개 기능)
+- `prd.md` — 태스크 체크리스트 (32개 기능, 전체 완료)
 - `tests.json` — 기능 목록 + 수락 기준 + 의존성 그래프
 - `ARCHITECTURE.md` — 3계층 아키텍처 + ERD + 확장 로드맵
 - `AGENT_GUIDE.md` — 에이전트 사용 매뉴얼 (JSON 구조, DB 쿼리 예시)
@@ -204,6 +214,6 @@ docker restart mc-web
 
 ### Custom deploy hooks
 - Pre-merge: none
-- Deploy trigger: docker compose up -d --build (수동 실행)
+- Deploy trigger: GitHub Actions (main 푸시 시 자동) → docker cp + docker restart
 - Deploy status: docker ps --format "{{.Names}}\t{{.Status}}"
 - Health check: http://localhost:3000 (mc-web), http://localhost:8421/api/status (API)
