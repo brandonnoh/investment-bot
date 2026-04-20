@@ -125,6 +125,8 @@ def _collect_opportunities(engine: EngineStatus):
 
     # 발굴 종목 포함 ticker_master 갱신 (신규 종목 UPSERT)
     try:
+        from data.ticker_master import run as update_ticker_master
+
         master = update_ticker_master()
         print(f"  종목 사전 갱신: {len(master)}개 종목")
     except Exception as e:
@@ -244,10 +246,10 @@ def main():
     # 4.1 ~ 4.3. 후처리 분석
     _run_post_analysis()
 
-    # 4.5. JSON 출력 스키마 검증
+    # 4.6. JSON 출력 스키마 검증
     validate_all_outputs()
 
-    # 4.6. 엔진 상태 저장
+    # 4.7. 엔진 상태 저장
     save_engine_status(engine)
 
     # 5. 일일 리포트 생성
