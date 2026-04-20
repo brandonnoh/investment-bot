@@ -147,17 +147,62 @@ Available skills:
 - `/document-release`, `/codex`, `/cso`, `/autoplan`
 - `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`
 
+## 웹 서비스 아키텍처
+
+```
+외부 클라이언트 (Tailscale VPN)
+        │ http://macmini:3000
+        ▼
+┌──────────────────────────────────────┐
+│  mc-web (port 3000)                  │
+│  Next.js standalone server           │
+│  web-next/Dockerfile                 │
+│                                      │
+│  GET /        → 대시보드 SPA         │
+│  /api/events  → SSE 스트리밍 프록시  │
+│  /api/*       → Flask로 프록시 ──────┼──┐
+└──────────────────────────────────────┘  │
+                                          ▼
+┌──────────────────────────────────────┐
+│  investment-bot (port 8421)          │
+│  Python Flask API 전용               │
+│  Dockerfile (frontend 빌드 없음)     │
+│                                      │
+│  /api/data, /api/wealth, /api/status │
+│  /api/events (SSE), /api/logs        │
+│  POST /api/run-pipeline, /api/run-marcus │
+└──────────────────────────────────────┘
+```
+
+### 컨테이너별 역할
+| 컨테이너 | 포트 | 역할 | Dockerfile |
+|---------|------|------|-----------|
+| `mc-web` | 3000 | Next.js 프론트 (standalone) | `web-next/Dockerfile` |
+| `investment-bot` | 8421 | Flask API 전용 | `Dockerfile` (루트) |
+
+### ⚠️ Next.js 배포 규칙 (docker cp 방식)
+```bash
+# 반드시 /. 형태로 — 없으면 static/static/ 중첩 경로 버그 발생
+docker cp web-next/.next/standalone/. mc-web:/app/
+docker cp web-next/.next/static/. mc-web:/app/.next/static/
+docker restart mc-web
+```
+- `next.config.ts`의 `output: 'standalone'`과 `web-next/Dockerfile`은 항상 일치해야 함
+- output 모드 변경 시 반드시 클린 빌드: `.next/` 삭제 후 `npm run build`
+- `HOSTNAME=0.0.0.0` 필수 (없으면 Tailscale 외부 접근 불가)
+
 ## Deploy Configuration (configured by /setup-deploy)
 - Platform: Docker Compose (self-hosted, Mac mini)
-- Production URL: http://100.90.201.87:8421
+- Production URL: http://100.90.201.87:3000 (프론트엔드 mc-web)
+- API URL: http://100.90.201.87:8421 (Flask API 전용)
 - Deploy workflow: docker compose up -d --build
 - Deploy status command: docker ps --filter name=investment-bot
 - Merge method: merge
-- Project type: web app (Python Flask, 미션컨트롤 대시보드)
-- Post-deploy health check: http://100.90.201.87:8421
+- Project type: web app (Python Flask + Next.js, 미션컨트롤 대시보드)
+- Post-deploy health check: http://100.90.201.87:3000
 
 ### Custom deploy hooks
 - Pre-merge: none
 - Deploy trigger: docker compose up -d --build (수동 실행)
-- Deploy status: docker ps --filter name=investment-bot --format "{{.Status}}"
-- Health check: http://localhost:8421
+- Deploy status: docker ps --format "{{.Names}}\t{{.Status}}"
+- Health check: http://localhost:3000 (mc-web), http://localhost:8421/api/status (API)
