@@ -222,10 +222,7 @@ def _send_failure_alert(error_msg: str) -> None:
         import os
         import urllib.request as _urllib
 
-        webhook = os.environ.get(
-            "DISCORD_WEBHOOK_URL",
-            "https://discord.com/api/webhooks/1490306786870165624/0JjO5i_BNWCmIDnFJXQZ0OcDGeWdYsryKnUFGXvoKlqALza6mFPqcjbFz40fWltCIkRR",
-        )
+        webhook = os.environ.get("DISCORD_WEBHOOK_URL", "")
         payload = _json.dumps({"content": f"❌ 마커스 분석 실패: {error_msg}"}).encode("utf-8")
         req = _urllib.Request(
             webhook,

@@ -13,11 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-# Discord Webhook URL (환경변수 우선, fallback: 하드코딩)
-DISCORD_WEBHOOK_URL = os.environ.get(
-    "DISCORD_WEBHOOK_URL",
-    "https://discord.com/api/webhooks/1490306786870165624/0JjO5i_BNWCmIDnFJXQZ0OcDGeWdYsryKnUFGXvoKlqALza6mFPqcjbFz40fWltCIkRR",
-)
+# Discord Webhook URL — .env의 DISCORD_WEBHOOK_URL 필수
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
 
 def _send_discord(message: str) -> bool:
