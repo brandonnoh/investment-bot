@@ -45,7 +45,7 @@ from utils.schema import validate_all_outputs  # noqa: E402
 
 
 def _collect_data(engine: EngineStatus):
-    """데이터 수집 단계 실행 (가격/매크로/뉴스/펀더멘탈/수급/발굴)"""
+    """데이터 수집 단계 실행 (가격/매크로/뉴스/레짐/섹터/펀더멘탈/수급/발굴)"""
     price_records = fetch_prices()
     if price_records:
         record_module_status(engine, "fetch_prices", price_records, success_key="price")
@@ -57,6 +57,14 @@ def _collect_data(engine: EngineStatus):
     news_records = fetch_news()
     if news_records:
         record_module_status(engine, "fetch_news", news_records, success_key="title")
+
+    # 레짐 분류 — sector_intel이 regime.json을 읽으므로 반드시 먼저 실행
+    try:
+        from analysis.regime_classifier import run as classify_regime
+
+        classify_regime()
+    except Exception as e:
+        print(f"  ⚠️ 레짐 분류 실패: {e}")
 
     _collect_fundamentals(engine)
     _collect_supply()
@@ -213,16 +221,8 @@ def main():
     # 1. DB 초기화
     init_db()
 
-    # 2. 데이터 수집
+    # 2. 데이터 수집 (내부에서 레짐 분류 → 섹터 인텔 순서로 실행)
     _collect_data(engine)
-
-    # 2.5. 시장 레짐 분류 (매크로 수집 후, 분석 전)
-    try:
-        from analysis.regime_classifier import run as classify_regime
-
-        classify_regime()
-    except Exception as e:
-        print(f"  ⚠️ 레짐 분류 실패: {e}")
 
     # 3. 일봉 집계 + DB 유지보수
     aggregate_daily()

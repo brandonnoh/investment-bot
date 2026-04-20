@@ -68,7 +68,7 @@ export interface PortfolioSummary {
     fx_pnl_krw?: number
   }
   holdings?: PriceItem[]
-  sectors?: Record<string, number>
+  sectors?: Array<{ sector: string; weight_pct: number; value_krw: number; pnl_pct: number; stocks: string[] }>
   history?: PortfolioHistory[]
 }
 
@@ -108,6 +108,15 @@ export interface Opportunity {
   composite_score?: number
   discovered_via?: string
   source?: string
+  // 실제 value_screener 출력 필드
+  sector?: string
+  screen_reason?: string
+  rsi?: number
+  per?: number
+  pbr?: number
+  roe?: number
+  pos_52w?: number
+  // 레거시 필드 (하위 호환)
   url?: string
   sentiment?: number
   title?: string
@@ -123,10 +132,13 @@ export interface OpportunitiesData {
 }
 
 export interface EngineStatus {
-  last_run?: string
-  error_count?: number
+  updated_at?: string
+  pipeline_ok?: boolean
+  total_errors?: number
   db_size_mb?: number
-  intel_files?: string[]
+  uptime_days?: number
+  first_run?: string
+  modules?: Record<string, unknown>
 }
 
 export interface IntelData {
@@ -140,6 +152,13 @@ export interface IntelData {
   regime?: RegimeData                  // 실제 키: regime (market_regime 아님)
   supply_data?: SupplyData
   opportunities?: OpportunitiesData    // 실제: { opportunities: [...] }
+  price_analysis?: Record<string, unknown>
+  screener_results?: Record<string, unknown>
+  news?: Record<string, unknown>
+  fundamentals?: Record<string, unknown>
+  holdings_proposal?: Record<string, unknown>
+  performance_report?: Record<string, unknown>
+  simulation_report?: Record<string, unknown>
   marcus_analysis?: string
   engine_status?: EngineStatus
   last_updated?: string

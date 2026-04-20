@@ -183,7 +183,7 @@ def load_analysis_history(limit: int = 30) -> list[dict]:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
                 """
-                SELECT date, confidence_level, regime, today_call, created_at
+                SELECT date, confidence_level, regime, regime as stance, today_call, created_at
                 FROM analysis_history
                 ORDER BY date DESC
                 LIMIT ?

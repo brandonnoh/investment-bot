@@ -59,9 +59,9 @@ export function MarcusTab() {
                       {'★'.repeat(h.confidence_level)}
                     </span>
                   )}
-                  {h.stance && (
-                    <span className="text-[10px] text-muted-foreground">{h.stance}</span>
-                  )}
+                  <span className={`text-[10px] ${h.stance ? 'text-gold' : 'text-muted-foreground'}`}>
+                    {h.stance ?? '—'}
+                  </span>
                 </div>
                 {h.today_call && (
                   <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2 hidden sm:block">

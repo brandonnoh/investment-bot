@@ -147,6 +147,9 @@ def init_db():
     """파일 기반 DB 스키마 초기화 (이미 존재하면 마이그레이션)"""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
+    # WAL 모드: 읽기/쓰기 동시성 향상, 파이프라인 병렬 접근 대비
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
     init_schema(conn)
     conn.close()
     print(f"✅ 데이터베이스 초기화 완료: {DB_PATH}")
