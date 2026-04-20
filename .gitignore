@@ -30,5 +30,5 @@ logs/*.log
 
 # npm (create-claude-harness 실행 잔여물)
 node_modules/
-package.json
-package-lock.json
+/package.json
+/package-lock.json
