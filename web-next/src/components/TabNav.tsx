@@ -7,6 +7,7 @@ const MAIN_TABS: { id: TabId; label: string; icon: string }[] = [
   { id: 'portfolio',  label: '포트폴리오', icon: '◉' },
   { id: 'marcus',     label: 'AI 분석', icon: '✦' },
   { id: 'discovery',  label: '발굴',    icon: '◎' },
+  { id: 'wealth',     label: '전재산',  icon: '◈' },
 ]
 
 const EXTRA_TABS: { id: TabId; label: string; icon: string }[] = [
