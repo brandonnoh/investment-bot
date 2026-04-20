@@ -80,10 +80,10 @@ export function Header() {
       const json = await res.json()
       if (!json.ok) {
         toast.error(`실행 실패: ${json.error ?? '알 수 없는 오류'}`)
-        setPipelineRunning(false)
       }
     } catch {
       toast.error('파이프라인 요청 실패')
+    } finally {
       setPipelineRunning(false)
     }
   }
@@ -97,10 +97,10 @@ export function Header() {
       const json = await res.json()
       if (!json.ok) {
         toast.error(`실행 실패: ${json.error ?? '알 수 없는 오류'}`)
-        setMarcusRunning(false)
       }
     } catch {
       toast.error('AI 분석 요청 실패')
+    } finally {
       setMarcusRunning(false)
     }
   }
