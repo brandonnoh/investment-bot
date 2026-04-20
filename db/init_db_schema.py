@@ -305,14 +305,25 @@ CREATE_INDEX_ANALYSIS_HISTORY_DATE = """
 CREATE_INDEX_PRICES_TICKER_TS = (
     "CREATE INDEX IF NOT EXISTS idx_prices_ticker_ts ON prices (ticker, timestamp)"
 )
+# 중복 삽입 방지용 UNIQUE 인덱스 — INSERT OR IGNORE 와 함께 사용
+CREATE_UNIQUE_INDEX_PRICES_TICKER_TS = (
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_prices_ticker_ts_unique ON prices (ticker, timestamp)"
+)
 CREATE_INDEX_MACRO_INDICATOR_TS = (
     "CREATE INDEX IF NOT EXISTS idx_macro_indicator_ts ON macro (indicator, timestamp)"
 )
+# 중복 삽입 방지용 UNIQUE 인덱스 — INSERT OR IGNORE 와 함께 사용
+CREATE_UNIQUE_INDEX_MACRO_INDICATOR_TS = "CREATE UNIQUE INDEX IF NOT EXISTS idx_macro_indicator_ts_unique ON macro (indicator, timestamp)"
 CREATE_INDEX_ALERTS_TRIGGERED = (
     "CREATE INDEX IF NOT EXISTS idx_alerts_triggered ON alerts (triggered_at)"
 )
 CREATE_INDEX_NEWS_TITLE_SOURCE = (
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_news_title_source ON news (title, source)"
+)
+# news 카테고리/발행일 조회 성능 최적화
+CREATE_INDEX_NEWS_CATEGORY = "CREATE INDEX IF NOT EXISTS idx_news_category ON news (category)"
+CREATE_INDEX_NEWS_PUBLISHED_AT = (
+    "CREATE INDEX IF NOT EXISTS idx_news_published_at ON news (published_at)"
 )
 
 # ── 인덱스 — 집계 테이블 (유니크 — UPSERT 지원) ──

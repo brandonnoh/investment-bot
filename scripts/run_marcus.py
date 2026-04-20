@@ -26,27 +26,49 @@ CLAUDE_BIN = shutil.which("claude") or "/Users/jarvis/.local/bin/claude"
 KST = timezone(timedelta(hours=9))
 
 
+def _load_regime_json() -> dict:
+    """output/intel/regime.json 로드. 실패 시 빈 dict 반환."""
+    try:
+        path = INTEL_DIR / "regime.json"
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
 def _parse_analysis(content: str) -> dict:
-    """마크다운에서 confidence_level, regime, today_call 추출"""
-    # 확신 레벨: "(4/5)" 패턴
+    """마크다운 + regime.json 에서 confidence_level, regime, today_call 추출"""
+    # ── 확신 레벨: "(4/5)" 패턴 → 없으면 ★ 개수 → 없으면 regime.json confidence
+    regime_data = _load_regime_json()
     confidence = None
     m = re.search(r"\((\d)/5\)", content)
     if m:
         confidence = int(m.group(1))
     elif (stars := content.count("★")) > 0:
         confidence = stars
+    elif "confidence" in regime_data:
+        # regime.json의 confidence는 0~1 float → 1~5 정수로 변환
+        raw_conf = regime_data["confidence"]
+        confidence = max(1, min(5, round(float(raw_conf) * 5)))
 
-    # 레짐: "## MARKET REGIME" 섹션 첫 줄
-    regime = None
-    m = re.search(r"## MARKET REGIME[^\n]*\n+([^\n]+)", content)
-    if m:
-        regime = m.group(1).strip()[:50]
+    # ── 레짐: regime.json 우선, 텍스트 파싱 보조
+    regime = regime_data.get("regime")  # 예: "RISK_OFF", "BULL" 등
+    if not regime:
+        # 마크다운에서 MARKET REGIME 섹션 탐색
+        m = re.search(r"## MARKET REGIME[^\n]*\n+([^\n]+)", content)
+        if m:
+            regime = m.group(1).strip()[:50]
+    if regime:
+        regime = str(regime)[:50]
 
-    # TODAY'S CALL 섹션 전체
+    # ── TODAY'S CALL: 인용 블록("> **오늘의 판단:**") 또는 TODAY'S CALL 섹션
     today_call = None
-    m = re.search(r"## TODAY'S CALL[^\n]*\n+([\s\S]+?)(?=\n## |\Z)", content)
+    m = re.search(r"> \*\*오늘의 판단:\*\*\s*(.+)", content)
     if m:
         today_call = m.group(1).strip()[:500]
+    else:
+        m = re.search(r"## TODAY'S CALL[^\n]*\n+([\s\S]+?)(?=\n## |\Z)", content)
+        if m:
+            today_call = m.group(1).strip()[:500]
 
     return {"confidence_level": confidence, "regime": regime, "today_call": today_call}
 

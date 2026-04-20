@@ -132,6 +132,12 @@ def init_schema(conn):
     cursor.execute(CREATE_INDEX_MACRO_INDICATOR_TS)
     cursor.execute(CREATE_INDEX_ALERTS_TRIGGERED)
     cursor.execute(CREATE_INDEX_NEWS_TITLE_SOURCE)
+    cursor.execute(CREATE_INDEX_NEWS_CATEGORY)
+    cursor.execute(CREATE_INDEX_NEWS_PUBLISHED_AT)
+
+    # 원시 테이블 중복 방지 UNIQUE 인덱스 — INSERT OR IGNORE 와 짝
+    cursor.execute(CREATE_UNIQUE_INDEX_PRICES_TICKER_TS)
+    cursor.execute(CREATE_UNIQUE_INDEX_MACRO_INDICATOR_TS)
 
     # 집계 테이블 인덱스 (유니크 — UPSERT 지원)
     cursor.execute(CREATE_INDEX_PRICES_DAILY_TICKER_DATE)

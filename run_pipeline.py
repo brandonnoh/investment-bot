@@ -123,6 +123,13 @@ def _collect_opportunities(engine: EngineStatus):
     except Exception as e:
         print(f"  ⚠️ fetch_opportunities 실패: {e}")
 
+    # 발굴 종목 포함 ticker_master 갱신 (신규 종목 UPSERT)
+    try:
+        master = update_ticker_master()
+        print(f"  종목 사전 갱신: {len(master)}개 종목")
+    except Exception as e:
+        print(f"  ⚠️ ticker_master 갱신 실패: {e}")
+
 
 def _run_post_analysis():
     """분석 후처리 단계 실행 (성과추적/자기교정/능동알림/동적관리/시뮬레이션)"""

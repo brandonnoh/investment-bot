@@ -145,7 +145,7 @@ def save_to_db(records: list[dict]):
             if r.get("value") is None:
                 continue
             cursor.execute(
-                """INSERT INTO macro (indicator, value, change_pct, timestamp)
+                """INSERT OR IGNORE INTO macro (indicator, value, change_pct, timestamp)
                    VALUES (?, ?, ?, ?)""",
                 (r["indicator"], r["value"], r["change_pct"], r["timestamp"]),
             )

@@ -3,16 +3,29 @@
 뉴스 DB 저장 레이어 — fetch_news.py에서 분리된 SQLite 저장 담당
 - category 컬럼 마이그레이션
 - title+source 기준 중복 제거 후 INSERT
+- published_at ISO 8601 정규화 (RFC2822 → '%Y-%m-%d %H:%M:%S')
 """
 
 import json
 import sqlite3
 import sys
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import DB_PATH
+
+
+def normalize_date(raw: str) -> str:
+    """RFC2822 날짜 문자열을 SQLite 호환 ISO 8601 형식으로 변환.
+    파싱 실패 시 원본 문자열 반환."""
+    if not raw:
+        return raw
+    try:
+        return parsedate_to_datetime(raw).strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return raw  # 파싱 실패 시 원본 유지
 
 
 def ensure_category_column():
@@ -58,6 +71,12 @@ def save_to_db(records: list[dict]):
         inserted = 0
         skipped = 0
         for r in records:
+            # published_at: RFC2822 → ISO 8601 정규화 (SQLite datetime() 호환)
+            pub_at = normalize_date(r.get("published_at", "") or "")
+            # sentiment: None이면 0.0으로 폴백 (NULL 방지)
+            sentiment = r.get("sentiment")
+            if sentiment is None:
+                sentiment = 0.0
             cursor.execute(
                 """INSERT OR IGNORE INTO news (title, summary, source, url, published_at, relevance_score, sentiment, tickers, category)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -66,9 +85,9 @@ def save_to_db(records: list[dict]):
                     r["summary"],
                     r["source"],
                     r["url"],
-                    r["published_at"],
+                    pub_at,
                     r["relevance_score"],
-                    r.get("sentiment"),
+                    sentiment,
                     json.dumps(r["tickers"], ensure_ascii=False),
                     r.get("category", "stock"),
                 ),

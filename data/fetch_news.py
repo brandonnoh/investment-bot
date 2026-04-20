@@ -414,6 +414,13 @@ def run():
 
     # 감성 분석
     records = analyze_news_sentiment(records)
+    # sentiment가 None인 레코드는 0.0으로 폴백 (DB NULL 방지)
+    null_count = sum(1 for r in records if r.get("sentiment") is None)
+    if null_count:
+        print(f"  ⚠️ sentiment None {null_count}건 → 0.0 폴백")
+        for r in records:
+            if r.get("sentiment") is None:
+                r["sentiment"] = 0.0
     ticker_sentiment = aggregate_sentiment_by_ticker_weighted(records)
     print(f"  🧠 감성 분석 완료: {len(records)}건, 종목별 {len(ticker_sentiment)}개")
 

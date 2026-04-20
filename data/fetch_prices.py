@@ -60,11 +60,50 @@ def fetch_yahoo_quote(ticker: str) -> dict:
         raise ValueError(f"응답 파싱 실패 ({ticker}): {e}") from e
 
 
+def _fetch_gold_usd_per_oz() -> tuple[float, float, str]:
+    """
+    금 USD/oz 시세 수집.
+    1순위: GC=F (금 선물), 2순위: GLD (금 ETF — 1/10 oz), 3순위: IAU (금 ETF — 1/100 oz)
+
+    Returns:
+        (price_usd_oz, prev_usd_oz, data_source)
+    """
+    # GC=F: 금 선물 (troy oz 기준)
+    try:
+        meta = fetch_yahoo_quote("GC=F")
+        price = meta["regularMarketPrice"]
+        prev = meta.get("chartPreviousClose", meta.get("previousClose", price))
+        return price, prev, "GC=F"
+    except Exception as e:
+        print(f"  ⚠️ GC=F 조회 실패, GLD fallback: {e}")
+
+    # GLD: SPDR Gold Shares (1주 = 0.0926 troy oz)
+    GLD_OZ_PER_SHARE = 0.0926
+    try:
+        meta = fetch_yahoo_quote("GLD")
+        price = meta["regularMarketPrice"] / GLD_OZ_PER_SHARE
+        prev_raw = meta.get(
+            "chartPreviousClose", meta.get("previousClose", meta["regularMarketPrice"])
+        )
+        prev = prev_raw / GLD_OZ_PER_SHARE
+        return price, prev, "GLD"
+    except Exception as e:
+        print(f"  ⚠️ GLD 조회 실패, IAU fallback: {e}")
+
+    # IAU: iShares Gold Trust (1주 = 0.01 troy oz)
+    IAU_OZ_PER_SHARE = 0.01
+    meta = fetch_yahoo_quote("IAU")
+    price = meta["regularMarketPrice"] / IAU_OZ_PER_SHARE
+    prev_raw = meta.get("chartPreviousClose", meta.get("previousClose", meta["regularMarketPrice"]))
+    prev = prev_raw / IAU_OZ_PER_SHARE
+    return price, prev, "IAU"
+
+
 def fetch_gold_krw_per_gram() -> tuple[float, float, str, str | None]:
     """
     금 현물 원화/g 가격 계산.
     1순위: 키움증권 KRX 금 현물(4001) API
-    2순위(fallback): GC=F × KRW=X ÷ 31.1035
+    2순위(fallback): GC=F(→GLD→IAU) × KRW=X ÷ 31.1035
 
     Returns:
         (price, prev_close, data_source, calc_method)
@@ -80,21 +119,21 @@ def fetch_gold_krw_per_gram() -> tuple[float, float, str, str | None]:
         except Exception as e:
             print(f"  ⚠️ 키움 API 실패, Yahoo fallback: {e}")
 
-    # fallback: GC=F × 환율
-    gold_meta = fetch_yahoo_quote("GC=F")
+    # fallback: 금 USD/oz (GC=F→GLD→IAU) × 환율 ÷ 31.1035
+    gold_usd, gold_prev, gold_src = _fetch_gold_usd_per_oz()
     fx_meta = fetch_yahoo_quote("KRW=X")
-    gold_usd = gold_meta["regularMarketPrice"]
     usd_krw = fx_meta["regularMarketPrice"]
-    gold_prev = gold_meta.get("chartPreviousClose", gold_meta.get("previousClose", gold_usd))
     fx_prev = fx_meta.get("chartPreviousClose", fx_meta.get("previousClose", usd_krw))
 
     price_krw_g = gold_usd * usd_krw / 31.1035
     prev_krw_g = gold_prev * fx_prev / 31.1035
+    calc_method = f"{gold_src} × KRW=X ÷ 31.1035"
+    print(f"  ℹ️ 금 시세 소스: {gold_src}")
     return (
         round(price_krw_g, 0),
         round(prev_krw_g, 0),
         "calculated",
-        "GC=F × KRW=X ÷ 31.1035",
+        calc_method,
     )
 
 
@@ -204,7 +243,7 @@ def save_to_db(records: list[dict]):
             if r.get("price") is None:
                 continue  # 에러 난 종목은 DB에 저장하지 않음
             cursor.execute(
-                """INSERT INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
+                """INSERT OR IGNORE INTO prices (ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     r["ticker"],
