@@ -245,6 +245,20 @@ def _build_discovery_prompt(analysis_snippet: str) -> str:
     )
 
 
+def _extract_claude_result(raw: str) -> str:
+    """--output-format json 출력에서 result 필드 추출. 훅 노이즈 제거."""
+    # stdout에서 마지막 JSON 객체 탐색 (훅 출력이 앞에 섞일 수 있음)
+    for line in reversed(raw.splitlines()):
+        line = line.strip()
+        if line.startswith("{") and '"result"' in line:
+            try:
+                return json.loads(line).get("result", "")
+            except json.JSONDecodeError:
+                pass
+    # fallback: result 키 없으면 원문 그대로
+    return raw
+
+
 def _parse_keyword_json(raw: str) -> dict | None:
     """Claude 응답에서 JSON 블록 추출 및 파싱"""
     # ```json ... ``` 블록 또는 { ... } 직접 파싱
@@ -383,13 +397,15 @@ def run():
     claude_output = ""
     try:
         result = subprocess.run(
-            [CLAUDE_BIN, "--dangerously-skip-permissions", "-p", prompt],
+            [CLAUDE_BIN, "--dangerously-skip-permissions", "--output-format", "json", "-p", prompt],
             capture_output=True,
             text=True,
             timeout=300,
             cwd=str(PROJECT_ROOT),
         )
-        claude_output = result.stdout.strip()
+        # --output-format json → stdout에 훅 노이즈가 섞여도 마지막 JSON 객체에서 result 추출
+        raw = result.stdout.strip()
+        claude_output = _extract_claude_result(raw)
         if result.returncode != 0 and not claude_output:
             error_msg = result.stderr[:300] if result.stderr else f"종료코드 {result.returncode}"
             print(f"  ❌ Claude 실행 오류: {error_msg}")
