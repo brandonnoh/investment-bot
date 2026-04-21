@@ -9,6 +9,7 @@ Discord Webhook URL로 직접 POST 전송
 
 import json
 import os
+import re
 import sqlite3
 import sys
 import urllib.error
@@ -57,23 +58,25 @@ def fire_discord_alert(alerts: list[dict]):
     # 알림 목록 생성
     alert_lines = []
     for a in alerts:
-        level_emoji = {"RED": "🔴", "YELLOW": "🟡", "GREEN": "🟢"}.get(a["level"], "⚪")
         ticker = a.get("ticker", "")
         price = a.get("price")
         change = a.get("value", 0)
         name = a.get("name")
+        level = a.get("level", "")
 
         if name and price is not None:
-            # 종목 알림 — 간결 포맷 + 평손익
             sign = "+" if change >= 0 else ""
             pnl = _pnl_suffix(ticker, price, holdings)
-            alert_lines.append(f"{level_emoji} {name} {sign}{change:.1f}%{pnl}")
+            direction = "급락" if level == "RED" else "급등"
+            alert_lines.append(f"{name} {direction} {sign}{change:.1f}%{pnl}")
         else:
-            # 매크로 알림 — message에 이모지 포함되어 있으므로 그대로
-            alert_lines.append(a.get("message", ticker) or ticker)
+            # 매크로 알림 — 이모지/마크다운 제거
+            raw = a.get("message", ticker) or ticker
+            raw = re.sub(r"[🔴🟡🟢⚪🚨💡📊🧠⚡★☆•]", "", raw).strip()
+            alert_lines.append(raw)
 
     alerts_text = "\n".join(alert_lines)
-    message = f"🚨 투자 알림\n{alerts_text}"
+    message = f"[투자 알림]\n{alerts_text}"
 
     try:
         payload = json.dumps({"content": message}).encode("utf-8")

@@ -111,11 +111,10 @@ def notify_marcus_complete(md_path: Path) -> None:
         call, basis, confidence = _extract_marcus_summary(md_text)
 
         stars = "★" * confidence + "☆" * (5 - confidence)
-        lines = [f"📊 마커스 | 확신 {stars}"]
-        lines.append("")
-        lines.append(f"💡 {call}")
+        lines = [f"마커스 {stars}"]
+        lines.append(call)
         if basis:
-            lines.append(f"📌 {basis[:120]}")
+            lines.append(basis[:150])
 
         ok = _send_discord("\n".join(lines))
         if ok:
@@ -134,14 +133,13 @@ def notify_jarvis_complete(briefing_path: Path) -> None:
         md_text = briefing_path.read_text(encoding="utf-8")
         summary, risk, actions = _extract_jarvis_summary(md_text)
 
-        lines = [f"🧠 자비스 CIO | 리스크 {risk}" if risk else "🧠 자비스 CIO"]
-        lines.append("")
+        lines = [f"자비스 CIO | 리스크 {risk}" if risk else "자비스 CIO"]
         if summary:
-            lines.append(f"**{summary[:150]}**")
+            lines.append(summary[:200])
         if actions:
             lines.append("")
-            lines.append("⚡ 액션")
-            lines.extend(actions)
+            lines.append("액션")
+            lines.extend(a.lstrip("•").strip() for a in actions)
 
         ok = _send_discord("\n".join(lines))
         if ok:
