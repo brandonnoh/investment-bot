@@ -40,16 +40,23 @@ def fetch_naver_price(code: str) -> dict:
         )
         d = json.loads(body)
         data = d["datas"][0]
-        price = int(data["closePrice"].replace(",", ""))
-        change = int(data["compareToPreviousClosePrice"].replace(",", ""))
+
+        def _safe_int(val: str) -> int:
+            cleaned = val.replace(",", "").strip()
+            return int(cleaned) if cleaned and cleaned not in ("-", "--") else 0
+
+        price = _safe_int(data["closePrice"])
+        change = _safe_int(data["compareToPreviousClosePrice"])
         prev_close = price - change
         return {
             "price": price,
             "prev_close": prev_close,
-            "change_pct": float(data["fluctuationsRatio"]),
-            "volume": int(data["accumulatedTradingVolume"].replace(",", "")),
-            "high": int(data["highPrice"].replace(",", "")),
-            "low": int(data["lowPrice"].replace(",", "")),
+            "change_pct": float(data["fluctuationsRatio"])
+            if data["fluctuationsRatio"] not in ("-", "--", "")
+            else 0.0,
+            "volume": _safe_int(data["accumulatedTradingVolume"]),
+            "high": _safe_int(data["highPrice"]),
+            "low": _safe_int(data["lowPrice"]),
         }
     except urllib.error.URLError as e:
         raise ConnectionError(f"네이버 API 네트워크 오류 ({code}): {e}") from e

@@ -442,6 +442,16 @@ def run():
             print(f"  ❌ Claude 실행 오류: {error_msg}")
             _send_failure_alert(error_msg)
             return
+        # 응답이 너무 짧거나 로그인 오류 문구면 저장 거부
+        if (
+            len(claude_output) < 200
+            or "Not logged in" in claude_output
+            or "Please run /login" in claude_output
+        ):
+            error_msg = f"Claude 응답 불량 ({len(claude_output)}자): {claude_output[:80]}"
+            print(f"  ❌ {error_msg}")
+            _send_failure_alert(error_msg)
+            return
         if result.stderr:
             print(f"  ℹ️  Claude stderr: {result.stderr[:200]}")
         print(f"  ✅ Claude 응답 수신 ({len(claude_output)}자)")

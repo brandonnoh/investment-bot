@@ -145,7 +145,7 @@ UNIVERSE_SP100 = [
     {"ticker": "CB", "name": "Chubb", "market": "US"},
     {"ticker": "TJX", "name": "TJX Companies", "market": "US"},
     {"ticker": "ADP", "name": "ADP", "market": "US"},
-    {"ticker": "MMC", "name": "Marsh McLennan", "market": "US"},
+    {"ticker": "AON", "name": "Aon", "market": "US"},
     {"ticker": "ZTS", "name": "Zoetis", "market": "US"},
     {"ticker": "REGN", "name": "Regeneron", "market": "US"},
     {"ticker": "VRTX", "name": "Vertex Pharma", "market": "US"},
