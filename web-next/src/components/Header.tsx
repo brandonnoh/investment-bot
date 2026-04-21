@@ -62,13 +62,15 @@ export function Header() {
   useCompletionToast(isRunningMarcus, 'AI 분석')
 
   const lastUpdatedLabel = (() => {
+    // SSE 로컬 시각 우선: SWR 재검증 레이스 영향 없음, 항상 최신
+    if (lastUpdated) return lastUpdated + ' 기준'
     const ts = data?.last_updated ?? data?.engine_status?.updated_at
     if (ts) {
       try {
         return new Date(ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) + ' 기준'
       } catch { /* fallback */ }
     }
-    return lastUpdated || null
+    return null
   })()
 
   async function handleRunPipeline() {
