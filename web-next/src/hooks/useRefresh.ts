@@ -2,16 +2,6 @@
 
 import { useCallback, useState } from 'react'
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE ?? ''
-const REFRESH_DURATION_MS = 15_000
-
-async function triggerRefreshPrices(): Promise<void> {
-  const res = await fetch(`${BASE}/api/refresh-prices`, { method: 'POST' })
-  if (!res.ok) throw new Error(`refresh-prices 실패: ${res.status}`)
-  // refresh_prices.py 실행 시간(~12초) 대기 후 SSE가 완료를 알려줌
-  await new Promise<void>((resolve) => setTimeout(resolve, REFRESH_DURATION_MS))
-}
-
 export function useRefresh(mutate: () => Promise<unknown>) {
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -19,11 +9,10 @@ export function useRefresh(mutate: () => Promise<unknown>) {
     if (isRefreshing) return
     setIsRefreshing(true)
     try {
-      await triggerRefreshPrices()
+      // cron이 1분마다 미리 수집 → 끌어서 새로고침은 캐시된 최신 데이터 즉시 반환
       await mutate()
     } catch (e) {
       console.error('refresh 실패:', e)
-      await mutate()
     } finally {
       setIsRefreshing(false)
     }
