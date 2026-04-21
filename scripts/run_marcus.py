@@ -5,6 +5,7 @@ launchd → 매일 05:30 KST 실행 (평일)
 """
 
 import json
+import os
 import re
 import shutil
 import sqlite3
@@ -17,6 +18,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # ── 경로 정의 ──
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# .env 파일 자동 로드 (cron 환경에서 환경변수 미설정 방지)
+_env_path = PROJECT_ROOT / ".env"
+if _env_path.exists():
+    with open(_env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
 INTEL_DIR = PROJECT_ROOT / "output" / "intel"
 OUTPUT_FILE = INTEL_DIR / "marcus-analysis.md"
 

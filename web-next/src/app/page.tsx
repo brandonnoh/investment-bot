@@ -19,7 +19,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 export default function Home() {
   const { activeTab } = useMCStore()
   const { mutate } = useIntelData()
-  const { refresh } = useRefresh(mutate)
+  const { refresh, isRefreshing } = useRefresh(mutate)
 
   // 모바일: 최상단에서 80px 이상 아래로 당기면 새로고침
   usePullToRefresh(refresh)
@@ -27,6 +27,16 @@ export default function Home() {
   return (
     <SSEProvider>
       <div className="min-h-screen bg-mc-bg flex flex-col">
+        {isRefreshing && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-mc-bg/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs font-mono text-gold tracking-widest uppercase animate-pulse">
+                가격 수집 중…
+              </p>
+            </div>
+          </div>
+        )}
         <Header />
         <TabNav />
         <main className="flex-1 p-4 pb-20 sm:pb-4 max-w-[1400px] mx-auto w-full">

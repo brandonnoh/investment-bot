@@ -35,6 +35,11 @@ def _now_kst() -> str:
     return datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S KST")
 
 
+def _now_kst_iso() -> str:
+    """현재 KST 시각 ISO 8601 문자열 반환"""
+    return datetime.now(KST).isoformat()
+
+
 def _is_market_hours() -> bool:
     """KRX(09:00~15:30) 또는 미국장(22:30~06:00) 장중이면 True"""
     now = datetime.now(KST)
@@ -88,6 +93,10 @@ def main():
     print(f"[{_now_kst()}] 장중 가격 갱신 시작")
     print("=" * 50)
 
+    # 수집 시작 시각을 먼저 기록 — SSE가 prices.json 저장을 감지해 mutate()를 호출할 때
+    # engine_status가 이미 최신 시각이어야 대시보드가 올바른 시각을 표시함
+    _touch_engine_status()
+
     from analysis.portfolio import run as analyze_portfolio
     from data.fetch_macro import run as fetch_macro
     from data.fetch_prices import run as fetch_prices
@@ -100,9 +109,25 @@ def main():
 
     success = sum(results.values())
     total = len(results)
+
     print("=" * 50)
     print(f"[{_now_kst()}] 장중 가격 갱신 완료 ({success}/{total} 성공)")
     print("=" * 50)
+
+
+def _touch_engine_status():
+    """engine_status.json의 updated_at을 현재 시각으로 갱신"""
+    import json
+
+    status_path = Path(__file__).resolve().parent.parent / "output" / "intel" / "engine_status.json"
+    if not status_path.exists():
+        return
+    try:
+        data = json.loads(status_path.read_text())
+        data["updated_at"] = _now_kst_iso()
+        status_path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    except Exception as e:
+        print(f"[{_now_kst()}] engine_status 갱신 실패: {e}")
 
 
 if __name__ == "__main__":

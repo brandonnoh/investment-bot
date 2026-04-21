@@ -201,6 +201,16 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             )
             self.send_json(result)
 
+        elif path == "/api/refresh-prices":
+            result = run_background(
+                "refresh_prices",
+                [
+                    "python3",
+                    str(PROJECT_ROOT / "scripts" / "refresh_prices.py"),
+                ],
+            )
+            self.send_json(result)
+
         else:
             self.send_response(404)
             self.end_headers()

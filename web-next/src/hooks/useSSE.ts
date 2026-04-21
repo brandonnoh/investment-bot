@@ -16,7 +16,9 @@ export function useSSE() {
     es.onopen = () => setSseStatus('connected')
     es.onerror = () => setSseStatus('disconnected')
 
-    es.onmessage = () => {
+    es.onmessage = (e) => {
+      const msg = e.data?.trim()
+      if (msg === 'ping' || msg === 'connected') return
       void mutate('intel-data')
       void mutate('process-status')
       setLastUpdated(

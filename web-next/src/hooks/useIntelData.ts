@@ -8,7 +8,7 @@ export function useIntelData() {
   const { data, error, isLoading, mutate } = useSWR<IntelData>(
     'intel-data',
     fetchIntelData,
-    { refreshInterval: 30_000, revalidateOnFocus: false },
+    { refreshInterval: 0, revalidateOnFocus: false },
   )
   return { data, error, isLoading, mutate }
 }

@@ -189,7 +189,24 @@ Available skills:
 | 컨테이너 | 포트 | 역할 | Dockerfile |
 |---------|------|------|-----------|
 | `mc-web` | 3000 | Next.js 프론트 (standalone) | `web-next/Dockerfile` |
-| `investment-bot` | 8421 | Flask API 전용 | `Dockerfile` (루트) |
+| `investment-bot` | 8421 | Flask API + cron 스케줄러 | `Dockerfile` (루트) |
+
+### ⚠️ 스케줄러 — Docker 내부 cron (HOST launchd 사용 안 함)
+
+모든 주기적 작업은 `investment-bot` 컨테이너 내부 cron이 실행. HOST launchd는 비활성화됨.
+
+| 잡 | 스케줄 (KST) | 스크립트 |
+|----|-------------|---------|
+| alerts_watch | 매 5분 | `analysis/alerts_watch.py` |
+| refresh_prices | 매 10분 | `scripts/refresh_prices.py` |
+| marcus | 평일 05:30 | `scripts/run_marcus.py` |
+| jarvis | 평일 07:30 | `scripts/run_jarvis.py` |
+| pipeline | 평일 07:40 | `run_pipeline.py` |
+| news | 평일 08:00 | `scripts/refresh_news.py` |
+| monthly-deposit | 매월 1일 00:00 | `scripts/monthly_deposit_cron.py` |
+
+관련 파일: `crontab.docker`, `docker-entrypoint.sh`
+**스케줄 변경 시**: `crontab.docker` 수정 → `docker compose up -d --build investment-bot`
 
 ### ⚠️ Next.js 배포 규칙 (docker cp 방식)
 ```bash
