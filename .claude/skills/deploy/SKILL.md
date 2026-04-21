@@ -9,6 +9,28 @@ description: >
 
 # investment-bot 배포 규칙
 
+## Step 0: Git Push (항상 먼저)
+
+배포 전 반드시 코드를 GitHub에 백업한다.
+
+```bash
+# 미커밋 변경사항 확인
+git status
+
+# 스테이징 + 커밋 (변경사항이 있을 때)
+git add -p   # 파일별로 확인하며 추가
+git commit -m "커밋 메시지"
+
+# 푸시
+git push
+```
+
+- 커밋이 이미 되어 있으면 `git push`만 실행
+- 미커밋 파일이 있으면 먼저 `/commit` 스킬로 커밋 후 push
+- git push 완료 후 Docker 배포 진행
+
+---
+
 ## 컨테이너 구조
 
 | 컨테이너 | 포트 | 역할 |

@@ -9,6 +9,7 @@ Discord Webhook URL로 직접 POST 전송
 
 import json
 import os
+import sqlite3
 import sys
 import urllib.error
 import urllib.request
@@ -21,16 +22,55 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
 
+def _load_holdings() -> dict[str, dict]:
+    """holdings 테이블에서 ticker → {qty, avg_cost} 로드"""
+    try:
+        from config import DB_PATH
+
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT ticker, qty, avg_cost FROM holdings")
+        result = {row[0]: {"qty": row[1], "avg_cost": row[2]} for row in c.fetchall()}
+        conn.close()
+        return result
+    except Exception:
+        return {}
+
+
+def _pnl_suffix(ticker: str, current_price: float, holdings: dict[str, dict]) -> str:
+    """보유 종목이면 평가손익% 반환, 없으면 빈 문자열"""
+    h = holdings.get(ticker)
+    if not h or not h["avg_cost"]:
+        return ""
+    pnl_pct = (current_price - h["avg_cost"]) / h["avg_cost"] * 100
+    sign = "+" if pnl_pct >= 0 else ""
+    return f" | 평손익 {sign}{pnl_pct:.1f}%"
+
+
 def fire_discord_alert(alerts: list[dict]):
     """Discord Webhook으로 투자 알림 직접 전송 (중복 없이 단건)"""
     if not alerts:
         return
 
+    holdings = _load_holdings()
+
     # 알림 목록 생성
     alert_lines = []
     for a in alerts:
         level_emoji = {"RED": "🔴", "YELLOW": "🟡", "GREEN": "🟢"}.get(a["level"], "⚪")
-        alert_lines.append(f"{level_emoji} {a['message']}")
+        ticker = a.get("ticker", "")
+        price = a.get("price")
+        change = a.get("value", 0)
+        name = a.get("name")
+
+        if name and price is not None:
+            # 종목 알림 — 간결 포맷 + 평손익
+            sign = "+" if change >= 0 else ""
+            pnl = _pnl_suffix(ticker, price, holdings)
+            alert_lines.append(f"{level_emoji} {name} {sign}{change:.1f}%{pnl}")
+        else:
+            # 매크로 알림 — message에 이모지 포함되어 있으므로 그대로
+            alert_lines.append(a.get("message", ticker) or ticker)
 
     alerts_text = "\n".join(alert_lines)
     message = f"🚨 투자 알림\n{alerts_text}"

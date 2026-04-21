@@ -63,9 +63,7 @@ def get_current_vix(macro: list[dict]) -> float | None:
 # ── 공통 감지 로직 (alerts_watch.py에서도 사용) ──
 
 
-def check_stock_alerts(
-    prices: list[dict], thresholds: dict | None = None
-) -> list[dict]:
+def check_stock_alerts(prices: list[dict], thresholds: dict | None = None) -> list[dict]:
     """종목별 급등/급락 감지.
 
     Args:
@@ -74,9 +72,7 @@ def check_stock_alerts(
     """
     alerts = []
     if thresholds is not None:
-        drop_threshold = thresholds.get(
-            "stock_drop", ALERT_THRESHOLDS["stock_drop"]["threshold"]
-        )
+        drop_threshold = thresholds.get("stock_drop", ALERT_THRESHOLDS["stock_drop"]["threshold"])
         surge_threshold = thresholds.get(
             "stock_surge", ALERT_THRESHOLDS["stock_surge"]["threshold"]
         )
@@ -96,6 +92,8 @@ def check_stock_alerts(
                     "level": "RED",
                     "event_type": "stock_drop",
                     "ticker": p["ticker"],
+                    "name": p["name"],
+                    "price": p["price"],
                     "message": f"🔴 긴급: {p['name']} {change:+.2f}% 급락 (현재가: {p['price']:,.2f})",
                     "value": change,
                     "threshold": drop_threshold,
@@ -109,6 +107,8 @@ def check_stock_alerts(
                     "level": "GREEN",
                     "event_type": "stock_surge",
                     "ticker": p["ticker"],
+                    "name": p["name"],
+                    "price": p["price"],
                     "message": f"🟢 알림: {p['name']} {change:+.2f}% 급등 (현재가: {p['price']:,.2f})",
                     "value": change,
                     "threshold": surge_threshold,
@@ -268,9 +268,7 @@ def check_portfolio_alert(prices: list[dict]) -> list[dict]:
 
     for cur, totals in by_currency.items():
         if totals["invested"] > 0:
-            pnl_pct = (
-                (totals["current"] - totals["invested"]) / totals["invested"] * 100
-            )
+            pnl_pct = (totals["current"] - totals["invested"]) / totals["invested"] * 100
             if pnl_pct <= threshold:
                 alerts.append(
                     {
@@ -306,9 +304,7 @@ def run():
     if vix is not None:
         dynamic = _get_dynamic_thresholds(vix)
         regime = dynamic["regime"]
-        print(
-            f"  📊 현재 레짐: {regime} (VIX {vix:.2f}) — 임계값 {dynamic['stock_drop']}% 적용"
-        )
+        print(f"  📊 현재 레짐: {regime} (VIX {vix:.2f}) — 임계값 {dynamic['stock_drop']}% 적용")
         thresholds = dynamic
     else:
         thresholds = None
