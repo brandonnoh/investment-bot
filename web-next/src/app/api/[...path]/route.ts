@@ -19,12 +19,12 @@ async function proxy(req: NextRequest, path: string[]) {
     })
   }
 
+  const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
+  const bodyText = hasBody ? await req.text() : undefined
   const res = await fetch(url, {
     method: req.method,
     headers: { 'Content-Type': 'application/json' },
-    body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
-    // @ts-expect-error Node fetch duplex
-    duplex: 'half',
+    body: bodyText,
   })
   const data = await res.arrayBuffer()
   return new NextResponse(data, {

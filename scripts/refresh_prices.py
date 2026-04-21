@@ -40,30 +40,40 @@ def _now_kst_iso() -> str:
     return datetime.now(KST).isoformat()
 
 
-def _is_market_hours() -> bool:
-    """KRX(09:00~15:30) 또는 미국장(22:30~06:00) 장중이면 True"""
-    now = datetime.now(KST)
+def _is_market_hours(now: datetime | None = None) -> bool:
+    """장중 여부 반환. now 생략 시 현재 KST 시각 사용.
+
+    수집 구간:
+    - KRX 정규장:   평일 09:00~15:30
+    - 국내 장외:    평일 15:40~18:00
+    - 미국 프리마켓: 평일 20:00~22:30
+    - 미국 정규장:  평일 22:30~다음날 06:00 (일요일 22:30 포함)
+    """
+    if now is None:
+        now = datetime.now(KST)
     weekday = now.weekday()  # 0=월 ... 6=일
     t = now.time()
 
-    # KRX: 평일(월~금) 09:00~15:30
-    krx_open = dt_time(9, 0)
-    krx_close = dt_time(15, 30)
-    if weekday < 5 and krx_open <= t <= krx_close:
+    if weekday < 5:
+        # KRX 정규장: 09:00~15:30
+        if dt_time(9, 0) <= t <= dt_time(15, 30):
+            return True
+        # 국내 장외: 15:40~18:00
+        if dt_time(15, 40) <= t <= dt_time(18, 0):
+            return True
+        # 미국 프리마켓: 20:00~22:30
+        if dt_time(20, 0) <= t <= dt_time(22, 30):
+            return True
+        # 미국 정규장: 22:30~자정
+        if t >= dt_time(22, 30):
+            return True
+
+    # 미국 정규장: 자정~06:00 (화~토 새벽)
+    if 1 <= weekday <= 6 and t <= dt_time(6, 0):
         return True
 
-    # 미국장: 평일 22:30~자정 (월~금)
-    us_open = dt_time(22, 30)
-    if weekday < 5 and t >= us_open:
-        return True
-
-    # 미국장: 자정~06:00 (화~토, 즉 전날 밤 22:30에서 이어지는 새벽)
-    us_close = dt_time(6, 0)
-    if 1 <= weekday <= 6 and t < us_close:
-        return True
-
-    # 일요일 22:30~자정 (월요일 미국장 프리마켓 포함)
-    if weekday == 6 and t >= us_open:
+    # 일요일 22:30~자정 (월요일 미국장 이어짐)
+    if weekday == 6 and t >= dt_time(22, 30):
         return True
 
     return False

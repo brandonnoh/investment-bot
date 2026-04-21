@@ -1,11 +1,12 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useWealthData } from '@/hooks/useWealthData'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { fmtKrw } from '@/lib/format'
 import { SyncBadge } from '@/components/SyncBadge'
 
-const ASSET_TYPES = ['부동산', '적금', '청약', '연금', '보험', '기타'] as const
+const ASSET_TYPES = ['부동산', '적금', '청약', '연금', '보험', '현금', '기타'] as const
 type AssetType = (typeof ASSET_TYPES)[number]
 
 const TYPE_COLOR: Record<string, string> = {
@@ -14,6 +15,7 @@ const TYPE_COLOR: Record<string, string> = {
   적금: 'bg-green-500/20 text-green-300 border-green-500/30',
   청약: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   보험: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  현금: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
   기타: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
 }
 
@@ -59,6 +61,40 @@ async function apiCall(url: string, method: string, body?: object) {
     body: body ? JSON.stringify(body) : undefined,
   })
   if (!res.ok) throw new Error(`${res.status}`)
+}
+
+interface FormActionsProps {
+  id?: number
+  saving: boolean
+  canSave: boolean
+  deleteConfirm: number | null
+  onSave: (id?: number) => void
+  onCancel: () => void
+  onDelete: (id: number) => void
+}
+
+function FormActions({ id, saving, canSave, deleteConfirm, onSave, onCancel, onDelete }: FormActionsProps) {
+  return (
+    <div className="flex items-center gap-2 mt-2.5">
+      <button onClick={() => onSave(id)} disabled={saving || !canSave}
+        className="px-3 py-1.5 bg-gold text-black text-xs font-semibold rounded hover:bg-gold/80 disabled:opacity-40 cursor-pointer transition-colors">
+        {saving ? '저장 중…' : '저장'}
+      </button>
+      <button onClick={onCancel} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+        취소
+      </button>
+      {id !== undefined && (
+        <button onClick={() => onDelete(id)} disabled={saving}
+          className={`ml-auto px-3 py-1.5 text-xs rounded cursor-pointer transition-colors ${
+            deleteConfirm === id
+              ? 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
+              : 'text-muted-foreground hover:text-red-400'
+          }`}>
+          {deleteConfirm === id ? '정말 삭제?' : '삭제'}
+        </button>
+      )}
+    </div>
+  )
 }
 
 function AssetFormFields({ form, onChange }: { form: AssetForm; onChange: (p: Partial<AssetForm>) => void }) {
@@ -155,8 +191,10 @@ export function WealthTab() {
         await apiCall('/api/wealth/assets', 'POST', buildPayload(form))
       }
       await mutate(); cancel()
-    } catch (e) { console.error('저장 실패:', e) }
-    finally { setSaving(false) }
+    } catch (e) {
+      console.error('저장 실패:', e)
+      toast.error('저장에 실패했습니다. 다시 시도해주세요.')
+    } finally { setSaving(false) }
   }
 
   async function handleDelete(id: number) {
@@ -165,33 +203,13 @@ export function WealthTab() {
     try {
       await apiCall(`/api/wealth/assets/${id}`, 'DELETE')
       await mutate(); cancel()
-    } catch (e) { console.error('삭제 실패:', e) }
-    finally { setSaving(false) }
+    } catch (e) {
+      console.error('삭제 실패:', e)
+      toast.error('삭제에 실패했습니다. 다시 시도해주세요.')
+    } finally { setSaving(false) }
   }
 
-  function FormActions({ id }: { id?: number }) {
-    return (
-      <div className="flex items-center gap-2 mt-2.5">
-        <button onClick={() => handleSave(id)} disabled={saving || !form.name.trim()}
-          className="px-3 py-1.5 bg-gold text-black text-xs font-semibold rounded hover:bg-gold/80 disabled:opacity-40 cursor-pointer transition-colors">
-          {saving ? '저장 중…' : '저장'}
-        </button>
-        <button onClick={cancel} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
-          취소
-        </button>
-        {id !== undefined && (
-          <button onClick={() => handleDelete(id)} disabled={saving}
-            className={`ml-auto px-3 py-1.5 text-xs rounded cursor-pointer transition-colors ${
-              deleteConfirm === id
-                ? 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
-                : 'text-muted-foreground hover:text-red-400'
-            }`}>
-            {deleteConfirm === id ? '정말 삭제?' : '삭제'}
-          </button>
-        )}
-      </div>
-    )
-  }
+
 
   return (
     <div className="space-y-4">
@@ -257,7 +275,8 @@ export function WealthTab() {
                 {editingId === a.id && (
                   <div className="pb-3">
                     <AssetFormFields form={form} onChange={patchForm} />
-                    <FormActions id={a.id} />
+                    <FormActions id={a.id} saving={saving} canSave={!!form.name.trim()}
+                      deleteConfirm={deleteConfirm} onSave={handleSave} onCancel={cancel} onDelete={handleDelete} />
                   </div>
                 )}
               </div>
@@ -267,7 +286,8 @@ export function WealthTab() {
           {isAdding && (
             <div className="mt-2">
               <AssetFormFields form={form} onChange={patchForm} />
-              <FormActions />
+              <FormActions saving={saving} canSave={!!form.name.trim()}
+                deleteConfirm={deleteConfirm} onSave={handleSave} onCancel={cancel} onDelete={handleDelete} />
             </div>
           )}
 

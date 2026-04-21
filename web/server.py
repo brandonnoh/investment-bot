@@ -19,6 +19,11 @@ from urllib.parse import parse_qs, urlparse
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from db.ssot_wealth import (
+    create_extra_asset,
+    delete_extra_asset_by_id,
+    update_extra_asset_by_id,
+)
 from web.api import (
     INTEL_DIR,
     PID_DIR,
