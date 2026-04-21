@@ -12,6 +12,8 @@ services:
       - ./docs:/app/docs
       - ~/.claude:/root/.claude:ro
       - ~/.claude.json:/root/.claude.json:ro
+    environment:
+      - TZ=Asia/Seoul
     env_file:
       - .env
 

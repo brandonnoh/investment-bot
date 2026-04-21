@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- 실시간 알림 데몬 LaunchAgent -->
+<!-- 상시 실행 (KeepAlive), 비정상 종료 시 60초 후 자동 재시작 -->
+<plist version="1.0">
+<dict>
+
+    <!-- 서비스 식별자 -->
+    <key>Label</key>
+    <string>com.investment-bot.alerts-watch</string>
+
+    <!-- 실행 명령 -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/jarvis/Projects/investment-bot/analysis/alerts_watch.py</string>
+    </array>
+
+    <!-- 작업 디렉토리 -->
+    <key>WorkingDirectory</key>
+    <string>/Users/jarvis/Projects/investment-bot</string>
+
+    <!-- 환경변수 -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>DISCORD_WEBHOOK_URL</key>
+        <string>https://discord.com/api/webhooks/1490306786870165624/0JjO5i_BNWCmIDnFJXQZ0OcDGeWdYsryKnUFGXvoKlqALza6mFPqcjbFz40fWltCIkRR</string>
+    </dict>
+
+    <!-- 상시 실행: 종료 시 자동 재시작 -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- 재시작 쿨다운: 60초 (무한 재시작 루프 방지) -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- 등록 즉시 시작 -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- 표준 출력/에러 → 같은 로그 파일 -->
+    <key>StandardOutPath</key>
+    <string>/Users/jarvis/Projects/investment-bot/logs/launchd_alerts.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jarvis/Projects/investment-bot/logs/launchd_alerts.log</string>
+
+</dict>
+</plist>

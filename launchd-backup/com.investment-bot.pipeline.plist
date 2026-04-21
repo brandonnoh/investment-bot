@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- 일일 파이프라인 LaunchAgent -->
+<!-- 평일(월~금) KST 16:40 (UTC 07:40)에 실행 -->
+<!-- install.sh가 __PLACEHOLDER__ 값을 실제 환경변수로 치환함 -->
+<plist version="1.0">
+<dict>
+
+    <!-- 서비스 식별자 -->
+    <key>Label</key>
+    <string>com.investment-bot.pipeline</string>
+
+    <!-- 실행 명령 -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/python3</string>
+        <string>/Users/jarvis/Projects/investment-bot/run_pipeline.py</string>
+    </array>
+
+    <!-- 작업 디렉토리 -->
+    <key>WorkingDirectory</key>
+    <string>/Users/jarvis/Projects/investment-bot</string>
+
+    <!-- 환경변수 (install.sh에서 실제 값으로 치환됨) -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>KIWOOM_APPKEY</key>
+        <string>FfT3708hHvI_pMQudOIRtKmkCKvPSSs1pBU7QNQtIwM</string>
+        <key>KIWOOM_SECRETKEY</key>
+        <string>0IlHNImUhkpOVkMr7vgOipy-o0664j9rLN5sZUFK8u0</string>
+        <key>BRAVE_API_KEY</key>
+        <string>BSAlLbCWB7JMChqA-6lMVUQPyjGAprL</string>
+        <!-- PATH: python3, 시스템 바이너리 접근용 -->
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <!-- 실행 스케줄: 평일(월=1 ~ 금=5) UTC 07:40 = KST 16:40 -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <!-- 월요일 -->
+        <dict>
+            <key>Weekday</key>
+            <integer>1</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>40</integer>
+        </dict>
+        <!-- 화요일 -->
+        <dict>
+            <key>Weekday</key>
+            <integer>2</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>40</integer>
+        </dict>
+        <!-- 수요일 -->
+        <dict>
+            <key>Weekday</key>
+            <integer>3</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>40</integer>
+        </dict>
+        <!-- 목요일 -->
+        <dict>
+            <key>Weekday</key>
+            <integer>4</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>40</integer>
+        </dict>
+        <!-- 금요일 -->
+        <dict>
+            <key>Weekday</key>
+            <integer>5</integer>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>40</integer>
+        </dict>
+    </array>
+
+    <!-- 표준 출력/에러 → 같은 로그 파일 -->
+    <key>StandardOutPath</key>
+    <string>/Users/jarvis/Projects/investment-bot/logs/launchd_pipeline.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jarvis/Projects/investment-bot/logs/launchd_pipeline.log</string>
+
+    <!-- 상시 실행 불필요 (스케줄 기반) -->
+    <key>RunAtLoad</key>
+    <false/>
+
+</dict>
+</plist>

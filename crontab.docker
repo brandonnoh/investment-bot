@@ -1,0 +1,26 @@
+# 투자봇 Docker 내부 스케줄러
+# 타임존: Asia/Seoul (KST) — Dockerfile에서 설정됨
+# /etc/cron.d/ 형식: 각 항목에 username 필드 필수
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+# alerts_watch: 5분마다 (launchd KeepAlive 대체 — run-once 스크립트)
+*/5 * * * * root cd /app && python3 analysis/alerts_watch.py >> /app/logs/alerts_watch.log 2>&1
+
+# 가격 갱신: 10분마다 (스크립트 내부에서 장중 여부 판단)
+*/10 * * * * root cd /app && python3 scripts/refresh_prices.py >> /app/logs/refresh_prices.log 2>&1
+
+# 마커스 AI 분석: 평일(월~금) 05:30 KST
+30 5 * * 1-5 root cd /app && python3 scripts/run_marcus.py >> /app/logs/marcus.log 2>&1
+
+# 자비스 분석: 평일(월~금) 07:30 KST
+30 7 * * 1-5 root cd /app && python3 scripts/run_jarvis.py >> /app/logs/jarvis.log 2>&1
+
+# 전체 파이프라인: 평일(월~금) 07:40 KST
+40 7 * * 1-5 root cd /app && python3 run_pipeline.py >> /app/logs/pipeline.log 2>&1
+
+# 뉴스 수집: 평일(월~금) 08:00 KST
+0 8 * * 1-5 root cd /app && python3 scripts/refresh_news.py >> /app/logs/news.log 2>&1
+
+# 월별 입금 기록: 매월 1일 00:00 KST
+0 0 1 * * root cd /app && python3 scripts/monthly_deposit_cron.py >> /app/logs/deposit.log 2>&1
