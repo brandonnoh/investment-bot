@@ -102,7 +102,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         """CORS preflight 처리."""
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
@@ -211,6 +211,65 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             )
             self.send_json(result)
 
+        elif path == "/api/wealth/assets":
+            body = self._read_json_body()
+            try:
+                asset_id = create_extra_asset(
+                    name=body["name"],
+                    asset_type=body["asset_type"],
+                    current_value_krw=float(body["current_value_krw"]),
+                    monthly_deposit_krw=float(body.get("monthly_deposit_krw", 0)),
+                    is_fixed=bool(body.get("is_fixed", False)),
+                    maturity_date=body.get("maturity_date"),
+                    note=body.get("note"),
+                )
+                self.send_json({"ok": True, "id": asset_id}, 201)
+            except (KeyError, ValueError) as e:
+                self.send_json({"error": str(e)}, 400)
+
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def _read_json_body(self) -> dict:
+        """요청 바디를 JSON으로 파싱."""
+        length = int(self.headers.get("Content-Length", 0))
+        return json.loads(self.rfile.read(length)) if length else {}
+
+    def do_PUT(self):
+        """PUT 요청 라우팅 (자산 수정)."""
+        path = urlparse(self.path).path
+        if path.startswith("/api/wealth/assets/"):
+            try:
+                asset_id = int(path.rsplit("/", 1)[-1])
+                body = self._read_json_body()
+                ok = update_extra_asset_by_id(
+                    asset_id=asset_id,
+                    name=body["name"],
+                    asset_type=body["asset_type"],
+                    current_value_krw=float(body["current_value_krw"]),
+                    monthly_deposit_krw=float(body.get("monthly_deposit_krw", 0)),
+                    is_fixed=bool(body.get("is_fixed", False)),
+                    maturity_date=body.get("maturity_date"),
+                    note=body.get("note"),
+                )
+                self.send_json({"ok": ok}, 200 if ok else 404)
+            except (KeyError, ValueError) as e:
+                self.send_json({"error": str(e)}, 400)
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_DELETE(self):
+        """DELETE 요청 라우팅 (자산 삭제)."""
+        path = urlparse(self.path).path
+        if path.startswith("/api/wealth/assets/"):
+            try:
+                asset_id = int(path.rsplit("/", 1)[-1])
+                ok = delete_extra_asset_by_id(asset_id)
+                self.send_json({"ok": ok}, 200 if ok else 404)
+            except ValueError:
+                self.send_json({"error": "잘못된 id"}, 400)
         else:
             self.send_response(404)
             self.end_headers()

@@ -34,7 +34,7 @@ def get_extra_assets(conn=None) -> list[dict]:
 
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT name, asset_type, current_value_krw, monthly_deposit_krw,
+        SELECT id, name, asset_type, current_value_krw, monthly_deposit_krw,
                is_fixed, maturity_date, note
         FROM extra_assets
         ORDER BY asset_type, name
@@ -44,13 +44,14 @@ def get_extra_assets(conn=None) -> list[dict]:
     for row in cursor.fetchall():
         assets.append(
             {
-                "name": row[0],
-                "type": row[1],
-                "current_value_krw": row[2],
-                "monthly_deposit_krw": row[3],
-                "is_fixed": bool(row[4]),
-                "maturity_date": row[5],
-                "note": row[6],
+                "id": row[0],
+                "name": row[1],
+                "type": row[2],
+                "current_value_krw": row[3],
+                "monthly_deposit_krw": row[4],
+                "is_fixed": bool(row[5]),
+                "maturity_date": row[6],
+                "note": row[7],
             }
         )
 
@@ -86,9 +87,7 @@ def update_extra_asset(
         updates.append("updated_at = ?")
         params.append(now)
         params.append(name)
-        cursor.execute(
-            f"UPDATE extra_assets SET {', '.join(updates)} WHERE name = ?", params
-        )
+        cursor.execute(f"UPDATE extra_assets SET {', '.join(updates)} WHERE name = ?", params)
         conn.commit()
 
     if own_conn:
@@ -255,3 +254,99 @@ def get_wealth_summary(conn=None) -> dict:
         "last_investment_pnl": row[1] if row else None,
         "last_investment_pnl_pct": row[2] if row else None,
     }
+
+
+# ══════════════════════════════════════════════════════════════
+# Extra Assets CRUD
+# ══════════════════════════════════════════════════════════════
+
+
+def create_extra_asset(
+    name: str,
+    asset_type: str,
+    current_value_krw: float,
+    monthly_deposit_krw: float = 0,
+    is_fixed: bool = False,
+    maturity_date: str = None,
+    note: str = None,
+) -> int:
+    """비금융 자산 신규 생성, 생성된 id 반환"""
+    conn = get_conn()
+    try:
+        cursor = conn.cursor()
+        now = datetime.now(KST).isoformat()
+        cursor.execute(
+            """
+            INSERT INTO extra_assets
+            (name, asset_type, current_value_krw, monthly_deposit_krw,
+             is_fixed, maturity_date, note, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                name,
+                asset_type,
+                current_value_krw,
+                monthly_deposit_krw,
+                1 if is_fixed else 0,
+                maturity_date,
+                note,
+                now,
+            ),
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def update_extra_asset_by_id(
+    asset_id: int,
+    name: str,
+    asset_type: str,
+    current_value_krw: float,
+    monthly_deposit_krw: float,
+    is_fixed: bool,
+    maturity_date: str = None,
+    note: str = None,
+) -> bool:
+    """비금융 자산 전체 필드 업데이트, 성공 여부 반환"""
+    conn = get_conn()
+    try:
+        cursor = conn.cursor()
+        now = datetime.now(KST).isoformat()
+        cursor.execute(
+            """
+            UPDATE extra_assets
+            SET name = ?, asset_type = ?, current_value_krw = ?,
+                monthly_deposit_krw = ?, is_fixed = ?,
+                maturity_date = ?, note = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                name,
+                asset_type,
+                current_value_krw,
+                monthly_deposit_krw,
+                1 if is_fixed else 0,
+                maturity_date,
+                note,
+                now,
+                asset_id,
+            ),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
+def delete_extra_asset_by_id(asset_id: int) -> bool:
+    """비금융 자산 삭제, 성공 여부 반환"""
+    conn = get_conn()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM extra_assets WHERE id = ?", (asset_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
