@@ -186,3 +186,22 @@ export interface AnalysisDetail {
 export interface LogResponse {
   lines: string[]
 }
+
+export interface SolarListing {
+  id: number
+  source: string          // 'allthatsolar' | 'solarmarket' | 'onbid' | ...
+  listing_id: string
+  title: string | null
+  capacity_kw: number | null
+  location: string | null
+  price_krw: number | null
+  url: string | null
+  status: string
+  first_seen_at: string
+  last_seen_at: string
+}
+
+export interface SolarResponse {
+  listings: SolarListing[]
+  count: number
+}

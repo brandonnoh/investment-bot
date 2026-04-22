@@ -10,6 +10,7 @@ import { AlertsTab } from '@/components/tabs/AlertsTab'
 import { SystemTab } from '@/components/tabs/SystemTab'
 import { ServiceMapTab } from '@/components/tabs/ServiceMapTab'
 import { WealthTab } from '@/components/tabs/WealthTab'
+import { SolarTab } from '@/components/tabs/SolarTab'
 import { SSEProvider } from '@/components/SSEProvider'
 import { useMCStore } from '@/store/useMCStore'
 import { useIntelData } from '@/hooks/useIntelData'
@@ -45,6 +46,7 @@ export default function Home() {
           {activeTab === 'marcus' && <MarcusTab />}
           {activeTab === 'discovery' && <DiscoveryTab />}
           {activeTab === 'wealth' && <WealthTab />}
+          {activeTab === 'solar' && <SolarTab />}
           {activeTab === 'alerts' && <AlertsTab />}
           {activeTab === 'system' && <SystemTab />}
           {activeTab === 'service-map' && <ServiceMapTab />}
