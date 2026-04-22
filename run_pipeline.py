@@ -69,6 +69,7 @@ def _collect_data(engine: EngineStatus):
     _collect_fundamentals(engine)
     _collect_supply()
     _run_sector_intel()
+    _fetch_universe_daily(engine)  # 유니버스 일봉 사전 수집 (value_screener DB 스크리닝용)
     _collect_opportunities(engine)
 
 
@@ -109,6 +110,19 @@ def _run_sector_intel():
         print(f"  섹터 점수화: top={top.get('name')}({top.get('score')})")
     except Exception as e:
         print(f"  ⚠️ sector_intel 실패: {e}")
+
+
+def _fetch_universe_daily(engine: EngineStatus):
+    """유니버스 전체(150개) 일봉 사전 수집 → prices_daily 저장"""
+    try:
+        from data.fetch_universe_daily import run as fetch_universe_daily
+
+        result = fetch_universe_daily()
+        print(
+            f"  유니버스 일봉 수집: {result.get('success', 0)}개 성공, {result.get('fail', 0)}개 실패"
+        )
+    except Exception as e:
+        print(f"  ⚠️ 유니버스 일봉 수집 실패: {e}")
 
 
 def _collect_opportunities(engine: EngineStatus):

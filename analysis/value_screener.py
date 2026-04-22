@@ -1,14 +1,8 @@
 #!/usr/bin/env python3
-"""
-섹터 기반 가치 스크리닝 모듈
+"""섹터 기반 가치 스크리닝 — KOSPI200 50 + SP100 100 유니버스(150개).
 
-상위 섹터 종목에 대해 RSI/PER/PBR/52주 범위를 분석하여
-매수 기회를 발굴한다.
-
-스크리닝 조건:
-  1. 과매도: RSI < 35
-  2. 저평가: PBR < 1.2 AND ROE > 8.0
-  3. 52주 저점 근접: position_52w < 15%
+스크리닝 조건: RSI<35 / PBR<1.2+ROE>8% / 52주 저점<15%
+Marcus discovery_keywords.json 키워드로 섹터 필터 우선 적용.
 """
 
 import json
@@ -18,25 +12,26 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-# 프로젝트 루트 경로 설정
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from analysis.price_analysis_indicators import calc_52w_range  # noqa: E402
 from analysis.price_analysis_momentum import calc_rsi  # noqa: E402
-from analysis.sector_map import _TICKER_NAMES, SECTOR_MAP  # noqa: E402
-from data.fetch_fundamentals_sources import fetch_yahoo_financials  # noqa: E402
+from analysis.screener_universe import UNIVERSE_KOSPI200, UNIVERSE_SP100  # noqa: E402
+from analysis.sector_map import _TICKER_NAMES, get_ticker_sector  # noqa: E402
+from analysis.value_screener_data import (  # noqa: E402
+    load_fundamentals_cache,
+    load_sector_scores,
+    load_universe_cache,
+    resolve_fundamentals,
+)
+from analysis.value_screener_marcus import load_marcus_sectors  # noqa: E402
 
 # ── 상수 ──
 
 KST = timezone(timedelta(hours=9))
 DB_PATH = PROJECT_ROOT / "db" / "history.db"
 OUTPUT_DIR = PROJECT_ROOT / "output" / "intel"
-FUNDAMENTALS_PATH = OUTPUT_DIR / "fundamentals.json"
-SECTOR_SCORES_PATH = OUTPUT_DIR / "sector_scores.json"
-
-MAX_TICKERS_PER_MARKET = 5
-TOP_SECTOR_COUNT = 3
 
 
 # ── 스크리닝 조건 ──
@@ -50,11 +45,8 @@ def _is_oversold(m: dict) -> bool:
 
 def _is_undervalued(m: dict) -> bool:
     """PBR+ROE 저평가 판단"""
-    pbr = m.get("pbr")
-    roe = m.get("roe")
-    if pbr is None or roe is None:
-        return False
-    return pbr < 1.2 and roe > 8.0
+    pbr, roe = m.get("pbr"), m.get("roe")
+    return pbr is not None and roe is not None and pbr < 1.2 and roe > 8.0
 
 
 def _is_near_52w_low(m: dict) -> bool:
@@ -76,74 +68,14 @@ SCREEN_CONDITIONS = [
 def _calc_composite_score(metrics: dict) -> float:
     """RSI 과매도 + PBR 저평가 + 52주 저점 기반 0~1 점수"""
     score = 0.5
-    rsi = metrics.get("rsi")
-    pbr = metrics.get("pbr")
-    pos = metrics.get("pos_52w_pct")
-
+    rsi, pbr, pos = metrics.get("rsi"), metrics.get("pbr"), metrics.get("pos_52w_pct")
     if rsi is not None:
-        if rsi <= 30:
-            score += 0.3
-        elif rsi <= 35:
-            score += 0.15
-
+        score += 0.3 if rsi <= 30 else (0.15 if rsi <= 35 else 0)
     if pbr is not None and pbr > 0:
-        if pbr <= 1.0:
-            score += 0.25
-        elif pbr <= 1.5:
-            score += 0.1
-
+        score += 0.25 if pbr <= 1.0 else (0.1 if pbr <= 1.5 else 0)
     if pos is not None and pos <= 15:
         score += 0.2
-
     return round(min(1.0, score), 4)
-
-
-# ── 캐시 로드 ──
-
-UNIVERSE_CACHE_PATH = OUTPUT_DIR / "universe_cache.json"
-
-
-def _load_universe_cache() -> dict[str, dict]:
-    """universe_cache.json 로드 (없으면 빈 dict)"""
-    if not UNIVERSE_CACHE_PATH.exists():
-        return {}
-    try:
-        data = json.loads(
-            UNIVERSE_CACHE_PATH.read_text(encoding="utf-8"),
-        )
-        return data.get("stocks", {})
-    except (json.JSONDecodeError, KeyError):
-        return {}
-
-
-def _load_fundamentals_cache() -> dict[str, dict]:
-    """fundamentals.json에서 티커별 캐시 딕셔너리 반환"""
-    if not FUNDAMENTALS_PATH.exists():
-        return {}
-    try:
-        data = json.loads(
-            FUNDAMENTALS_PATH.read_text(encoding="utf-8"),
-        )
-        items = data.get("fundamentals", [])
-        return {item["ticker"]: item for item in items}
-    except (json.JSONDecodeError, KeyError):
-        return {}
-
-
-def _load_sector_scores() -> list[dict]:
-    """sector_scores.json에서 상위 섹터 리스트 반환"""
-    if not SECTOR_SCORES_PATH.exists():
-        print("  sector_scores.json 없음 — sector_intel 먼저 실행 필요")
-        return []
-    try:
-        data = json.loads(
-            SECTOR_SCORES_PATH.read_text(encoding="utf-8"),
-        )
-        sectors = data.get("sectors", [])
-        eligible = [s for s in sectors if s.get("signal") in ("favorable", "neutral")]
-        return eligible[:TOP_SECTOR_COUNT]
-    except (json.JSONDecodeError, KeyError):
-        return []
 
 
 # ── 52주 위치 파싱 ──
@@ -154,13 +86,7 @@ def _parse_position_52w(pos_str: str | None) -> float | None:
     if not pos_str or pos_str == "변동 없음":
         return None
     match = re.search(r"([\d.]+)", pos_str)
-    if not match:
-        return None
-    pct = float(match.group(1))
-    # "하단 X%" → X가 작을수록 저점, 그대로 사용
-    # "상단 X%" → X가 클수록 고점, 그대로 사용
-    # position_52w는 0(저점)~100(고점) 범위
-    return pct
+    return float(match.group(1)) if match else None
 
 
 # ── 종목별 지표 수집 ──
@@ -172,106 +98,60 @@ def _fetch_stock_metrics(
     cache: dict[str, dict],
     uni_cache: dict[str, dict] | None = None,
 ) -> dict:
-    """단일 종목 RSI + PER/PBR/ROE + 52주 범위 수집
-
-    조회 우선순위: universe_cache → fundamentals 캐시 → Yahoo Finance
-    """
+    """단일 종목 RSI + PER/PBR/ROE + 52주 범위 수집"""
     metrics: dict = {"ticker": ticker}
 
-    # RSI (1순위: DB, 2순위: universe_cache)
+    # RSI: DB prices_daily → universe_cache 폴백
     try:
         metrics["rsi"] = calc_rsi(conn, ticker)
     except Exception:
         metrics["rsi"] = None
     if metrics["rsi"] is None and uni_cache:
-        cached = uni_cache.get(ticker)
-        if cached:
-            metrics["rsi"] = cached.get("rsi")
+        metrics["rsi"] = (uni_cache.get(ticker) or {}).get("rsi")
 
-    # 52주 범위 (DB)
+    # 52주 범위 (DB prices_daily)
     try:
-        range_data = calc_52w_range(conn, ticker)
-        pos_str = range_data.get("position_52w")
+        pos_str = calc_52w_range(conn, ticker).get("position_52w")
         metrics["pos_52w_pct"] = _parse_position_52w(pos_str)
     except Exception:
         metrics["pos_52w_pct"] = None
 
-    # PER/PBR/ROE (universe_cache → fundamentals → Yahoo)
-    fund = _resolve_fundamentals(
-        ticker,
-        cache,
-        uni_cache,
-    )
-
+    # 펀더멘탈: DB → cache → Yahoo 폴백 (resolve_fundamentals)
+    fund = resolve_fundamentals(ticker, conn, cache, uni_cache)
     metrics["per"] = fund.get("per")
     metrics["pbr"] = fund.get("pbr")
     metrics["roe"] = fund.get("roe")
-    metrics["name"] = fund.get(
-        "name",
-        _TICKER_NAMES.get(ticker, ticker),
-    )
+    metrics["name"] = fund.get("name") or _TICKER_NAMES.get(ticker, ticker)
 
     return metrics
 
 
-def _resolve_fundamentals(
-    ticker: str,
-    cache: dict[str, dict],
-    uni_cache: dict[str, dict] | None,
-) -> dict:
-    """PER/PBR/ROE 조회: universe_cache → fundamentals → Yahoo"""
-    # 1. universe_cache.json 우선
-    if uni_cache:
-        entry = uni_cache.get(ticker)
-        if entry and entry.get("per") is not None:
-            return entry
-
-    # 2. fundamentals.json 캐시
-    fund = cache.get(ticker)
-    if fund and fund.get("per") is not None:
-        return fund
-
-    # 3. Yahoo Finance 직접 호출
-    try:
-        return fetch_yahoo_financials(ticker) or {}
-    except Exception:
-        return {}
+# ── 유니버스 기반 대상 종목 수집 ──
 
 
-# ── 대상 종목 수집 ──
+def _collect_target_tickers() -> list[dict]:
+    """KOSPI200 + SP100 전체 유니버스 기반 대상 종목 수집.
 
-
-def _collect_target_tickers(
-    top_sectors: list[dict],
-) -> list[dict]:
-    """상위 섹터에서 KR/US 종목 리스트 수집"""
+    섹터 할당: sector_map.get_ticker_sector 우선, 없으면 market 기반 "기타"
+    """
     targets: list[dict] = []
     seen: set[str] = set()
-    for sector in top_sectors:
-        name = sector["name"]
-        smap = SECTOR_MAP.get(name, {})
-        kr = smap.get("kr", [])[:MAX_TICKERS_PER_MARKET]
-        us = smap.get("us", [])[:MAX_TICKERS_PER_MARKET]
-        for t in kr + us:
-            if t not in seen:
-                seen.add(t)
-                targets.append({"ticker": t, "sector": name})
+    for item in UNIVERSE_KOSPI200 + UNIVERSE_SP100:
+        ticker = item["ticker"]
+        if ticker in seen:
+            continue
+        seen.add(ticker)
+        sector = get_ticker_sector(ticker) or f"기타({item['market']})"
+        targets.append({"ticker": ticker, "name": item["name"], "sector": sector})
     return targets
 
 
 # ── 스크리닝 실행 ──
 
 
-def _screen_ticker(
-    metrics: dict,
-    sector: str,
-) -> dict | None:
+def _screen_ticker(metrics: dict, sector: str) -> dict | None:
     """단일 종목 스크리닝 → opportunity 또는 None"""
-    reasons = []
-    for cond_fn, cond_label in SCREEN_CONDITIONS:
-        if cond_fn(metrics):
-            reasons.append(cond_label)
-
+    reasons = [label for fn, label in SCREEN_CONDITIONS if fn(metrics)]
     if not reasons:
         return None
 
@@ -285,14 +165,14 @@ def _screen_ticker(
         "per": metrics.get("per"),
         "pbr": metrics.get("pbr"),
         "roe": metrics.get("roe"),
-        "pos_52w": round(pos_52w, 1) if pos_52w else None,
+        "pos_52w": round(pos_52w, 1) if pos_52w is not None else None,
         "composite_score": _calc_composite_score(metrics),
         "discovered_via": f"섹터스크리닝:{sector}",
         "source": "value_screener",
     }
 
 
-# ── 가장 빈번한 스크리닝 사유 ──
+# ── 결과 저장 ──
 
 
 def _top_reason(opportunities: list[dict]) -> str:
@@ -306,12 +186,10 @@ def _top_reason(opportunities: list[dict]) -> str:
     return max(counts, key=counts.get) if counts else "해당 없음"
 
 
-# ── 결과 저장 ──
-
-
 def _build_output(
     opportunities: list[dict],
     top_sectors: list[dict],
+    marcus_sectors: set[str],
 ) -> dict:
     """opportunities.json 출력 데이터 구성"""
     by_sector: dict[str, int] = {}
@@ -320,7 +198,10 @@ def _build_output(
         by_sector[s] = by_sector.get(s, 0) + 1
 
     keywords = [
-        {"keyword": s["name"], "category": "sector", "priority": i + 1}
+        {"keyword": s, "category": "marcus_sector", "priority": i + 1}
+        for i, s in enumerate(sorted(marcus_sectors))
+    ] + [
+        {"keyword": s["name"], "category": "sector", "priority": len(marcus_sectors) + i + 1}
         for i, s in enumerate(top_sectors)
     ]
 
@@ -341,55 +222,48 @@ def _save_output(output: dict) -> None:
     """opportunities.json 파일 저장"""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUTPUT_DIR / "opportunities.json"
-    path.write_text(
-        json.dumps(output, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 # ── 메인 진입점 ──
 
 
 def run() -> list:
-    """섹터 기반 가치 스크리닝 실행 -> opportunities 리스트"""
-    top_sectors = _load_sector_scores()
-    if not top_sectors:
-        return []
+    """유니버스 기반 가치 스크리닝 실행 → opportunities 리스트"""
+    top_sectors = load_sector_scores()
+    marcus_sectors = load_marcus_sectors()
+    all_targets = _collect_target_tickers()
 
-    targets = _collect_target_tickers(top_sectors)
+    allowed_sectors = marcus_sectors | {s["name"] for s in top_sectors}
+    if allowed_sectors:
+        targets = [t for t in all_targets if t["sector"] in allowed_sectors]
+        print(f"  섹터 필터 적용: {len(all_targets)}개 → {len(targets)}개 (허용 섹터: {len(allowed_sectors)}개)")
+    else:
+        targets = all_targets
+        print(f"  섹터 정보 없음 — 전체 {len(targets)}개 스크리닝")
+
     if not targets:
         print("  대상 종목 없음")
         return []
 
-    uni_cache = _load_universe_cache()
-    cache = _load_fundamentals_cache()
+    uni_cache = load_universe_cache()
+    cache = load_fundamentals_cache()
     conn = sqlite3.connect(str(DB_PATH))
 
     opportunities: list[dict] = []
     for item in targets:
-        metrics = _fetch_stock_metrics(
-            conn,
-            item["ticker"],
-            cache,
-            uni_cache,
-        )
+        metrics = _fetch_stock_metrics(conn, item["ticker"], cache, uni_cache)
         result = _screen_ticker(metrics, item["sector"])
         if result:
             opportunities.append(result)
 
     conn.close()
+    opportunities.sort(key=lambda x: x.get("composite_score", 0), reverse=True)
 
-    # composite_score 내림차순 정렬
-    opportunities.sort(
-        key=lambda x: x.get("composite_score", 0),
-        reverse=True,
-    )
-
-    output = _build_output(opportunities, top_sectors)
+    output = _build_output(opportunities, top_sectors, marcus_sectors)
     _save_output(output)
 
-    count = len(opportunities)
-    print(f"  가치 스크리닝 완료: {count}건")
+    print(f"  가치 스크리닝 완료: {len(opportunities)}건 (대상 {len(targets)}개 중)")
     return opportunities
 
 

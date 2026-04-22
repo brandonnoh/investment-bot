@@ -13,6 +13,9 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # 마커스 AI 분석: 평일(월~금) 05:30 KST
 30 5 * * 1-5 root cd /app && python3 scripts/run_marcus.py >> /app/logs/marcus.log 2>&1
 
+# 유니버스 일봉 사전 수집: 평일(월~금) 07:00 KST (파이프라인 07:40 실행 전 DB 준비)
+0 7 * * 1-5 root cd /app && python3 data/fetch_universe_daily.py >> /app/logs/universe_daily.log 2>&1
+
 # 자비스 분석: 평일(월~금) 07:30 KST
 30 7 * * 1-5 root cd /app && python3 scripts/run_jarvis.py >> /app/logs/jarvis.log 2>&1
 
