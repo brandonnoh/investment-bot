@@ -111,6 +111,8 @@ export interface Opportunity {
   // 실제 value_screener 출력 필드
   sector?: string
   screen_reason?: string
+  grade?: string
+  factors?: Record<string, number>
   rsi?: number
   per?: number
   pbr?: number

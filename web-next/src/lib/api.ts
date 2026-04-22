@@ -35,3 +35,12 @@ export async function fetchLogs(
 ): Promise<LogResponse> {
   return apiFetch<LogResponse>(`/api/logs?name=${name}&lines=${lines}`)
 }
+
+export async function fetchOpportunities(strategy: string): Promise<{
+  strategy: string
+  meta: { name: string; description: string }
+  opportunities: import('@/types/api').Opportunity[]
+  total_count: number
+}> {
+  return apiFetch(`/api/opportunities?strategy=${strategy}`)
+}

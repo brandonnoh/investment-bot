@@ -185,6 +185,22 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             lines = int(params.get("lines", ["80"])[0])
             log_path = PID_DIR / f"{name}.log"
             self.send_json(load_log_tail(log_path, lines))
+        elif path == "/api/opportunities":
+            strategy = params.get("strategy", ["composite"])[0]
+            if strategy not in STRATEGY_META:
+                self.send_json({"error": "알 수 없는 전략"}, 400)
+                return
+            opps = get_opportunities_cached(strategy)
+            self.send_json(
+                {
+                    "strategy": strategy,
+                    "meta": STRATEGY_META[strategy],
+                    "opportunities": opps,
+                    "total_count": len(opps),
+                }
+            )
+        elif path == "/api/strategies":
+            self.send_json({"strategies": list(STRATEGY_META.values())})
         else:
             self._serve_static(path)
 

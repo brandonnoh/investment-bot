@@ -2,28 +2,14 @@
 
 import { useState } from 'react'
 import { useIntelData } from '@/hooks/useIntelData'
+import { useOpportunities, STRATEGIES, type StrategyId } from '@/hooks/useOpportunities'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-type Opportunity = {
-  ticker: string
-  name?: string
-  sector?: string
-  screen_reason?: string
-  grade?: string
-  composite_score?: number
-  factors?: {
-    quality?: number
-    value?: number
-    flow?: number
-    momentum?: number
-    growth?: number
-  }
-}
+import type { Opportunity } from '@/types/api'
 
 const HOW_IT_WORKS = [
   { step: '1', label: 'Marcus AI가 오늘 주목할 섹터 선정', sub: '뉴스·시장 분석 기반' },
   { step: '2', label: '700개 유니버스 중 해당 섹터 필터', sub: 'KOSPI200 + S&P500' },
-  { step: '3', label: '5가지 기준으로 매력도 점수 계산', sub: '수익성·가치·수급·모멘텀·성장' },
+  { step: '3', label: '선택한 거장의 기준으로 종목 발굴', sub: '렌즈를 바꿔 다른 시각으로' },
 ]
 
 const FACTOR_LABELS: Record<string, string> = {
@@ -70,6 +56,24 @@ function FactorBar({ label, value }: { label: string; value: number }) {
   )
 }
 
+function SkeletonCard() {
+  return (
+    <div className="rounded-md border border-mc-border bg-mc-card p-3 space-y-2 animate-pulse">
+      <div className="flex justify-between">
+        <div className="space-y-1.5">
+          <div className="h-3.5 w-24 bg-mc-border rounded" />
+          <div className="h-2.5 w-16 bg-mc-border rounded" />
+        </div>
+        <div className="h-6 w-12 bg-mc-border rounded" />
+      </div>
+      <div className="h-2 w-full bg-mc-border rounded" />
+      <div className="space-y-1">
+        {[1,2,3,4,5].map(i => <div key={i} className="h-1.5 w-full bg-mc-border rounded" />)}
+      </div>
+    </div>
+  )
+}
+
 function OpportunityCard({ o }: { o: Opportunity }) {
   const score = Math.round((o.composite_score ?? 0) * 100)
   const factors = o.factors ?? {}
@@ -87,10 +91,8 @@ function OpportunityCard({ o }: { o: Opportunity }) {
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {o.grade && (
-            <span
-              className="text-xs font-bold px-1.5 py-0.5 rounded"
-              style={{ color: gradeColor(o.grade), background: gradeBg(o.grade) }}
-            >
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded"
+              style={{ color: gradeColor(o.grade), background: gradeBg(o.grade) }}>
               {o.grade}
             </span>
           )}
@@ -109,7 +111,7 @@ function OpportunityCard({ o }: { o: Opportunity }) {
       {Object.keys(factors).length > 0 && (
         <div className="space-y-0.5 pt-0.5">
           {factorOrder.map((key) => {
-            const val = factors[key]
+            const val = (factors as Record<string, number>)[key]
             if (val === undefined) return null
             return <FactorBar key={key} label={FACTOR_LABELS[key]} value={val} />
           })}
@@ -119,7 +121,14 @@ function OpportunityCard({ o }: { o: Opportunity }) {
   )
 }
 
-function MarketList({ opportunities, emptyLabel }: { opportunities: Opportunity[]; emptyLabel: string }) {
+function MarketList({ opportunities, isLoading, emptyLabel }: {
+  opportunities: Opportunity[]
+  isLoading: boolean
+  emptyLabel: string
+}) {
+  if (isLoading) {
+    return <div className="space-y-2">{[1,2,3].map(i => <SkeletonCard key={i} />)}</div>
+  }
   if (opportunities.length === 0) {
     return <div className="text-center text-muted-foreground text-xs py-8">{emptyLabel}</div>
   }
@@ -130,14 +139,37 @@ function MarketList({ opportunities, emptyLabel }: { opportunities: Opportunity[
   )
 }
 
-export function DiscoveryTab() {
-  const { data } = useIntelData()
+// composite 전략은 기존 useIntelData에서 가져오는 래퍼
+function CompositeDiscovery({ market }: { market: 'kr' | 'us' }) {
+  const { data, isLoading } = useIntelData()
   const all: Opportunity[] = data?.opportunities?.opportunities ?? []
+  const filtered = all.filter(o => market === 'kr' ? isKrTicker(o.ticker) : !isKrTicker(o.ticker))
+  return (
+    <MarketList
+      opportunities={filtered}
+      isLoading={isLoading}
+      emptyLabel={`발굴된 ${market === 'kr' ? '국내' : '미국'} 종목 없음`}
+    />
+  )
+}
 
-  const kr = all.filter((o) => isKrTicker(o.ticker))
-  const us = all.filter((o) => !isKrTicker(o.ticker))
+function StrategyDiscovery({ strategy, market }: { strategy: StrategyId; market: 'kr' | 'us' }) {
+  const { opportunities, isLoading } = useOpportunities(strategy)
+  const filtered = opportunities.filter(o => market === 'kr' ? isKrTicker(o.ticker) : !isKrTicker(o.ticker))
+  return (
+    <MarketList
+      opportunities={filtered}
+      isLoading={isLoading}
+      emptyLabel={`이 렌즈로 발굴된 ${market === 'kr' ? '국내' : '미국'} 종목 없음`}
+    />
+  )
+}
 
+export function DiscoveryTab() {
+  const [strategy, setStrategy] = useState<StrategyId>('composite')
   const [market, setMarket] = useState<'kr' | 'us'>('kr')
+
+  const currentMeta = STRATEGIES.find(s => s.id === strategy)
 
   return (
     <div className="space-y-4">
@@ -152,39 +184,63 @@ export function DiscoveryTab() {
         ))}
       </div>
 
-      {/* 미장 / 국장 탭 */}
+      {/* 렌즈 선택 칩 */}
+      <div className="space-y-1.5">
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+          {STRATEGIES.map(s => {
+            const active = strategy === s.id
+            return (
+              <button
+                key={s.id}
+                onClick={() => setStrategy(s.id)}
+                className="shrink-0 text-[11px] font-medium px-3 py-1 rounded-full border transition-colors"
+                style={{
+                  borderColor: active ? '#4dca7e' : '#2a2420',
+                  background: active ? 'rgba(77,202,126,0.15)' : 'transparent',
+                  color: active ? '#4dca7e' : '#9a8e84',
+                }}
+              >
+                {s.name}
+              </button>
+            )
+          })}
+        </div>
+        {/* 현재 렌즈 설명 */}
+        {currentMeta && (
+          <div className="text-[10px] text-muted-foreground px-0.5">
+            <span className="font-medium" style={{ color: '#4dca7e' }}>{currentMeta.name} 렌즈</span>
+            {' — '}{currentMeta.description}
+          </div>
+        )}
+      </div>
+
+      {/* 국장 / 미장 탭 + 결과 */}
       <Card className="bg-mc-card border-mc-border">
         <CardHeader className="py-3 px-4 pb-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs font-mono">발굴 종목</CardTitle>
             <div className="flex rounded-md border border-mc-border overflow-hidden text-[11px] font-medium">
-              <button
-                className="px-3 py-1 transition-colors"
-                style={{
-                  background: market === 'kr' ? 'rgba(77,202,126,0.15)' : 'transparent',
-                  color: market === 'kr' ? '#4dca7e' : '#9a8e84',
-                }}
-                onClick={() => setMarket('kr')}
-              >
-                국장 {kr.length > 0 && <span className="ml-0.5 opacity-70">{kr.length}</span>}
-              </button>
-              <button
-                className="px-3 py-1 transition-colors border-l border-mc-border"
-                style={{
-                  background: market === 'us' ? 'rgba(77,202,126,0.15)' : 'transparent',
-                  color: market === 'us' ? '#4dca7e' : '#9a8e84',
-                }}
-                onClick={() => setMarket('us')}
-              >
-                미장 {us.length > 0 && <span className="ml-0.5 opacity-70">{us.length}</span>}
-              </button>
+              {(['kr', 'us'] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMarket(m)}
+                  className="px-3 py-1 transition-colors"
+                  style={{
+                    background: market === m ? 'rgba(77,202,126,0.15)' : 'transparent',
+                    color: market === m ? '#4dca7e' : '#9a8e84',
+                    borderLeft: m === 'us' ? '1px solid #2a2420' : undefined,
+                  }}
+                >
+                  {m === 'kr' ? '국장' : '미장'}
+                </button>
+              ))}
             </div>
           </div>
         </CardHeader>
         <CardContent className="px-4 pb-4 pt-3">
-          {market === 'kr'
-            ? <MarketList opportunities={kr} emptyLabel="발굴된 국내 종목 없음" />
-            : <MarketList opportunities={us} emptyLabel="발굴된 미국 종목 없음" />
+          {strategy === 'composite'
+            ? <CompositeDiscovery market={market} />
+            : <StrategyDiscovery strategy={strategy} market={market} />
           }
         </CardContent>
       </Card>
