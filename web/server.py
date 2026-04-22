@@ -34,6 +34,7 @@ from web.api import (
     load_intel_data,
     load_log_tail,
     load_md_file,
+    load_solar_listings,
     load_wealth_data,
     run_background,
 )
