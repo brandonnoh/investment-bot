@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlparse
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from analysis.value_screener_strategies import STRATEGY_META, get_opportunities_cached
 from db.ssot_wealth import (
     create_extra_asset,
     delete_extra_asset_by_id,
