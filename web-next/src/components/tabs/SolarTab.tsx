@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import { fetchSolarListings } from '@/lib/api'
 import type { SolarListing } from '@/types/api'
@@ -31,7 +31,7 @@ const SOURCE_COLORS: Record<string, { color: string; bg: string; border: string 
 
 const DEFAULT_COLOR = { color: '#9a8e84', bg: 'rgba(154,142,132,0.10)', border: 'rgba(154,142,132,0.2)' }
 
-const DEAL_TYPE_STYLES = {
+const DEAL_TYPE_STYLES: Record<string, { color: string; bg: string; border: string }> = {
   '매매': { color: '#5b9bf5', bg: 'rgba(91,155,245,0.15)', border: 'rgba(91,155,245,0.3)' },
   '분양': { color: '#4dca7e', bg: 'rgba(77,202,126,0.15)', border: 'rgba(77,202,126,0.3)' },
 }
@@ -43,6 +43,27 @@ const CAP_RANGES = [
   { label: '100~500kW', min: 100, max: 500 },
   { label: '500kW+', min: 500, max: Infinity },
 ]
+
+const LS_READ    = 'solar_read_v1'
+const LS_STARRED = 'solar_starred_v1'
+
+function lsLoad(key: string): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(key) ?? '[]'))
+  } catch {
+    return new Set()
+  }
+}
+
+function lsSave(key: string, set: Set<string>) {
+  try {
+    localStorage.setItem(key, JSON.stringify([...set]))
+  } catch {}
+}
+
+function listingKey(l: SolarListing) {
+  return `${l.source}-${l.listing_id}`
+}
 
 function formatKrw(value: number): string {
   const eok = Math.floor(value / 100_000_000)
@@ -65,7 +86,6 @@ function formatDate(dateStr: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
-/** 지역 앞 2글자로 시/도 그룹 추출 */
 function regionGroup(location: string | null): string {
   if (!location) return '지역미상'
   return location.slice(0, 2)
@@ -80,75 +100,6 @@ function SkeletonCard() {
         <div className="h-2.5 w-16 bg-mc-border rounded" />
         <div className="h-2.5 w-12 bg-mc-border rounded" />
         <div className="h-2.5 w-20 bg-mc-border rounded" />
-      </div>
-    </div>
-  )
-}
-
-function ListingCard({ listing }: { listing: SolarListing }) {
-  const style = SOURCE_COLORS[listing.source] ?? DEFAULT_COLOR
-  const isNew = isToday(listing.first_seen_at)
-
-  return (
-    <div className="rounded-md border border-mc-border bg-mc-card p-3 space-y-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span
-              className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
-              style={{ color: style.color, background: style.bg, border: `1px solid ${style.border}` }}
-            >
-              {SOURCE_LABELS[listing.source] ?? listing.source}
-            </span>
-            {listing.deal_type && (() => {
-              const ds = DEAL_TYPE_STYLES[listing.deal_type]
-              return (
-                <span
-                  className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
-                  style={{ color: ds.color, background: ds.bg, border: `1px solid ${ds.border}` }}
-                >
-                  {listing.deal_type}
-                </span>
-              )
-            })()}
-            {isNew && (
-              <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
-                style={{ color: '#ff6b6b', background: 'rgba(255,107,107,0.15)', border: '1px solid rgba(255,107,107,0.3)' }}
-              >
-                NEW
-              </span>
-            )}
-          </div>
-          <div className="text-sm font-semibold leading-snug mt-1 line-clamp-2">
-            {listing.title ?? '(제목 없음)'}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-        {listing.location && <span>{listing.location}</span>}
-        {listing.capacity_kw != null && (
-          <span>{listing.capacity_kw.toLocaleString('ko-KR')}kW</span>
-        )}
-        <span className="font-medium" style={{ color: listing.price_krw != null ? '#c9a93a' : '#9a8e84' }}>
-          {listing.price_krw != null ? formatKrw(listing.price_krw) : '가격 미공개'}
-        </span>
-      </div>
-
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-        <span>발견 {formatDate(listing.first_seen_at)}</span>
-        {listing.url && (
-          <a
-            href={listing.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline"
-            style={{ color: '#5b9bf5' }}
-          >
-            원본 보기
-          </a>
-        )}
       </div>
     </div>
   )
@@ -178,20 +129,145 @@ function FilterChip({
   )
 }
 
+function ListingCard({
+  listing,
+  isRead,
+  isStarred,
+  onOpen,
+  onToggleStar,
+}: {
+  listing: SolarListing
+  isRead: boolean
+  isStarred: boolean
+  onOpen: () => void
+  onToggleStar: (e: React.MouseEvent) => void
+}) {
+  const style = SOURCE_COLORS[listing.source] ?? DEFAULT_COLOR
+  const isNew = isToday(listing.first_seen_at)
+
+  function handleCardClick() {
+    if (listing.url) {
+      window.open(listing.url, '_blank', 'noopener,noreferrer')
+      onOpen()
+    }
+  }
+
+  return (
+    <div
+      onClick={handleCardClick}
+      className="rounded-md border border-mc-border bg-mc-card p-3 space-y-2 transition-opacity cursor-pointer hover:border-mc-border/60"
+      style={{ opacity: isRead ? 0.5 : 1 }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span
+              className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
+              style={{ color: style.color, background: style.bg, border: `1px solid ${style.border}` }}
+            >
+              {SOURCE_LABELS[listing.source] ?? listing.source}
+            </span>
+            {listing.deal_type && (() => {
+              const ds = DEAL_TYPE_STYLES[listing.deal_type]
+              return (
+                <span
+                  className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
+                  style={{ color: ds.color, background: ds.bg, border: `1px solid ${ds.border}` }}
+                >
+                  {listing.deal_type}
+                </span>
+              )
+            })()}
+            {isNew && (
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                style={{ color: '#ff6b6b', background: 'rgba(255,107,107,0.15)', border: '1px solid rgba(255,107,107,0.3)' }}
+              >
+                NEW
+              </span>
+            )}
+          </div>
+          <div className={`text-sm font-semibold leading-snug mt-1 line-clamp-2 ${isRead ? 'text-muted-foreground' : ''}`}>
+            {listing.title ?? '(제목 없음)'}
+          </div>
+        </div>
+
+        {/* 별표 버튼 */}
+        <button
+          onClick={onToggleStar}
+          className="shrink-0 text-lg leading-none transition-transform hover:scale-110 cursor-pointer"
+          style={{ color: isStarred ? '#f5a623' : 'rgba(154,142,132,0.35)' }}
+          title={isStarred ? '별표 해제' : '별표'}
+        >
+          {isStarred ? '★' : '☆'}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+        {listing.location && <span>{listing.location}</span>}
+        {listing.capacity_kw != null && (
+          <span>{listing.capacity_kw.toLocaleString('ko-KR')}kW</span>
+        )}
+        <span className="font-medium" style={{ color: listing.price_krw != null ? '#c9a93a' : '#9a8e84' }}>
+          {listing.price_krw != null ? formatKrw(listing.price_krw) : '가격 미공개'}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <span>발견 {formatDate(listing.first_seen_at)}</span>
+        {isRead && <span style={{ color: '#9a8e84' }}>열람</span>}
+      </div>
+    </div>
+  )
+}
+
+type ViewMode = 'all' | 'unread' | 'starred'
+
 export function SolarTab() {
   const { data, isLoading } = useSWR('solar-listings', fetchSolarListings, {
     dedupingInterval: 300_000,
     revalidateOnFocus: false,
   })
 
+  const [readSet, setReadSet]       = useState<Set<string>>(new Set())
+  const [starredSet, setStarredSet] = useState<Set<string>>(new Set())
+  const [mounted, setMounted]       = useState(false)
+
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
-  const [selectedRegion, setSelectedRegion] = useState<string>('')
-  const [capRangeIdx, setCapRangeIdx] = useState(0)
-  const [dealType, setDealType] = useState<string>('')
+  const [selectedRegion, setSelectedRegion]   = useState('')
+  const [capRangeIdx, setCapRangeIdx]         = useState(0)
+  const [dealType, setDealType]               = useState('')
+  const [viewMode, setViewMode]               = useState<ViewMode>('all')
+
+  useEffect(() => {
+    setReadSet(lsLoad(LS_READ))
+    setStarredSet(lsLoad(LS_STARRED))
+    setMounted(true)
+  }, [])
+
+  const markRead = useCallback((key: string) => {
+    setReadSet(prev => {
+      if (prev.has(key)) return prev
+      const next = new Set(prev)
+      next.add(key)
+      lsSave(LS_READ, next)
+      return next
+    })
+  }, [])
+
+  const toggleStar = useCallback((key: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setStarredSet(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      lsSave(LS_STARRED, next)
+      return next
+    })
+  }, [])
 
   const allListings = data?.listings ?? []
 
-  // 필터용 집계
   const availableSources = useMemo(
     () => [...new Set(allListings.map(l => l.source))].sort(),
     [allListings],
@@ -205,6 +281,9 @@ export function SolarTab() {
   const filtered = useMemo(() => {
     const capRange = CAP_RANGES[capRangeIdx]
     return allListings.filter(l => {
+      const key = listingKey(l)
+      if (viewMode === 'unread'  && readSet.has(key))    return false
+      if (viewMode === 'starred' && !starredSet.has(key)) return false
       if (selectedSources.size > 0 && !selectedSources.has(l.source)) return false
       if (selectedRegion && regionGroup(l.location) !== selectedRegion) return false
       if (dealType && l.deal_type !== dealType) return false
@@ -214,7 +293,7 @@ export function SolarTab() {
       }
       return true
     })
-  }, [allListings, selectedSources, selectedRegion, dealType, capRangeIdx])
+  }, [allListings, viewMode, readSet, starredSet, selectedSources, selectedRegion, dealType, capRangeIdx])
 
   function toggleSource(src: string) {
     setSelectedSources(prev => {
@@ -225,7 +304,9 @@ export function SolarTab() {
     })
   }
 
-  const hasFilter = selectedSources.size > 0 || selectedRegion !== '' || dealType !== '' || capRangeIdx !== 0
+  const unreadCount   = mounted ? allListings.filter(l => !readSet.has(listingKey(l))).length : null
+  const starredCount  = mounted ? allListings.filter(l => starredSet.has(listingKey(l))).length : null
+  const hasFilter     = selectedSources.size > 0 || selectedRegion !== '' || dealType !== '' || capRangeIdx !== 0
 
   return (
     <div className="space-y-3">
@@ -234,40 +315,46 @@ export function SolarTab() {
         <h2 className="text-sm font-mono font-semibold">태양광 발전소 매물</h2>
         {data && (
           <span className="text-[10px] text-muted-foreground">
-            {hasFilter ? `${filtered.length} / ${data.count}건` : `${data.count}건`}
+            {hasFilter || viewMode !== 'all'
+              ? `${filtered.length} / ${data.count}건`
+              : `${data.count}건`}
           </span>
         )}
       </div>
 
-      {/* 필터 패널 */}
       {!isLoading && allListings.length > 0 && (
         <div className="space-y-2 pb-2 border-b border-mc-border">
-          {/* 거래유형 필터 */}
+          {/* 보기 모드 */}
           <div className="flex gap-1">
-            <FilterChip active={dealType === ''} onClick={() => setDealType('')}>전체</FilterChip>
+            <FilterChip active={viewMode === 'all'}     onClick={() => setViewMode('all')}>전체</FilterChip>
+            <FilterChip active={viewMode === 'unread'}  onClick={() => setViewMode('unread')}>
+              미열람{unreadCount != null ? ` ${unreadCount}` : ''}
+            </FilterChip>
+            <FilterChip active={viewMode === 'starred'} onClick={() => setViewMode('starred')}>
+              ★ 별표{starredCount ? ` ${starredCount}` : ''}
+            </FilterChip>
+          </div>
+
+          {/* 거래유형 */}
+          <div className="flex gap-1">
+            <FilterChip active={dealType === ''}     onClick={() => setDealType('')}>전체</FilterChip>
             <FilterChip active={dealType === '매매'} onClick={() => setDealType(dealType === '매매' ? '' : '매매')}>매매</FilterChip>
             <FilterChip active={dealType === '분양'} onClick={() => setDealType(dealType === '분양' ? '' : '분양')}>분양</FilterChip>
           </div>
 
-          {/* 출처 필터 */}
+          {/* 출처 */}
           <div className="flex flex-wrap gap-1">
             {availableSources.map(src => (
-              <FilterChip
-                key={src}
-                active={selectedSources.has(src)}
-                onClick={() => toggleSource(src)}
-              >
+              <FilterChip key={src} active={selectedSources.has(src)} onClick={() => toggleSource(src)}>
                 {SOURCE_LABELS[src] ?? src}
               </FilterChip>
             ))}
           </div>
 
-          {/* 지역 필터 */}
+          {/* 지역 */}
           {availableRegions.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              <FilterChip active={selectedRegion === ''} onClick={() => setSelectedRegion('')}>
-                전체지역
-              </FilterChip>
+              <FilterChip active={selectedRegion === ''} onClick={() => setSelectedRegion('')}>전체지역</FilterChip>
               {availableRegions.map(r => (
                 <FilterChip
                   key={r}
@@ -280,7 +367,7 @@ export function SolarTab() {
             </div>
           )}
 
-          {/* 용량 필터 */}
+          {/* 용량 */}
           <div className="flex flex-wrap gap-1">
             {CAP_RANGES.map((range, i) => (
               <FilterChip key={range.label} active={capRangeIdx === i} onClick={() => setCapRangeIdx(i)}>
@@ -291,33 +378,39 @@ export function SolarTab() {
         </div>
       )}
 
-      {/* 로딩 */}
       {isLoading && (
         <div className="space-y-2">
           {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
         </div>
       )}
 
-      {/* 빈 상태 */}
       {!isLoading && allListings.length === 0 && (
         <div className="text-center text-muted-foreground text-xs py-12">
           수집된 매물이 없습니다
         </div>
       )}
 
-      {/* 필터 결과 없음 */}
       {!isLoading && allListings.length > 0 && filtered.length === 0 && (
         <div className="text-center text-muted-foreground text-xs py-8">
           조건에 맞는 매물이 없습니다
         </div>
       )}
 
-      {/* 매물 카드 리스트 */}
       {!isLoading && filtered.length > 0 && (
         <div className="space-y-2">
-          {filtered.map(listing => (
-            <ListingCard key={`${listing.source}-${listing.listing_id}`} listing={listing} />
-          ))}
+          {filtered.map(listing => {
+            const key = listingKey(listing)
+            return (
+              <ListingCard
+                key={key}
+                listing={listing}
+                isRead={mounted && readSet.has(key)}
+                isStarred={mounted && starredSet.has(key)}
+                onOpen={() => markRead(key)}
+                onToggleStar={(e) => toggleStar(key, e)}
+              />
+            )
+          })}
         </div>
       )}
     </div>
