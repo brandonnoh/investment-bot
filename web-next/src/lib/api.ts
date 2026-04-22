@@ -3,6 +3,7 @@ import type {
   IntelData,
   LogResponse,
   ProcessStatus,
+  SolarResponse,
 } from '@/types/api'
 
 // Flask가 정적 파일과 API 모두 서빙하므로 상대 경로 사용
@@ -34,6 +35,10 @@ export async function fetchLogs(
   lines = 50,
 ): Promise<LogResponse> {
   return apiFetch<LogResponse>(`/api/logs?name=${name}&lines=${lines}`)
+}
+
+export async function fetchSolarListings(): Promise<SolarResponse> {
+  return apiFetch<SolarResponse>('/api/solar')
 }
 
 export async function fetchOpportunities(strategy: string): Promise<{

@@ -11,6 +11,7 @@ const MAIN_TABS: { id: TabId; label: string; icon: string }[] = [
 ]
 
 const EXTRA_TABS: { id: TabId; label: string; icon: string }[] = [
+  { id: 'solar',       label: '태양광',  icon: '◉' },
   { id: 'alerts',      label: '알림',    icon: '◬' },
   { id: 'system',      label: '시스템',  icon: '⊞' },
   { id: 'service-map', label: '서비스맵', icon: '⊟' },
