@@ -64,13 +64,12 @@ def _screen_graham(m: dict) -> dict | None:
     """그레이엄 방어적 투자자 기준"""
     per = m.get("per")
     pbr = m.get("pbr")
-    eps = m.get("eps")
     debt = m.get("debt_ratio")
     div = m.get("dividend_yield")
 
-    if per is None or pbr is None or eps is None:
+    if per is None or pbr is None:
         return None
-    if not (per > 0 and pbr > 0 and eps > 0):
+    if not (per > 0 and pbr > 0):
         return None
     if per > 15:
         return None
@@ -97,12 +96,9 @@ def _screen_buffett(m: dict) -> dict | None:
     roe = m.get("roe")
     opm = m.get("operating_margin")
     debt = m.get("debt_ratio")
-    eps = m.get("eps")
     rev = m.get("revenue_growth")
 
-    if roe is None or opm is None or eps is None:
-        return None
-    if eps <= 0:
+    if roe is None or opm is None:
         return None
     if roe < 15:
         return None
@@ -125,11 +121,10 @@ def _screen_lynch(m: dict) -> dict | None:
     per = m.get("per")
     rev = m.get("revenue_growth")
     debt = m.get("debt_ratio")
-    eps = m.get("eps")
 
-    if per is None or rev is None or eps is None:
+    if per is None or rev is None:
         return None
-    if eps <= 0 or per <= 0 or rev <= 0:
+    if per <= 0 or rev <= 0:
         return None
     if not (15 <= rev <= 50):
         return None
@@ -149,14 +144,7 @@ def _screen_lynch(m: dict) -> dict | None:
 def _rank_greenblatt(all_metrics: list[dict]) -> list[dict]:
     """그린블랫 매직포뮬라 — 1/PER 순위 + ROE 순위 합산"""
     eligible = [
-        m
-        for m in all_metrics
-        if m.get("per")
-        and m["per"] > 0
-        and m.get("roe")
-        and m["roe"] > 0
-        and m.get("eps")
-        and m["eps"] > 0
+        m for m in all_metrics if m.get("per") and m["per"] > 0 and m.get("roe") and m["roe"] > 0
     ]
     if not eligible:
         return []
