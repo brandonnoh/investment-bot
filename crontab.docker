@@ -27,3 +27,7 @@ PATH=/usr/local/bin:/usr/bin:/bin
 
 # 월별 입금 기록: 매월 1일 00:00 KST
 0 0 1 * * root cd /app && python3 scripts/monthly_deposit_cron.py >> /app/logs/deposit.log 2>&1
+
+# 태양광 매물 수집: 매일 08:30, 19:00 KST
+30 8 * * * root cd /app && python3 scripts/refresh_solar.py >> /app/logs/refresh_solar.log 2>&1
+0 19 * * * root cd /app && python3 scripts/refresh_solar.py >> /app/logs/refresh_solar.log 2>&1

@@ -243,6 +243,29 @@ def load_wealth_data(days: int = 60) -> dict:
         return {"error": str(e)}
 
 
+def load_solar_listings(limit: int = 100) -> list[dict]:
+    """solar_listings 테이블에서 최신 매물 조회"""
+    if not DB_PATH.exists():
+        return []
+    try:
+        with sqlite3.connect(str(DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT source, listing_id, title, capacity_kw, location,
+                       price_krw, url, status, first_seen_at, last_seen_at
+                FROM solar_listings
+                ORDER BY first_seen_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"[api] solar_listings 조회 실패: {e}")
+        return []
+
+
 def load_analysis_detail(date: str) -> dict | None:
     """특정 날짜의 전체 분석 내용 조회."""
     if not DB_PATH.exists():

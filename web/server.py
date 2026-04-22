@@ -200,6 +200,10 @@ class MissionControlHandler(BaseHTTPRequestHandler):
                     "total_count": len(opps),
                 }
             )
+        elif path == "/api/solar":
+            limit = int(params.get("limit", ["100"])[0])
+            listings = load_solar_listings(limit)
+            self.send_json({"listings": listings, "count": len(listings)})
         elif path == "/api/strategies":
             self.send_json({"strategies": list(STRATEGY_META.values())})
         else:

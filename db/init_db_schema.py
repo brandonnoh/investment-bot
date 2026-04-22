@@ -357,3 +357,28 @@ MIGRATION_COLUMNS = [
     # 유니버스 섹터 분류 (Yahoo Finance 기반)
     ("fundamentals", "sector", "TEXT"),
 ]
+
+# ── 태양광 발전소 매물 모니터링 ──
+
+CREATE_TABLE_SOLAR_LISTINGS = """
+    CREATE TABLE IF NOT EXISTS solar_listings (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        source        TEXT NOT NULL,
+        listing_id    TEXT NOT NULL,
+        title         TEXT,
+        capacity_kw   REAL,
+        location      TEXT,
+        price_krw     INTEGER,
+        url           TEXT,
+        status        TEXT DEFAULT 'active',
+        first_seen_at TEXT NOT NULL,
+        last_seen_at  TEXT NOT NULL,
+        raw_json      TEXT,
+        UNIQUE(source, listing_id)
+    )
+"""
+
+CREATE_INDEX_SOLAR_LISTINGS_SOURCE = (
+    "CREATE INDEX IF NOT EXISTS idx_solar_listings_source "
+    "ON solar_listings (source, first_seen_at DESC)"
+)
