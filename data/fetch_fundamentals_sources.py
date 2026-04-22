@@ -187,13 +187,13 @@ def fetch_dart_financials(stock_code: str) -> dict | None:
 
 
 def fetch_naver_per_pbr(stock_code: str) -> dict:
-    """네이버 금융 API로 국내 종목 PER/PBR 수집.
+    """네이버 금융 API로 국내 종목 PER/PBR/EPS/BPS 수집.
 
     Args:
         stock_code: 종목코드 6자리 (예: '005930')
 
     Returns:
-        {"per": float|None, "pbr": float|None}
+        {"per": float|None, "pbr": float|None, "eps": float|None, "bps": float|None}
     """
     url = f"https://m.stock.naver.com/api/stock/{stock_code}/integration"
     try:
@@ -201,19 +201,23 @@ def fetch_naver_per_pbr(stock_code: str) -> dict:
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read())
 
-        result = {"per": None, "pbr": None}
+        result: dict = {"per": None, "pbr": None, "eps": None, "bps": None}
+        _FLOAT_FIELDS = {"per", "pbr"}
+        # EPS/BPS는 "6,564원" 형태 — 숫자만 추출
+        _INT_FIELDS = {"eps", "bps"}
         for item in data.get("totalInfos", []):
             code = item.get("code", "")
             value_str = item.get("value", "")
-            if code in ("per", "pbr") and value_str:
-                # "28.37배" → 28.37
-                cleaned = value_str.replace("배", "").replace(",", "").strip()
+            if not value_str:
+                continue
+            cleaned = value_str.replace(",", "").replace("배", "").replace("원", "").strip()
+            if code in _FLOAT_FIELDS or code in _INT_FIELDS:
                 with contextlib.suppress(ValueError):
                     result[code] = float(cleaned)
         return result
     except Exception as e:
-        logger.debug(f"네이버 PER/PBR 수집 실패 ({stock_code}): {e}")
-        return {"per": None, "pbr": None}
+        logger.debug(f"네이버 펀더멘탈 수집 실패 ({stock_code}): {e}")
+        return {"per": None, "pbr": None, "eps": None, "bps": None}
 
 
 def _safe_raw(obj: dict, key: str, default=None):

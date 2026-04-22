@@ -82,17 +82,23 @@ def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, marke
     if not data:
         return
 
-    # KR 종목: Naver에서 PBR 보충 (Yahoo가 한국 PBR 미제공)
+    # KR 종목: Naver에서 PBR/EPS 보충 (Yahoo가 한국 지표 미제공)
     pbr = data.get("pbr")
-    if market == "KR" and pbr is None:
+    eps = data.get("eps")
+    if market == "KR":
         try:
             code = ticker.split(".")[0]
             naver = fetch_naver_per_pbr(code)
-            pbr = naver.get("pbr")
+            if pbr is None:
+                pbr = naver.get("pbr")
             if data.get("per") is None:
                 data["per"] = naver.get("per")
+            if eps is None:
+                eps = naver.get("eps")
         except Exception:
             pass
+    else:
+        eps = data.get("eps")
 
     # KR 종목은 키움 API로 외국인/기관 순매수 추가 수집
     foreign_net = inst_net = None
@@ -114,7 +120,14 @@ def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, marke
                 foreign_net, inst_net)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'yahoo_universe', ?, ?, ?)
            ON CONFLICT(ticker) DO UPDATE SET
-               per=excluded.per, pbr=COALESCE(excluded.pbr, pbr), roe=excluded.roe,
+               per=COALESCE(excluded.per, per),
+               pbr=COALESCE(excluded.pbr, pbr),
+               roe=COALESCE(excluded.roe, roe),
+               debt_ratio=COALESCE(excluded.debt_ratio, debt_ratio),
+               revenue_growth=COALESCE(excluded.revenue_growth, revenue_growth),
+               operating_margin=COALESCE(excluded.operating_margin, operating_margin),
+               eps=COALESCE(excluded.eps, eps),
+               dividend_yield=COALESCE(excluded.dividend_yield, dividend_yield),
                market_cap=excluded.market_cap,
                sector=COALESCE(excluded.sector, sector),
                data_source='yahoo_universe',
@@ -131,7 +144,7 @@ def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, marke
             data.get("revenue_growth"),
             data.get("operating_margin"),
             data.get("fcf"),
-            data.get("eps"),
+            eps,
             data.get("dividend_yield"),
             data.get("market_cap"),
             data.get("sector"),
