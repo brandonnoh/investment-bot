@@ -15,6 +15,7 @@ from data.fetch_solar_base import (
     SolarListing,
     fetch_html,
     parse_capacity,
+    parse_location,
     parse_price,
 )
 
@@ -35,18 +36,18 @@ def _parse_list(html: str) -> list[SolarListing]:
 
     # 각 매물 블록에서 정보 추출
     # 카드형 레이아웃: 제목(h4/h5), 가격, 용량 텍스트
-    blocks = re.split(r'wr_id=', html)
+    blocks = re.split(r"wr_id=", html)
     for block in blocks[1:]:
-        id_m = re.match(r'(\d+)', block)
+        id_m = re.match(r"(\d+)", block)
         if not id_m:
             continue
         wr_id = id_m.group(1)
         url = f"{BASE_URL}/bbs/board.php?bo_table=m01_01&wr_id={wr_id}"
 
         # 제목 추출 (h4, h5, 또는 링크 텍스트)
-        title_m = re.search(r'<h[45][^>]*>([^<]+)</h[45]>', block)
+        title_m = re.search(r"<h[45][^>]*>([^<]+)</h[45]>", block)
         if not title_m:
-            title_m = re.search(r'>([^<]{5,80})</', block)
+            title_m = re.search(r">([^<]{5,80})</", block)
         title = title_m.group(1).strip() if title_m else f"매물 #{wr_id}"
 
         # 판매완료 체크
@@ -54,23 +55,17 @@ def _parse_list(html: str) -> list[SolarListing]:
             continue
 
         # 가격 추출
-        price_m = re.search(r'(?:매도가격|가격|매매)[^0-9]*([0-9억천만원\s.]+)', block[:1000])
+        price_m = re.search(r"(?:매도가격|가격|매매)[^0-9]*([0-9억천만원\s.]+)", block[:1000])
         price = parse_price(price_m.group(1)) if price_m else parse_price(title)
 
         # 용량 추출
-        cap_m = re.search(r'[Kk][Ww]\s*[:\s]*([0-9,.]+)', block[:1000])
+        cap_m = re.search(r"[Kk][Ww]\s*[:\s]*([0-9,.]+)", block[:1000])
         if cap_m:
             capacity = float(cap_m.group(1).replace(",", ""))
         else:
             capacity = parse_capacity(block[:500]) or parse_capacity(title)
 
-        # 지역 추출
-        loc_m = re.search(
-            r"((?:서울|경기|인천|충[남북]|전[남북]|경[남북]|강원|제주|세종|대전|대구|부산|광주|울산)"
-            r"[^\s<,]{0,15})",
-            block[:500],
-        )
-        location = loc_m.group(1) if loc_m else None
+        location = parse_location(block[:500]) or parse_location(title)
 
         listings.append(
             SolarListing(

@@ -9,14 +9,13 @@ POST API: /op/cltrpbancinf/cltr/cltrcdtnsrch/CltrCdtnSrchController/srchCltrCdtn
 """
 
 import json
-import re
 import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from data.fetch_solar_base import SolarListing, parse_capacity, parse_price
+from data.fetch_solar_base import SolarListing, parse_capacity, parse_location, parse_price
 
 BASE_URL = "https://www.onbid.co.kr"
 SOURCE = "onbid"
@@ -63,17 +62,12 @@ def _to_listing(item: dict) -> SolarListing:
     capacity = parse_capacity(name)
     price_raw = item.get("cltrApslEvlAvgAmt", 0)
     price = int(price_raw) if price_raw and int(price_raw) > 0 else parse_price(name)
-    loc_m = re.search(
-        r"((?:서울|경기|인천|충[남북]|전[남북]|경[남북]|강원|제주|세종|대전|대구|부산|광주|울산)"
-        r"[^\s,<]{0,15})",
-        name,
-    )
     return SolarListing(
         source=SOURCE,
         listing_id=cltr_no,
         title=name[:100],
         capacity_kw=capacity,
-        location=loc_m.group(1) if loc_m else None,
+        location=parse_location(name),
         price_krw=price,
         url=url,
     )

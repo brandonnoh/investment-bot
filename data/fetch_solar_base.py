@@ -14,6 +14,11 @@ import ssl
 import urllib.request
 from typing import TypedDict
 
+_PROVINCE_RE = re.compile(
+    r"((?:서울|경기|인천|충[남북]|전[남북]|경[남북]|강원|제주|세종|대전|대구|부산|광주|울산|"
+    r"경상[남북]도|전라[남북]도|충청[남북]도|강원도)[^\s/<,\[\]（）()]{0,20})"
+)
+
 
 class SolarListing(TypedDict, total=False):
     """태양광 매물 표준 데이터 구조"""
@@ -67,6 +72,26 @@ def fetch_html(url: str, headers: dict | None = None) -> str | None:
         return None
 
 
+def parse_location(text: str) -> str | None:
+    """제목 텍스트에서 지역명 추출.
+
+    1) 시/도 prefix 패턴 우선 (경기, 전남 등)
+    2) 제목 앞 2-4자 한글 단어가 숫자/용량 앞에 있으면 도시명으로 간주
+    """
+    if not text:
+        return None
+    m = _PROVINCE_RE.search(text)
+    if m:
+        loc = m.group(1).strip()
+        loc = re.sub(r"[\[\]()（）].*$", "", loc).strip()
+        return loc or None
+    # 제목 시작부분 "나주 99kw" / "천안 72k" 패턴 — 도시명 추출
+    m = re.match(r"^([가-힣]{2,4})\s+(?:\d|\S*[Kk][Ww]|\S*태양광|\S*발전)", text)
+    if m:
+        return m.group(1)
+    return None
+
+
 def parse_price(text: str) -> int | None:
     """한국어 가격 텍스트 → 원 단위 정수 변환
 
@@ -115,8 +140,13 @@ def parse_capacity(text: str) -> float | None:
     if m:
         return float(m.group(1)) * 1000
 
-    # kW 단위 (kw, KW, kW, ㎾, 킬로와트)
-    m = re.search(r"(\d+(?:\.\d+)?)\s*(?:[Kk][Ww]|㎾|킬로와트)", text)
+    # kW 단위 (kw, KW, kW, kwh, ㎾, 킬로와트)
+    m = re.search(r"(\d+(?:\.\d+)?)\s*(?:[Kk][Ww][Hh]?|㎾|킬로와트)", text)
+    if m:
+        return float(m.group(1))
+
+    # k만 있는 경우 — "100k", "77k" (W 생략 표기)
+    m = re.search(r"(\d+(?:\.\d+)?)\s*[Kk](?![A-Za-z가-힣])", text)
     if m:
         return float(m.group(1))
 

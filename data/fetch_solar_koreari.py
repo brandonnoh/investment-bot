@@ -17,6 +17,7 @@ from data.fetch_solar_base import (
     SolarListing,
     fetch_html,
     parse_capacity,
+    parse_location,
     parse_price,
 )
 
@@ -49,19 +50,13 @@ def _parse_board(html: str, table: str) -> list[SolarListing]:
         url = f"{BASE_URL}/bbs/board.php?bo_table={table}&wr_id={wr_id}"
         capacity = parse_capacity(title)
         price = parse_price(title)
-        loc_m = re.search(
-            r"((?:서울|경기|인천|충[남북]|전[남북]|경[남북]|강원|제주|세종|대전|대구|부산|광주|울산"
-            r"|경상[남북]도|전라[남북]도|충청[남북]도|강원도)"
-            r"[^\s/<,]{0,20})",
-            title,
-        )
         listings.append(
             SolarListing(
                 source=SOURCE,
                 listing_id=f"{table}_{wr_id}",
                 title=title[:100],
                 capacity_kw=capacity,
-                location=loc_m.group(1) if loc_m else None,
+                location=parse_location(title),
                 price_krw=price,
                 url=url,
             )

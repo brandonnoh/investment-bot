@@ -16,6 +16,7 @@ from data.fetch_solar_base import (
     SolarListing,
     fetch_html,
     parse_capacity,
+    parse_location,
     parse_price,
 )
 
@@ -30,9 +31,9 @@ def _parse_list(html: str) -> list[SolarListing]:
 
     # view.php?seq={번호} 링크 패턴
     # 주변 텍스트에서 제목/가격/용량/위치 추출
-    blocks = re.split(r'view\.php\?seq=', html)
+    blocks = re.split(r"view\.php\?seq=", html)
     for block in blocks[1:]:
-        seq_m = re.match(r'(\d+)', block)
+        seq_m = re.match(r"(\d+)", block)
         if not seq_m:
             continue
         seq = seq_m.group(1)
@@ -44,28 +45,22 @@ def _parse_list(html: str) -> list[SolarListing]:
             continue
 
         # 텍스트 정리 (HTML 태그 제거)
-        text = re.sub(r'<[^>]+>', ' ', snippet)
-        text = re.sub(r'\s+', ' ', text).strip()
+        text = re.sub(r"<[^>]+>", " ", snippet)
+        text = re.sub(r"\s+", " ", text).strip()
 
         # 용량 추출 (예: "989.82 kw")
         capacity = parse_capacity(text)
 
         # 가격 추출 (예: "40억", "매매 3억5천")
-        price_m = re.search(r'(?:매매|가격|매도)[^0-9]*([0-9억천만원\s.]+)', text)
+        price_m = re.search(r"(?:매매|가격|매도)[^0-9]*([0-9억천만원\s.]+)", text)
         price = parse_price(price_m.group(1)) if price_m else parse_price(text)
 
-        # 지역 추출
-        loc_m = re.search(
-            r"((?:서울|경기|인천|충[남북]|전[남북]|경[남북]|강원|제주|세종|대전|대구|부산|광주|울산)"
-            r"[^\s<,]{0,15})",
-            text,
-        )
-        location = loc_m.group(1) if loc_m else None
+        location = parse_location(text)
 
         # 제목 추출 (첫 번째 의미 있는 텍스트)
         title_candidates = [t.strip() for t in text.split('"') if len(t.strip()) > 5]
         if not title_candidates:
-            title_candidates = [t.strip() for t in text.split('  ') if len(t.strip()) > 5]
+            title_candidates = [t.strip() for t in text.split("  ") if len(t.strip()) > 5]
         title = title_candidates[0][:100] if title_candidates else f"햇빛길 매물 #{seq}"
 
         # 지역+용량 조합이 제목에 있으면 그것 사용

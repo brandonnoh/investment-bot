@@ -15,8 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from data.fetch_solar_base import (
     SolarListing,
     fetch_html,
-    make_listing_id,
     parse_capacity,
+    parse_location,
     parse_price,
 )
 
@@ -46,13 +46,7 @@ def _parse_board(html: str) -> list[SolarListing]:
         capacity = parse_capacity(title)
         price = parse_price(title)
 
-        # 제목에서 지역 추출 (첫 번째 한글 지명 패턴)
-        loc_m = re.search(
-            r"((?:서울|경기|인천|충남|충북|전남|전북|경남|경북|강원|제주|세종|대전|대구|부산|광주|울산)"
-            r"[^\s,|/]{0,10})",
-            title,
-        )
-        location = loc_m.group(1) if loc_m else None
+        location = parse_location(title)
 
         listings.append(
             SolarListing(
