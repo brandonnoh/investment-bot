@@ -1,179 +1,111 @@
 #!/usr/bin/env python3
 """
-온비드 (onbid.co.kr) 태양광 관련 공매 매물 크롤러
+온비드 (onbid.co.kr) 태양광 관련 공매 크롤러
 
-검색 API: POST /op/ppa/selectPublicPropList.do
-검색어: "태양광"
-JSON 응답에서 매물 목록 추출
+POST API: /op/cltrpbancinf/cltr/cltrcdtnsrch/CltrCdtnSrchController/srchCltrCdtn.do
+- srchCltrType=0001: 부동산 (태양광 발전소 포함)
+- srchCltrType=0003: 동산 (기타 설비)
+클라이언트 측 키워드 필터링으로 태양광 관련 항목 추출
 """
 
 import json
 import re
 import sys
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from data.fetch_solar_base import (
-    SolarListing,
-    _HEADERS,
-    _SSL_UNVERIFIED,
-    _TIMEOUT,
-    fetch_html,
-    make_listing_id,
-    parse_capacity,
-    parse_price,
-)
+from data.fetch_solar_base import SolarListing, parse_capacity, parse_price
 
 BASE_URL = "https://www.onbid.co.kr"
 SOURCE = "onbid"
+_SEARCH_URL = f"{BASE_URL}/op/cltrpbancinf/cltr/cltrcdtnsrch/CltrCdtnSrchController/srchCltrCdtn.do"
+_SOLAR_KEYWORDS = ("태양광", "발전소", "발전기", "태양열")
+_HEADERS = {
+    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "X-Requested-With": "XMLHttpRequest",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    "Referer": f"{BASE_URL}/op/cltrpbancinf/cltr/cltrcdtnsrch/CltrCdtnSrchController/mvmnCltrCdtnSrchClg.do",
+}
 
-# 검색 결과 페이지 URL
-_SEARCH_URL = (
-    f"{BASE_URL}/op/ppa/selectPublicPropList.do"
-    "?searchKeyword=%ED%83%9C%EC%96%91%EA%B4%91"
-    "&currentPage=1&pageSize=20"
-)
 
-
-def _fetch_via_api() -> list[SolarListing] | None:
-    """온비드 검색 API 시도 (POST 방식)"""
-    try:
-        form_data = (
-            "searchKeyword=%ED%83%9C%EC%96%91%EA%B4%91"
-            "&currentPage=1&pageSize=20"
-        ).encode("utf-8")
-        hdrs = {
-            **_HEADERS,
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Referer": BASE_URL,
+def _fetch_page(cltr_type: str, page: int) -> list[dict]:
+    """한 페이지 조회"""
+    page_size = 30
+    params = urllib.parse.urlencode(
+        {
+            "pageIndex": str(page),
+            "pageUnit": str(page_size),
+            "pageSize": str(page_size),
+            "firstIndex": str((page - 1) * page_size),
+            "lastIndex": str(page * page_size),
+            "recordCountPerPage": str(page_size),
+            "srchCltrType": cltr_type,
+            "srchDspsMthod": "ALL",
+            "srchBidPerdType": "ALL",
+            "srchSortType": "DESC",
         }
-        req = urllib.request.Request(
-            f"{BASE_URL}/op/ppa/selectPublicPropList.do",
-            data=form_data,
-            headers=hdrs,
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_UNVERIFIED) as resp:
-            content = resp.read().decode("utf-8", errors="replace")
-
-        # JSON 응답인지 확인
-        if content.strip().startswith("{"):
-            data = json.loads(content)
-            items = data.get("list") or data.get("resultList") or []
-            return _parse_api_items(items) if items else None
-
-        # HTML 응답이면 HTML 파서로 전환
-        if "<html" in content.lower():
-            return _parse_search_html(content) or None
-
-    except Exception as e:
-        print(f"  [solar] {SOURCE} API 요청 실패: {e}")
-    return None
+    )
+    req = urllib.request.Request(_SEARCH_URL, params.encode("utf-8"), _HEADERS)
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read()).get("cltrInfVOList", [])
 
 
-def _parse_api_items(items: list[dict]) -> list[SolarListing]:
-    """API JSON 응답에서 매물 추출"""
-    listings: list[SolarListing] = []
-    for item in items:
-        # 온비드 API 필드명은 다양할 수 있음
-        prop_nm = item.get("PLNM_NM") or item.get("propNm") or item.get("title", "")
-        prop_no = str(item.get("PLNM_NO") or item.get("propNo") or "")
-        if not prop_no:
-            prop_no = make_listing_id(SOURCE, prop_nm)
-
-        addr = item.get("ADDR") or item.get("addr") or ""
-        price_str = str(item.get("MIN_BID_PRC") or item.get("minBidPrc") or "")
-
-        url = f"{BASE_URL}/op/ppa/selectPublicPropDtl.do?propNo={prop_no}"
-
-        listings.append(
-            SolarListing(
-                source=SOURCE,
-                listing_id=prop_no,
-                title=prop_nm[:100],
-                capacity_kw=parse_capacity(prop_nm),
-                location=addr[:50] if addr else None,
-                price_krw=int(price_str) if price_str.isdigit() else parse_price(price_str),
-                url=url,
-            )
-        )
-    return listings
+def _is_solar(name: str) -> bool:
+    return any(kw in name for kw in _SOLAR_KEYWORDS)
 
 
-def _parse_search_html(html: str) -> list[SolarListing]:
-    """검색 결과 HTML에서 매물 추출"""
-    listings: list[SolarListing] = []
-
-    # 테이블 행에서 매물 정보 추출
-    # 온비드는 보통 테이블 형식으로 결과 표시
-    for m in re.finditer(
-        r'selectPublicPropDtl[^"]*propNo=([^"&]+)[^>]*>([^<]+)', html
-    ):
-        prop_no, title = m.group(1), m.group(2).strip()
-        if not title:
-            continue
-
-        url = f"{BASE_URL}/op/ppa/selectPublicPropDtl.do?propNo={prop_no}"
-
-        listings.append(
-            SolarListing(
-                source=SOURCE,
-                listing_id=prop_no,
-                title=title[:100],
-                capacity_kw=parse_capacity(title),
-                location=None,
-                price_krw=None,
-                url=url,
-            )
-        )
-
-    # 링크 기반 폴백
-    if not listings:
-        for m in re.finditer(r'href="([^"]*태양광[^"]*)"[^>]*>([^<]+)', html):
-            href, title = m.group(1), m.group(2).strip()
-            lid = make_listing_id(SOURCE, href)
-            url = href if href.startswith("http") else f"{BASE_URL}{href}"
-            listings.append(
-                SolarListing(
-                    source=SOURCE,
-                    listing_id=lid,
-                    title=title[:100],
-                    capacity_kw=parse_capacity(title),
-                    location=None,
-                    price_krw=None,
-                    url=url,
-                )
-            )
-
-    return listings
+def _to_listing(item: dict) -> SolarListing:
+    cltr_no = str(item.get("onbidCltrno", ""))
+    name = item.get("onbidCltrNm", "")
+    url = f"{BASE_URL}/op/cltrpbancinf/cltr/cltrcdtninq/CltrCdtnInqController/mvmnCltrCdtnDtl.do?onbidCltrno={cltr_no}"
+    capacity = parse_capacity(name)
+    price_raw = item.get("cltrApslEvlAvgAmt", 0)
+    price = int(price_raw) if price_raw and int(price_raw) > 0 else parse_price(name)
+    loc_m = re.search(
+        r"((?:서울|경기|인천|충[남북]|전[남북]|경[남북]|강원|제주|세종|대전|대구|부산|광주|울산)"
+        r"[^\s,<]{0,15})",
+        name,
+    )
+    return SolarListing(
+        source=SOURCE,
+        listing_id=cltr_no,
+        title=name[:100],
+        capacity_kw=capacity,
+        location=loc_m.group(1) if loc_m else None,
+        price_krw=price,
+        url=url,
+    )
 
 
 def run() -> list[SolarListing]:
-    """온비드 태양광 매물 수집"""
+    """온비드 태양광 공매 매물 수집 (부동산 + 동산 최신 3페이지 필터링)"""
     print(f"  [solar] {SOURCE} 크롤링 시작...")
-    try:
-        result = _fetch_via_api()
-        if result:
-            print(f"  [solar] {SOURCE}: {len(result)}건 수집 (API)")
-            return result
-    except Exception:
-        pass
+    solar: list[SolarListing] = []
+    seen: set[str] = set()
 
-    try:
-        html = fetch_html(_SEARCH_URL)
-        if html:
-            items = _parse_search_html(html)
-            if items:
-                print(f"  [solar] {SOURCE}: {len(items)}건 수집 (HTML)")
-                return items
-    except Exception as e:
-        print(f"  [solar] {SOURCE} HTML 파싱 오류: {e}")
+    for cltr_type in ("0001", "0003"):
+        label = "부동산" if cltr_type == "0001" else "동산"
+        for page in range(1, 4):
+            try:
+                items = _fetch_page(cltr_type, page)
+                if not items:
+                    break
+                for item in items:
+                    name = item.get("onbidCltrNm", "")
+                    cltr_no = str(item.get("onbidCltrno", ""))
+                    if _is_solar(name) and cltr_no not in seen:
+                        seen.add(cltr_no)
+                        solar.append(_to_listing(item))
+            except Exception as e:
+                print(f"  [solar] {SOURCE} {label} p{page} 오류: {e}")
+                break
 
-    print(f"  [solar] {SOURCE}: 수집 실패")
-    return []
+    print(f"  [solar] {SOURCE}: {len(solar)}건 수집 (전체 목록 필터링)")
+    return solar
 
 
 if __name__ == "__main__":
     for item in run():
-        print(f"  {item['title']} | {item.get('location')} | {item.get('price_krw')}")
+        print(f"  {item['title']} | {item.get('location')} | {item.get('capacity_kw')}kW")
