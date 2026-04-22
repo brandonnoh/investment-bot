@@ -10,8 +10,8 @@ services:
       - ./output:/app/output
       - ./logs:/app/logs
       - ./docs:/app/docs
-      - ~/.claude:/root/.claude:ro
-      - ~/.claude.json:/root/.claude.json:ro
+      - ~/.claude:/root/.claude-host:ro
+      - ~/.claude.json:/root/.claude-host.json:ro
     environment:
       - TZ=Asia/Seoul
     env_file:

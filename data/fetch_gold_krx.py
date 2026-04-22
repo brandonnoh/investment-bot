@@ -24,6 +24,7 @@ TOKEN_CACHE_PATH = BASE_DIR / ".kiwoom_token.json"
 
 KIWOOM_TOKEN_URL = "https://api.kiwoom.com/oauth2/token"
 KIWOOM_QUOTE_URL = "https://api.kiwoom.com/api/dostk/mrkcond"
+KIWOOM_INVESTOR_URL = "https://api.kiwoom.com/api/dostk/frgnistt"
 GOLD_KRX_CODE = "M04020000"
 
 
@@ -225,6 +226,57 @@ def fetch_kiwoom_stock(code: str) -> dict:
         "volume": volume,
         "high": high,
         "low": low,
+    }
+
+
+def fetch_kiwoom_investor(code: str) -> dict:
+    """
+    키움증권 REST API로 외국인/기관 일별 순매수 조회 (ka10009 외국인기관요청).
+    code: 6자리 종목코드 (예: '005930')
+    반환: {foreign_net, inst_net, foreign_ratio} — 장외 시간엔 None
+    """
+    appkey, _ = _get_env()
+    token = get_token()
+
+    body = json.dumps({"stk_cd": code}).encode("utf-8")
+    req = urllib.request.Request(
+        KIWOOM_INVESTOR_URL,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+            "appkey": appkey,
+            "api-id": "ka10009",
+        },
+        method="POST",
+    )
+
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        data = json.load(resp)
+
+    if data.get("return_code") != 0:
+        raise ValueError(f"키움 투자자 API 오류: {data.get('return_msg', 'unknown')}")
+
+    def _parse_int(val: str) -> int | None:
+        if not val or val.strip() in ("", "-", "--"):
+            return None
+        try:
+            return int(val.replace("+", "").replace(",", "").strip())
+        except ValueError:
+            return None
+
+    def _parse_float(val: str) -> float | None:
+        if not val or val.strip() in ("", "-", "--"):
+            return None
+        try:
+            return float(val.replace("+", "").replace(",", "").strip())
+        except ValueError:
+            return None
+
+    return {
+        "foreign_net": _parse_int(data.get("frgnr_daly_nettrde", "")),
+        "inst_net": _parse_int(data.get("orgn_daly_nettrde", "")),
+        "foreign_ratio": _parse_float(data.get("frgnr_qota_rt", "")),
     }
 
 

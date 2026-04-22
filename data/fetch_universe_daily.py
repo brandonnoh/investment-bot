@@ -20,8 +20,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from analysis.screener_universe import UNIVERSE_KOSPI200, UNIVERSE_SP100  # noqa: E402
-from data.fetch_prices import fetch_yahoo_quote  # noqa: E402
 from data.fetch_fundamentals_sources import fetch_yahoo_financials  # noqa: E402
+from data.fetch_prices import fetch_yahoo_quote  # noqa: E402
 
 KST = timezone(timedelta(hours=9))
 DB_PATH = PROJECT_ROOT / "db" / "history.db"
@@ -38,7 +38,11 @@ def _meta_to_daily_row(ticker: str, meta: dict) -> dict | None:
     prev_close = meta.get("chartPreviousClose") or meta.get("previousClose") or close
     change_pct = round((close - prev_close) / prev_close * 100, 4) if prev_close else 0.0
     ts = meta.get("regularMarketTime", 0)
-    date_str = datetime.fromtimestamp(ts, tz=KST).strftime("%Y-%m-%d") if ts else datetime.now(KST).strftime("%Y-%m-%d")
+    date_str = (
+        datetime.fromtimestamp(ts, tz=KST).strftime("%Y-%m-%d")
+        if ts
+        else datetime.now(KST).strftime("%Y-%m-%d")
+    )
     return {
         "ticker": ticker,
         "date": date_str,
@@ -58,35 +62,65 @@ def _upsert_daily(conn: sqlite3.Connection, row: dict) -> None:
            (ticker, date, open, high, low, close, volume, change_pct, data_source)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'yahoo_universe')""",
         (
-            row["ticker"], row["date"],
-            row["open"], row["high"], row["low"],
-            row["close"], row["volume"], row["change_pct"],
+            row["ticker"],
+            row["date"],
+            row["open"],
+            row["high"],
+            row["low"],
+            row["close"],
+            row["volume"],
+            row["change_pct"],
         ),
     )
 
 
 def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, market: str) -> None:
-    """fundamentals 테이블에 Yahoo 펀더멘탈 UPSERT"""
+    """fundamentals 테이블에 Yahoo 펀더멘탈 + 키움 투자자 데이터 UPSERT"""
     data = fetch_yahoo_financials(ticker)
     if not data:
         return
+
+    # KR 종목은 키움 API로 외국인/기관 순매수 추가 수집
+    foreign_net = inst_net = None
+    if market == "KR":
+        try:
+            code = ticker.split(".")[0]
+            inv = fetch_kiwoom_investor(code)
+            foreign_net = inv.get("foreign_net")
+            inst_net = inv.get("inst_net")
+        except Exception:
+            pass
+
     now = datetime.now(KST).isoformat()
     conn.execute(
         """INSERT INTO fundamentals
                (ticker, name, market, per, pbr, roe, debt_ratio,
                 revenue_growth, operating_margin, fcf, eps,
-                dividend_yield, market_cap, data_source, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'yahoo_universe', ?)
+                dividend_yield, market_cap, data_source, updated_at,
+                foreign_net, inst_net)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'yahoo_universe', ?, ?, ?)
            ON CONFLICT(ticker) DO UPDATE SET
                per=excluded.per, pbr=excluded.pbr, roe=excluded.roe,
                market_cap=excluded.market_cap, data_source='yahoo_universe',
-               updated_at=excluded.updated_at""",
+               updated_at=excluded.updated_at,
+               foreign_net=excluded.foreign_net, inst_net=excluded.inst_net""",
         (
-            ticker, name, market,
-            data.get("per"), data.get("pbr"), data.get("roe"),
-            data.get("debt_ratio"), data.get("revenue_growth"),
-            data.get("operating_margin"), data.get("fcf"), data.get("eps"),
-            data.get("dividend_yield"), data.get("market_cap"), now,
+            ticker,
+            name,
+            market,
+            data.get("per"),
+            data.get("pbr"),
+            data.get("roe"),
+            data.get("debt_ratio"),
+            data.get("revenue_growth"),
+            data.get("operating_margin"),
+            data.get("fcf"),
+            data.get("eps"),
+            data.get("dividend_yield"),
+            data.get("market_cap"),
+            now,
+            foreign_net,
+            inst_net,
         ),
     )
 
@@ -126,7 +160,7 @@ def run() -> dict:
                 fail += 1
             if (i + 1) % RATE_LIMIT_BATCH == 0:
                 conn.commit()
-                print(f"    {i+1}/{total} 완료 (성공 {success} / 실패 {fail})...")
+                print(f"    {i + 1}/{total} 완료 (성공 {success} / 실패 {fail})...")
                 time.sleep(RATE_LIMIT_SLEEP)
         conn.commit()
     finally:

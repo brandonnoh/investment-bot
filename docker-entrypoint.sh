@@ -9,6 +9,16 @@ if [ -f /app/.env ]; then
     grep -v '^#' /app/.env | grep '=' | sed 's/^export //' >> /etc/environment
 fi
 
+# Claude 인증 파일 — 호스트 마운트를 writable 위치에 복사 (atomic rename으로 인한 stale inode 방지)
+if [ -f /root/.claude-host.json ]; then
+    cp /root/.claude-host.json /root/.claude.json
+    echo "[entrypoint] claude.json 복사 완료"
+fi
+if [ -d /root/.claude-host ]; then
+    cp -r /root/.claude-host/. /root/.claude/
+    echo "[entrypoint] .claude/ 복사 완료"
+fi
+
 # 로그 디렉토리 보장
 mkdir -p /app/logs
 
