@@ -190,6 +190,7 @@ CREATE_TABLE_FUNDAMENTALS = """
         eps REAL,
         dividend_yield REAL,
         market_cap REAL,
+        sector TEXT,
         data_source TEXT,
         updated_at TEXT NOT NULL
     )
@@ -353,4 +354,6 @@ MIGRATION_COLUMNS = [
     ("fundamentals", "inst_net", "INTEGER"),
     # holdings 계좌 구분 컬럼
     ("holdings", "account", "TEXT"),
+    # 유니버스 섹터 분류 (Yahoo Finance 기반)
+    ("fundamentals", "sector", "TEXT"),
 ]

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""섹터 기반 가치 스크리닝 — KOSPI200 50 + SP100 100 유니버스(150개).
+"""섹터 기반 가치 스크리닝 — KOSPI200 200 + SP500 500 유니버스(700개).
 
 스크리닝 조건: RSI<35 / PBR<1.2+ROE>8% / 52주 저점<15%
 Marcus discovery_keywords.json 키워드로 섹터 필터 우선 적용.
+섹터 할당: sector_map 우선 → fundamentals.sector(Yahoo) 폴백.
 """
 
 import json
@@ -129,11 +130,22 @@ def _fetch_stock_metrics(
 # ── 유니버스 기반 대상 종목 수집 ──
 
 
-def _collect_target_tickers() -> list[dict]:
-    """KOSPI200 + SP100 전체 유니버스 기반 대상 종목 수집.
+def _load_db_sectors(conn) -> dict[str, str]:
+    """fundamentals 테이블에서 ticker→sector 매핑 로드"""
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT ticker, sector FROM fundamentals WHERE sector IS NOT NULL")
+        return {row[0]: row[1] for row in cur.fetchall()}
+    except Exception:
+        return {}
 
-    섹터 할당: sector_map.get_ticker_sector 우선, 없으면 market 기반 "기타"
+
+def _collect_target_tickers(conn=None) -> list[dict]:
+    """KOSPI200 + SP500 전체 유니버스 기반 대상 종목 수집.
+
+    섹터 할당: sector_map 우선 → fundamentals.sector(Yahoo) 폴백 → "기타"
     """
+    db_sectors = _load_db_sectors(conn) if conn else {}
     targets: list[dict] = []
     seen: set[str] = set()
     for item in UNIVERSE_KOSPI200 + UNIVERSE_SP100:
@@ -141,7 +153,7 @@ def _collect_target_tickers() -> list[dict]:
         if ticker in seen:
             continue
         seen.add(ticker)
-        sector = get_ticker_sector(ticker) or f"기타({item['market']})"
+        sector = get_ticker_sector(ticker) or db_sectors.get(ticker) or f"기타({item['market']})"
         targets.append({"ticker": ticker, "name": item["name"], "sector": sector})
     return targets
 
@@ -232,23 +244,27 @@ def run() -> list:
     """유니버스 기반 가치 스크리닝 실행 → opportunities 리스트"""
     top_sectors = load_sector_scores()
     marcus_sectors = load_marcus_sectors()
-    all_targets = _collect_target_tickers()
+
+    uni_cache = load_universe_cache()
+    cache = load_fundamentals_cache()
+    conn = sqlite3.connect(str(DB_PATH))
+
+    all_targets = _collect_target_tickers(conn)
 
     allowed_sectors = marcus_sectors | {s["name"] for s in top_sectors}
     if allowed_sectors:
         targets = [t for t in all_targets if t["sector"] in allowed_sectors]
-        print(f"  섹터 필터 적용: {len(all_targets)}개 → {len(targets)}개 (허용 섹터: {len(allowed_sectors)}개)")
+        print(
+            f"  섹터 필터 적용: {len(all_targets)}개 → {len(targets)}개 (허용 섹터: {len(allowed_sectors)}개)"
+        )
     else:
         targets = all_targets
         print(f"  섹터 정보 없음 — 전체 {len(targets)}개 스크리닝")
 
     if not targets:
+        conn.close()
         print("  대상 종목 없음")
         return []
-
-    uni_cache = load_universe_cache()
-    cache = load_fundamentals_cache()
-    conn = sqlite3.connect(str(DB_PATH))
 
     opportunities: list[dict] = []
     for item in targets:

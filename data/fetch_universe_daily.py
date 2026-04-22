@@ -96,12 +96,14 @@ def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, marke
         """INSERT INTO fundamentals
                (ticker, name, market, per, pbr, roe, debt_ratio,
                 revenue_growth, operating_margin, fcf, eps,
-                dividend_yield, market_cap, data_source, updated_at,
+                dividend_yield, market_cap, sector, data_source, updated_at,
                 foreign_net, inst_net)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'yahoo_universe', ?, ?, ?)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'yahoo_universe', ?, ?, ?)
            ON CONFLICT(ticker) DO UPDATE SET
                per=excluded.per, pbr=excluded.pbr, roe=excluded.roe,
-               market_cap=excluded.market_cap, data_source='yahoo_universe',
+               market_cap=excluded.market_cap,
+               sector=COALESCE(excluded.sector, sector),
+               data_source='yahoo_universe',
                updated_at=excluded.updated_at,
                foreign_net=excluded.foreign_net, inst_net=excluded.inst_net""",
         (
@@ -118,6 +120,7 @@ def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, marke
             data.get("eps"),
             data.get("dividend_yield"),
             data.get("market_cap"),
+            data.get("sector"),
             now,
             foreign_net,
             inst_net,

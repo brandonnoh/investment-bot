@@ -226,6 +226,77 @@ def _safe_raw(obj: dict, key: str, default=None):
     return default
 
 
+# Yahoo Finance 업종 → 내부 섹터명 매핑
+_INDUSTRY_TO_SECTOR: dict[str, str] = {
+    "Semiconductors": "반도체",
+    "Semiconductor Equipment & Materials": "반도체",
+    "Electronic Components": "반도체",
+    "Software—Application": "AI/소프트웨어",
+    "Software—Infrastructure": "AI/소프트웨어",
+    "Software-Application": "AI/소프트웨어",
+    "Software-Infrastructure": "AI/소프트웨어",
+    "Information Technology Services": "AI/소프트웨어",
+    "Internet Content & Information": "AI/소프트웨어",
+    "Computer Hardware": "AI/소프트웨어",
+    "Drug Manufacturers—General": "바이오/헬스케어",
+    "Drug Manufacturers—Specialty & Generic": "바이오/헬스케어",
+    "Biotechnology": "바이오/헬스케어",
+    "Medical Devices": "바이오/헬스케어",
+    "Diagnostics & Research": "바이오/헬스케어",
+    "Healthcare Plans": "바이오/헬스케어",
+    "Medical Instruments & Supplies": "바이오/헬스케어",
+    "Aerospace & Defense": "방산",
+    "Oil & Gas Integrated": "에너지",
+    "Oil & Gas E&P": "에너지",
+    "Oil & Gas Refining & Marketing": "에너지",
+    "Oil & Gas Equipment & Services": "에너지",
+    "Banks—Diversified": "금융",
+    "Capital Markets": "금융",
+    "Credit Services": "금융",
+    "Insurance—Diversified": "금융",
+    "Financial Data & Stock Exchanges": "금융",
+    "Asset Management": "금융",
+    "Specialty Retail": "소비재/리테일",
+    "Discount Stores": "소비재/리테일",
+    "Grocery Stores": "소비재/리테일",
+    "Restaurants": "소비재/리테일",
+    "Household & Personal Products": "소비재/리테일",
+    "Beverages—Non-Alcoholic": "소비재/리테일",
+    "Home Improvement Retail": "소비재/리테일",
+    "Chemicals": "원자재/화학",
+    "Steel": "원자재/화학",
+    "Specialty Chemicals": "원자재/화학",
+    "Gold": "원자재/화학",
+    "Agricultural Inputs": "원자재/화학",
+    "Auto Manufacturers": "자동차",
+    "Auto Parts": "자동차",
+    "Lithium & Lithium Compounds": "2차전지",
+    "Electrical Equipment & Parts": "2차전지",
+}
+
+_YAHOO_SECTOR_FALLBACK: dict[str, str] = {
+    "Technology": "AI/소프트웨어",
+    "Healthcare": "바이오/헬스케어",
+    "Health Care": "바이오/헬스케어",
+    "Energy": "에너지",
+    "Financial Services": "금융",
+    "Financials": "금융",
+    "Consumer Cyclical": "소비재/리테일",
+    "Consumer Defensive": "소비재/리테일",
+    "Basic Materials": "원자재/화학",
+    "Communication Services": "AI/소프트웨어",
+    "Utilities": "에너지",
+    "Industrials": None,
+}
+
+
+def _map_yahoo_sector(yahoo_sector: str, yahoo_industry: str) -> str | None:
+    """Yahoo Finance 섹터/업종을 내부 섹터명으로 변환"""
+    if yahoo_industry and yahoo_industry in _INDUSTRY_TO_SECTOR:
+        return _INDUSTRY_TO_SECTOR[yahoo_industry]
+    return _YAHOO_SECTOR_FALLBACK.get(yahoo_sector)
+
+
 def fetch_yahoo_financials(ticker: str) -> dict | None:
     """yfinance로 재무 데이터 수집 (Yahoo Finance quoteSummary 대체).
 
@@ -269,6 +340,8 @@ def fetch_yahoo_financials(ticker: str) -> dict | None:
         div_yield_raw = info.get("dividendYield")
         dividend_yield = round(float(div_yield_raw) * 100, 2) if div_yield_raw is not None else None
 
+        sector = _map_yahoo_sector(info.get("sector", ""), info.get("industry", ""))
+
         return {
             "per": _safe("trailingPE"),
             "pbr": _safe("priceToBook"),
@@ -280,6 +353,7 @@ def fetch_yahoo_financials(ticker: str) -> dict | None:
             "eps": _safe("trailingEps"),
             "dividend_yield": dividend_yield,
             "market_cap": _safe("marketCap"),
+            "sector": sector,
         }
     except Exception as e:
         logger.error(f"yfinance 호출 실패 ({ticker}): {e}")
