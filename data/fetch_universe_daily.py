@@ -20,7 +20,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from analysis.screener_universe import UNIVERSE_KOSPI200, UNIVERSE_SP100  # noqa: E402
-from data.fetch_fundamentals_sources import fetch_yahoo_financials  # noqa: E402
+from data.fetch_fundamentals_sources import (  # noqa: E402
+    fetch_yahoo_financials,
+)
 from data.fetch_prices import fetch_yahoo_quote  # noqa: E402
 
 KST = timezone(timedelta(hours=9))
@@ -75,10 +77,22 @@ def _upsert_daily(conn: sqlite3.Connection, row: dict) -> None:
 
 
 def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, market: str) -> None:
-    """fundamentals 테이블에 Yahoo 펀더멘탈 + 키움 투자자 데이터 UPSERT"""
+    """fundamentals 테이블에 Yahoo 펀더멘탈 + Naver(KR PBR) + 키움 수급 UPSERT"""
     data = fetch_yahoo_financials(ticker)
     if not data:
         return
+
+    # KR 종목: Naver에서 PBR 보충 (Yahoo가 한국 PBR 미제공)
+    pbr = data.get("pbr")
+    if market == "KR" and pbr is None:
+        try:
+            code = ticker.split(".")[0]
+            naver = fetch_naver_per_pbr(code)
+            pbr = naver.get("pbr")
+            if data.get("per") is None:
+                data["per"] = naver.get("per")
+        except Exception:
+            pass
 
     # KR 종목은 키움 API로 외국인/기관 순매수 추가 수집
     foreign_net = inst_net = None
@@ -100,7 +114,7 @@ def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, marke
                 foreign_net, inst_net)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'yahoo_universe', ?, ?, ?)
            ON CONFLICT(ticker) DO UPDATE SET
-               per=excluded.per, pbr=excluded.pbr, roe=excluded.roe,
+               per=excluded.per, pbr=COALESCE(excluded.pbr, pbr), roe=excluded.roe,
                market_cap=excluded.market_cap,
                sector=COALESCE(excluded.sector, sector),
                data_source='yahoo_universe',
@@ -111,7 +125,7 @@ def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, marke
             name,
             market,
             data.get("per"),
-            data.get("pbr"),
+            pbr,
             data.get("roe"),
             data.get("debt_ratio"),
             data.get("revenue_growth"),
