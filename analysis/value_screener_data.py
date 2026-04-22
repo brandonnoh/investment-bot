@@ -52,8 +52,7 @@ def load_sector_scores() -> list[dict]:
     try:
         data = json.loads(SECTOR_SCORES_PATH.read_text(encoding="utf-8"))
         eligible = [
-            s for s in data.get("sectors", [])
-            if s.get("signal") in ("favorable", "neutral")
+            s for s in data.get("sectors", []) if s.get("signal") in ("favorable", "neutral")
         ]
         return eligible[:TOP_SECTOR_COUNT]
     except (json.JSONDecodeError, KeyError):
@@ -61,14 +60,25 @@ def load_sector_scores() -> list[dict]:
 
 
 def load_fundamentals_from_db(conn, ticker: str) -> dict:
-    """DB fundamentals 테이블에서 PER/PBR/ROE/종목명 조회"""
+    """DB fundamentals 테이블에서 전체 펀더멘탈 데이터 조회"""
+    cols = "per, pbr, roe, name, operating_margin, revenue_growth, debt_ratio, eps, dividend_yield, foreign_net, inst_net"
     try:
-        cur = conn.execute(
-            "SELECT per, pbr, roe, name FROM fundamentals WHERE ticker=?", (ticker,)
-        )
+        cur = conn.execute(f"SELECT {cols} FROM fundamentals WHERE ticker=?", (ticker,))
         row = cur.fetchone()
         if row:
-            return {"per": row[0], "pbr": row[1], "roe": row[2], "name": row[3]}
+            return {
+                "per": row[0],
+                "pbr": row[1],
+                "roe": row[2],
+                "name": row[3],
+                "operating_margin": row[4],
+                "revenue_growth": row[5],
+                "debt_ratio": row[6],
+                "eps": row[7],
+                "dividend_yield": row[8],
+                "foreign_net": row[9],
+                "inst_net": row[10],
+            }
     except Exception as e:
         print(f"  [WARN] fundamentals DB 조회 실패 ({ticker}): {e}")
     return {}
@@ -80,7 +90,7 @@ def resolve_fundamentals(
     cache: dict[str, dict],
     uni_cache: dict[str, dict] | None,
 ) -> dict:
-    """PER/PBR/ROE 조회: DB → universe_cache → fundamentals.json → Yahoo"""
+    """전체 펀더멘탈 조회: DB → universe_cache → fundamentals.json → Yahoo"""
     fund = load_fundamentals_from_db(conn, ticker)
     if fund.get("per") is not None:
         return fund
