@@ -29,6 +29,7 @@ class SolarListing(TypedDict, total=False):
     capacity_kw: float | None  # 용량 (kW)
     location: str | None  # 소재지
     price_krw: int | None  # 가격 (원)
+    deal_type: str | None  # 거래 유형: '매매' | '분양' | None
     url: str  # 매물 상세 URL
 
 
@@ -70,6 +71,21 @@ def fetch_html(url: str, headers: dict | None = None) -> str | None:
     except Exception as e:
         print(f"  [solar] HTML 요청 실패 ({url[:60]}): {e}")
         return None
+
+
+_DEAL_TYPE_SALE = re.compile(r"매매|매도|판매|팝니다|팔아|매각|양도|양도양수")
+_DEAL_TYPE_DIST = re.compile(r"분양")
+
+
+def parse_deal_type(text: str) -> str | None:
+    """제목에서 거래 유형 추출: '매매' 또는 '분양' 또는 None"""
+    if not text:
+        return None
+    if _DEAL_TYPE_DIST.search(text):
+        return "분양"
+    if _DEAL_TYPE_SALE.search(text):
+        return "매매"
+    return None
 
 
 def parse_location(text: str) -> str | None:

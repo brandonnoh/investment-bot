@@ -195,6 +195,7 @@ export interface SolarListing {
   capacity_kw: number | null
   location: string | null
   price_krw: number | null
+  deal_type: '매매' | '분양' | null
   url: string | null
   status: string
   first_seen_at: string

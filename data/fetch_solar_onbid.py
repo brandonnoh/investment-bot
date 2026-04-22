@@ -15,7 +15,12 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from data.fetch_solar_base import SolarListing, parse_capacity, parse_location, parse_price
+from data.fetch_solar_base import (
+    SolarListing,
+    parse_capacity,
+    parse_location,
+    parse_price,
+)
 
 BASE_URL = "https://www.onbid.co.kr"
 SOURCE = "onbid"
@@ -69,6 +74,8 @@ def _to_listing(item: dict) -> SolarListing:
         capacity_kw=capacity,
         location=parse_location(name),
         price_krw=price,
+        deal_type=parse_deal_type(name),
+
         url=url,
     )
 

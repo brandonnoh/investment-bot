@@ -31,6 +31,11 @@ const SOURCE_COLORS: Record<string, { color: string; bg: string; border: string 
 
 const DEFAULT_COLOR = { color: '#9a8e84', bg: 'rgba(154,142,132,0.10)', border: 'rgba(154,142,132,0.2)' }
 
+const DEAL_TYPE_STYLES = {
+  '매매': { color: '#5b9bf5', bg: 'rgba(91,155,245,0.15)', border: 'rgba(91,155,245,0.3)' },
+  '분양': { color: '#4dca7e', bg: 'rgba(77,202,126,0.15)', border: 'rgba(77,202,126,0.3)' },
+}
+
 const CAP_RANGES = [
   { label: '전체', min: 0, max: Infinity },
   { label: '~50kW', min: 0, max: 50 },
@@ -95,6 +100,17 @@ function ListingCard({ listing }: { listing: SolarListing }) {
             >
               {SOURCE_LABELS[listing.source] ?? listing.source}
             </span>
+            {listing.deal_type && (() => {
+              const ds = DEAL_TYPE_STYLES[listing.deal_type]
+              return (
+                <span
+                  className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
+                  style={{ color: ds.color, background: ds.bg, border: `1px solid ${ds.border}` }}
+                >
+                  {listing.deal_type}
+                </span>
+              )
+            })()}
             {isNew && (
               <span
                 className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
@@ -171,6 +187,7 @@ export function SolarTab() {
   const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set())
   const [selectedRegion, setSelectedRegion] = useState<string>('')
   const [capRangeIdx, setCapRangeIdx] = useState(0)
+  const [dealType, setDealType] = useState<string>('')
 
   const allListings = data?.listings ?? []
 
@@ -190,13 +207,14 @@ export function SolarTab() {
     return allListings.filter(l => {
       if (selectedSources.size > 0 && !selectedSources.has(l.source)) return false
       if (selectedRegion && regionGroup(l.location) !== selectedRegion) return false
+      if (dealType && l.deal_type !== dealType) return false
       if (capRange.min > 0 || capRange.max < Infinity) {
         if (l.capacity_kw == null) return false
         if (l.capacity_kw < capRange.min || l.capacity_kw >= capRange.max) return false
       }
       return true
     })
-  }, [allListings, selectedSources, selectedRegion, capRangeIdx])
+  }, [allListings, selectedSources, selectedRegion, dealType, capRangeIdx])
 
   function toggleSource(src: string) {
     setSelectedSources(prev => {
@@ -207,7 +225,7 @@ export function SolarTab() {
     })
   }
 
-  const hasFilter = selectedSources.size > 0 || selectedRegion !== '' || capRangeIdx !== 0
+  const hasFilter = selectedSources.size > 0 || selectedRegion !== '' || dealType !== '' || capRangeIdx !== 0
 
   return (
     <div className="space-y-3">
@@ -224,6 +242,13 @@ export function SolarTab() {
       {/* 필터 패널 */}
       {!isLoading && allListings.length > 0 && (
         <div className="space-y-2 pb-2 border-b border-mc-border">
+          {/* 거래유형 필터 */}
+          <div className="flex gap-1">
+            <FilterChip active={dealType === ''} onClick={() => setDealType('')}>전체</FilterChip>
+            <FilterChip active={dealType === '매매'} onClick={() => setDealType(dealType === '매매' ? '' : '매매')}>매매</FilterChip>
+            <FilterChip active={dealType === '분양'} onClick={() => setDealType(dealType === '분양' ? '' : '분양')}>분양</FilterChip>
+          </div>
+
           {/* 출처 필터 */}
           <div className="flex flex-wrap gap-1">
             {availableSources.map(src => (

@@ -16,6 +16,7 @@ from data.fetch_solar_base import (
     SolarListing,
     fetch_html,
     parse_capacity,
+    parse_deal_type,
 )
 
 BASE_URL = "http://www.solartrade.co.kr"
@@ -58,6 +59,7 @@ def _parse_table(html: str) -> list[SolarListing]:
                 capacity_kw=capacity,
                 location=location,
                 price_krw=None,
+                deal_type=parse_deal_type(title) or "매매",
                 url=url,
             )
         )

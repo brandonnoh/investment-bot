@@ -15,6 +15,7 @@ from data.fetch_solar_base import (
     SolarListing,
     fetch_html,
     parse_capacity,
+    parse_deal_type,
     parse_price,
 )
 
@@ -49,6 +50,8 @@ def _parse_page(html: str) -> list[SolarListing]:
                 capacity_kw=capacity,
                 location=loc_m.group(1) if loc_m else None,
                 price_krw=price,
+                deal_type=parse_deal_type(text),
+
                 url=f"{BASE_URL}/market.html",
             )
         )

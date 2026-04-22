@@ -16,6 +16,7 @@ from data.fetch_solar_base import (
     SolarListing,
     fetch_html,
     parse_capacity,
+    parse_deal_type,
     parse_location,
     parse_price,
 )
@@ -27,6 +28,8 @@ _BOARDS = [
     (f"{BASE_URL}/2", "2"),
     (f"{BASE_URL}/33", "33"),
 ]
+
+_BOARD_DEAL_TYPE = {"2": "매매", "33": "분양"}
 
 
 def _parse_board(html: str, board: str) -> list[SolarListing]:
@@ -57,6 +60,7 @@ def _parse_board(html: str, board: str) -> list[SolarListing]:
                 capacity_kw=capacity,
                 location=parse_location(title),
                 price_krw=price,
+                deal_type=parse_deal_type(title) or _BOARD_DEAL_TYPE.get(board),
                 url=url,
             )
         )

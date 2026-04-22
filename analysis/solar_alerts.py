@@ -68,7 +68,7 @@ def _ensure_db() -> sqlite3.Connection:
 
 
 def _save_listings(conn, listings) -> list[dict]:
-    """매물 DB 저장. 신규 매물(INSERT 성공)만 반환."""
+    """매물 DB 저장. 신규 매물만 반환. 기존 매물은 파싱 필드 덮어쓰기."""
     now = datetime.now(KST).isoformat()
     new_items = []
     cursor = conn.cursor()
@@ -76,33 +76,52 @@ def _save_listings(conn, listings) -> list[dict]:
     for item in listings:
         raw = json.dumps(item, ensure_ascii=False)
         try:
-            cursor.execute(
-                """INSERT OR IGNORE INTO solar_listings
-                   (source, listing_id, title, capacity_kw, location,
-                    price_krw, url, status, first_seen_at, last_seen_at, raw_json)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)""",
-                (
-                    item["source"],
-                    item["listing_id"],
-                    item.get("title"),
-                    item.get("capacity_kw"),
-                    item.get("location"),
-                    item.get("price_krw"),
-                    item.get("url"),
-                    now,
-                    now,
-                    raw,
-                ),
-            )
-            if cursor.rowcount > 0:
+            # 신규 여부 먼저 확인
+            exists = cursor.execute(
+                "SELECT 1 FROM solar_listings WHERE source=? AND listing_id=?",
+                (item["source"], item["listing_id"]),
+            ).fetchone()
+
+            if not exists:
+                cursor.execute(
+                    """INSERT INTO solar_listings
+                       (source, listing_id, title, capacity_kw, location,
+                        price_krw, deal_type, url, status, first_seen_at, last_seen_at, raw_json)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)""",
+                    (
+                        item["source"],
+                        item["listing_id"],
+                        item.get("title"),
+                        item.get("capacity_kw"),
+                        item.get("location"),
+                        item.get("price_krw"),
+                        item.get("deal_type"),
+                        item.get("url"),
+                        now,
+                        now,
+                        raw,
+                    ),
+                )
                 new_items.append(item)
             else:
-                # 기존 매물 — last_seen_at 갱신
+                # 기존 매물 — 파싱 결과 + last_seen_at 갱신 (first_seen_at 유지)
                 cursor.execute(
-                    """UPDATE solar_listings
-                       SET last_seen_at = ?, status = 'active'
-                       WHERE source = ? AND listing_id = ?""",
-                    (now, item["source"], item["listing_id"]),
+                    """UPDATE solar_listings SET
+                       title=?, capacity_kw=?, location=?, price_krw=?,
+                       deal_type=?, url=?, status='active', last_seen_at=?, raw_json=?
+                       WHERE source=? AND listing_id=?""",
+                    (
+                        item.get("title"),
+                        item.get("capacity_kw"),
+                        item.get("location"),
+                        item.get("price_krw"),
+                        item.get("deal_type"),
+                        item.get("url"),
+                        now,
+                        raw,
+                        item["source"],
+                        item["listing_id"],
+                    ),
                 )
         except sqlite3.Error as e:
             print(f"  [solar] DB 저장 오류: {e}")
@@ -142,9 +161,7 @@ def _send_discord(new_items: list[dict]):
         url = item.get("url", "")
 
         lines.append(
-            f"**{source_name}** — {item.get('title', '제목 없음')}\n"
-            f"{loc} | {cap} | {price}\n"
-            f"{url}"
+            f"**{source_name}** — {item.get('title', '제목 없음')}\n{loc} | {cap} | {price}\n{url}"
         )
 
     if len(new_items) > 10:
@@ -208,7 +225,7 @@ def run() -> dict:
         "new_listings": len(new_items),
         "new_items": new_items,
     }
-    print(f"[solar] 모니터링 완료\n")
+    print("[solar] 모니터링 완료\n")
     return result
 
 

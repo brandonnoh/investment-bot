@@ -253,7 +253,7 @@ def load_solar_listings(limit: int = 100) -> list[dict]:
             rows = conn.execute(
                 """
                 SELECT source, listing_id, title, capacity_kw, location,
-                       price_krw, url, status, first_seen_at, last_seen_at
+                       price_krw, deal_type, url, status, first_seen_at, last_seen_at
                 FROM solar_listings
                 ORDER BY first_seen_at DESC
                 LIMIT ?
