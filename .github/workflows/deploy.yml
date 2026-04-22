@@ -27,14 +27,15 @@ jobs:
 
       - name: investment-bot 배포
         run: |
-          docker cp web/. investment-bot:/app/web/
-          docker cp scripts/. investment-bot:/app/scripts/
-          docker cp run_pipeline.py investment-bot:/app/run_pipeline.py
-          docker compose restart investment-bot
+          docker compose up -d --build investment-bot
 
       - name: 헬스 체크
         run: |
-          sleep 5
           curl -sf http://localhost:3000 -o /dev/null || (echo "mc-web 헬스체크 실패" && exit 1)
-          curl -sf http://localhost:8421/api/status -o /dev/null || (echo "Flask API 헬스체크 실패" && exit 1)
+          for i in $(seq 1 6); do
+            curl -sf http://localhost:8421/api/status -o /dev/null && break
+            echo "Flask API 대기 중... ($i/6)"
+            sleep 10
+            if [ $i -eq 6 ]; then echo "Flask API 헬스체크 실패" && exit 1; fi
+          done
           echo "배포 성공"
