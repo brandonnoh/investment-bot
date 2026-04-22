@@ -205,11 +205,24 @@ export function DiscoveryTab() {
             )
           })}
         </div>
-        {/* 현재 렌즈 설명 */}
+        {/* 현재 렌즈 설명 + 조건 배지 */}
         {currentMeta && (
-          <div className="text-[10px] text-muted-foreground px-0.5">
-            <span className="font-medium" style={{ color: '#4dca7e' }}>{currentMeta.name} 렌즈</span>
-            {' — '}{currentMeta.description}
+          <div className="space-y-1.5 px-0.5">
+            <div className="text-[10px] text-muted-foreground">
+              <span className="font-medium" style={{ color: '#4dca7e' }}>{currentMeta.name} 렌즈</span>
+              {' — '}{currentMeta.description}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {'criteria' in currentMeta && (currentMeta.criteria as readonly string[]).map((c) => (
+                <span
+                  key={c}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                  style={{ background: 'rgba(77,202,126,0.08)', color: '#7ddfaa', border: '1px solid rgba(77,202,126,0.2)' }}
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
