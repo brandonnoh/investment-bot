@@ -20,6 +20,18 @@ const RISK_LABELS: Record<RiskLevel, string> = {
   5: '초공격',
 }
 
+/** 리스크 레벨 색상 (디자인 토큰) */
+function riskLevelColor(level: RiskLevel): string {
+  if (level <= 2) return 'text-mc-green'
+  if (level === 3) return 'text-gold'
+  return 'text-mc-red'
+}
+
+/** 자본금 포맷 (aria-valuetext용) */
+function formatCapital(capital: number): string {
+  return `${fmtKrw(capital)}원`
+}
+
 interface ConditionPanelProps {
   capital: number
   setCapital: (v: number) => void
@@ -61,18 +73,21 @@ export function ConditionPanel({
       {/* 자본금 슬라이더 */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs text-muted-foreground">투자 가용 자본금</label>
+          <label htmlFor="capital-slider" className="text-xs text-muted-foreground">투자 가용 자본금</label>
           <span className="text-sm font-mono font-bold text-gold">
-            {fmtKrw(capital)}원
+            {formatCapital(capital)}
           </span>
         </div>
         <input
+          id="capital-slider"
           type="range"
           min={0}
           max={CAPITAL_STEPS.length - 1}
           value={sliderIdx}
           onChange={e => setCapital(CAPITAL_STEPS[Number(e.target.value)])}
-          className="w-full accent-gold cursor-pointer"
+          aria-label="투자 가용 자본금"
+          aria-valuetext={formatCapital(capital)}
+          className="w-full accent-gold cursor-pointer focus-visible:outline-none focus:ring-2 focus:ring-gold"
         />
         <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
           <span>100만</span>
@@ -84,8 +99,11 @@ export function ConditionPanel({
       <div className="flex items-center justify-between">
         <label className="text-xs text-muted-foreground">레버리지 활용</label>
         <button
+          role="switch"
+          aria-checked={leverageOn}
+          aria-label="레버리지 활용"
           onClick={() => setLeverageOn(!leverageOn)}
-          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
             leverageOn ? 'bg-gold' : 'bg-mc-border'
           }`}
         >
@@ -100,18 +118,21 @@ export function ConditionPanel({
       {/* 리스크 성향 슬라이더 */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs text-muted-foreground">리스크 성향</label>
+          <label htmlFor="risk-slider" className="text-xs text-muted-foreground">리스크 성향</label>
           <span className={`text-xs font-mono font-semibold ${riskLevelColor(riskLevel)}`}>
             Lv.{riskLevel} {RISK_LABELS[riskLevel]}
           </span>
         </div>
         <input
+          id="risk-slider"
           type="range"
           min={1}
           max={5}
           value={riskLevel}
           onChange={e => setRiskLevel(Number(e.target.value) as RiskLevel)}
-          className="w-full accent-gold cursor-pointer"
+          aria-label="리스크 성향"
+          aria-valuetext={RISK_LABELS[riskLevel]}
+          className="w-full accent-gold cursor-pointer focus-visible:outline-none focus:ring-2 focus:ring-gold"
         />
         <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
           <span>보수</span>
@@ -126,10 +147,4 @@ export function ConditionPanel({
       </div>
     </div>
   )
-}
-
-function riskLevelColor(level: RiskLevel): string {
-  if (level <= 2) return 'text-[#4dca7e]'
-  if (level === 3) return 'text-[#c9a93a]'
-  return 'text-[#e05252]'
 }

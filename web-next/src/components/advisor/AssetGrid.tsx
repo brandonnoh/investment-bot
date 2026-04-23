@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { CheckCircle2, XCircle, AlertTriangle, Clock } from 'lucide-react'
 import { fmtKrw } from '@/lib/format'
 import type {
   InvestmentAsset,
@@ -102,7 +103,8 @@ export function AssetGrid({ assets, capital, leverageOn }: AssetGridProps) {
           <button
             key={f.key}
             onClick={() => setCategory(f.key)}
-            className={`px-2.5 py-1 text-[11px] rounded-full border transition-colors cursor-pointer ${
+            aria-pressed={category === f.key}
+            className={`px-2.5 py-2 text-[11px] rounded-full border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
               category === f.key
                 ? 'bg-gold/20 border-gold/40 text-gold'
                 : 'bg-transparent border-mc-border text-muted-foreground hover:text-foreground'
@@ -120,7 +122,8 @@ export function AssetGrid({ assets, capital, leverageOn }: AssetGridProps) {
           <button
             key={s.key}
             onClick={() => setSort(s.key)}
-            className={`text-[10px] px-2 py-0.5 rounded transition-colors cursor-pointer ${
+            aria-pressed={sort === s.key}
+            className={`text-[10px] px-2 py-1.5 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
               sort === s.key
                 ? 'text-gold underline underline-offset-2'
                 : 'text-muted-foreground hover:text-foreground'
@@ -148,11 +151,11 @@ export function AssetGrid({ assets, capital, leverageOn }: AssetGridProps) {
 
 /* ─── 자산 카드 ─── */
 
-const STATUS_CONFIG: Record<AccessStatus, { icon: string; label: string; color: string; border: string }> = {
-  available:    { icon: '✓', label: '가능',     color: 'text-[#4dca7e]', border: 'border-[#4dca7e]/30' },
-  insufficient: { icon: '✗', label: '자본부족', color: 'text-[#e05252]', border: 'border-[#e05252]/30' },
-  conditional:  { icon: '△', label: '조건부',   color: 'text-[#c9a93a]', border: 'border-[#c9a93a]/30' },
-  upcoming:     { icon: '🔜', label: '출시예정', color: 'text-muted-foreground', border: 'border-mc-border' },
+const STATUS_CONFIG: Record<AccessStatus, { icon: React.ReactNode; label: string; color: string; border: string }> = {
+  available:    { icon: <CheckCircle2 size={12} />,   label: '가능',     color: 'text-mc-green',          border: 'border-mc-green/30' },
+  insufficient: { icon: <XCircle size={12} />,        label: '자본부족', color: 'text-mc-red',            border: 'border-mc-red/30' },
+  conditional:  { icon: <AlertTriangle size={12} />,  label: '조건부',   color: 'text-gold',              border: 'border-gold/30' },
+  upcoming:     { icon: <Clock size={12} />,          label: '출시예정', color: 'text-muted-foreground',  border: 'border-mc-border' },
 }
 
 function AssetCard({
@@ -175,7 +178,7 @@ function AssetCard({
           <div className="text-sm font-semibold truncate">{asset.name}</div>
           <div className="text-[10px] text-muted-foreground">{asset.description}</div>
         </div>
-        <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-mono ${cfg.color} ${cfg.border} bg-transparent`}>
+        <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border font-mono ${cfg.color} ${cfg.border} bg-transparent`}>
           {cfg.icon} {cfg.label}
         </span>
       </div>
@@ -207,27 +210,27 @@ function AssetCard({
       {/* 뱃지 영역 */}
       <div className="flex flex-wrap gap-1">
         {asset.leverage_available && asset.leverage_type && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-gold/10 text-gold/80 border border-gold/20">
             {asset.leverage_type}
           </span>
         )}
         {asset.tax_benefit && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-300 border border-green-500/20">
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-mc-green/10 text-mc-green/80 border border-mc-green/20">
             {asset.tax_benefit}
           </span>
         )}
         {asset.regulation_note && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-mc-red/10 text-mc-red/80 border border-mc-red/20">
             {asset.regulation_note}
           </span>
         )}
         {asset.beginner_friendly && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-gold/15 text-gold border border-gold/30">
             초보 OK
           </span>
         )}
         {asset.status === 'upcoming' && asset.upcoming_date && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-500/10 text-gray-400 border border-gray-500/20">
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-mc-border/20 text-muted-foreground border border-mc-border">
             {asset.upcoming_date} 예정
           </span>
         )}
@@ -235,7 +238,7 @@ function AssetCard({
 
       {/* 주의사항 */}
       {asset.caution && (
-        <div className="text-[10px] text-[#e05252]/80 bg-[#e05252]/5 rounded px-2 py-1">
+        <div className="text-[10px] text-mc-red/80 bg-mc-red/5 rounded px-2 py-1">
           {asset.caution}
         </div>
       )}
@@ -250,13 +253,13 @@ function riskStars(level: number): string {
 }
 
 function riskColor(level: number): string {
-  if (level <= 2) return 'text-[#4dca7e]'
-  if (level === 3) return 'text-[#c9a93a]'
-  return 'text-[#e05252]'
+  if (level <= 2) return 'text-mc-green'
+  if (level === 3) return 'text-gold'
+  return 'text-mc-red'
 }
 
 function returnColor(max: number): string {
-  if (max >= 30) return 'text-[#4dca7e]'
-  if (max >= 10) return 'text-[#c9a93a]'
+  if (max >= 30) return 'text-mc-green'
+  if (max >= 10) return 'text-gold'
   return 'text-foreground'
 }

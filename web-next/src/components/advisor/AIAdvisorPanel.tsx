@@ -55,7 +55,7 @@ export function AIAdvisorPanel({
         <button
           onClick={fetchAdvice}
           disabled={loading}
-          className="px-3 py-1.5 text-xs font-semibold rounded bg-gold text-black hover:bg-gold/80 disabled:opacity-40 cursor-pointer transition-colors"
+          className="px-3 py-1.5 text-xs font-semibold rounded bg-gold text-black hover:bg-gold/80 disabled:opacity-40 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg"
         >
           {loading ? '분석 중...' : '분석 갱신'}
         </button>
@@ -72,14 +72,14 @@ export function AIAdvisorPanel({
           </div>
         )}
         {!loading && error && (
-          <div className="text-xs text-[#e05252]">
+          <div className="text-xs text-mc-red">
             오류: {error}
           </div>
         )}
         {!loading && !error && recommendation && (
-          <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed">
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
             {recommendation}
-          </pre>
+          </div>
         )}
         {!loading && !error && !recommendation && (
           <p className="text-xs text-muted-foreground">
