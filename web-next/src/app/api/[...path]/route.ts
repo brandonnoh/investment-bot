@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const maxDuration = 120
+
 const API_BASE = process.env.PYTHON_API_URL ?? 'http://localhost:8421'
 
 async function proxy(req: NextRequest, path: string[]) {
@@ -25,6 +27,7 @@ async function proxy(req: NextRequest, path: string[]) {
     method: req.method,
     headers: { 'Content-Type': 'application/json' },
     body: bodyText,
+    signal: AbortSignal.timeout(115_000),
   })
   const data = await res.arrayBuffer()
   return new NextResponse(data, {

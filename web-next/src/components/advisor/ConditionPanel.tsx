@@ -38,8 +38,6 @@ interface ConditionPanelProps {
   setLeverageAmt: (v: number) => void
   riskLevel: RiskLevel
   setRiskLevel: (v: RiskLevel) => void
-  aiRiskLevel: RiskLevel | null
-  aiRiskReason: string | null
   wealthKrw: number | null
 }
 
@@ -47,7 +45,6 @@ export function ConditionPanel({
   capital, setCapital,
   leverageAmt, setLeverageAmt,
   riskLevel, setRiskLevel,
-  aiRiskLevel, aiRiskReason,
   wealthKrw,
 }: ConditionPanelProps) {
   useEffect(() => {
@@ -139,12 +136,6 @@ export function ConditionPanel({
           <span>보수</span>
           <span>공격</span>
         </div>
-        {aiRiskLevel !== null && (
-          <div className="mt-2 px-2.5 py-1.5 rounded bg-gold/10 border border-gold/20 text-[11px] text-gold">
-            AI 추론: Lv.{aiRiskLevel} {RISK_LABELS[aiRiskLevel]}
-            {aiRiskReason && <span className="text-muted-foreground ml-1">-- {aiRiskReason}</span>}
-          </div>
-        )}
       </div>
     </div>
   )
