@@ -65,7 +65,7 @@ export function AIAdvisorPanel({
       </div>
 
       {/* 추천 영역 */}
-      <div className="min-h-[100px] rounded bg-mc-bg border border-mc-border p-3">
+      <div className="min-h-[100px] max-h-[600px] overflow-y-auto rounded bg-mc-bg border border-mc-border p-3">
         {loading && (
           <div className="space-y-2 animate-pulse">
             <div className="h-3 bg-mc-border rounded w-3/4" />
@@ -80,7 +80,7 @@ export function AIAdvisorPanel({
           </div>
         )}
         {!loading && !error && recommendation && (
-          <div className="prose prose-sm prose-invert max-w-none text-sm leading-relaxed [&_p]:mb-2 [&_strong]:text-foreground [&_table]:w-full [&_table]:text-xs [&_th]:border [&_th]:border-mc-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:text-gold [&_td]:border [&_td]:border-mc-border [&_td]:px-2 [&_td]:py-1 [&_ul]:list-none [&_ul]:pl-0 [&_li]:text-sm">
+          <div className="prose prose-sm prose-invert max-w-none text-sm leading-relaxed overflow-x-auto [&_p]:mb-2 [&_strong]:text-foreground [&_table]:w-full [&_table]:text-xs [&_table]:block [&_table]:overflow-x-auto [&_th]:border [&_th]:border-mc-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:text-gold [&_td]:border [&_td]:border-mc-border [&_td]:px-2 [&_td]:py-1 [&_ul]:list-none [&_ul]:pl-0 [&_li]:text-sm">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {recommendation}
             </ReactMarkdown>
