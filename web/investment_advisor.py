@@ -133,11 +133,14 @@ def _build_prompt(capital: int, leverage_amt: int, risk_level: int, assets: list
 - **1단계 / 2단계 / 3단계**로 시간축 구분 (각 단계별 기간 명시)
 - 각 단계마다:
   - 어떤 자산에 얼마를 투자하는지 (구체적 금액)
-  - 레버리지 쓴다면 얼마 빌리고, 이자 부담은 얼마인지
+  - 레버리지를 썼다면 **거치기간(이자만 납부)과 원리금 상환기간을 반드시 구분**:
+    - 거치기간(예: 1~2년): 월 이자 부담 얼마, 그 기간에 남은 현금으로 뭘 더 하는지
+    - 원리금 상환기간: 월 원리금 얼마, 현금흐름이 줄어드니 포트폴리오를 어떻게 조정하는지
   - 그 기간이 끝나면 총자산이 얼마가 되는지
-  - 다음 단계로 어떻게 전환하는지 (매도·재투자·추가 레버리지 등)
+  - 다음 단계로 어떻게 전환하는지 (매도·재투자·추가 레버리지·상환 등)
 - 마지막에 최종 목표 자산 규모와 월 현금흐름 제시
 
+레버리지가 없을 때도 "만약 여기서 신용대출 X원을 거치 1년으로 끊는다면" 같은 선택지를 한 줄 언급해줘.
 현실적인 수치로, 솔직하게. 한국어로."""
 
 
@@ -147,11 +150,13 @@ def _call_claude_api(prompt: str) -> str:
     if not api_key:
         raise RuntimeError("ANTHROPIC_API_KEY 없음")
 
-    payload = json.dumps({
-        "model": "claude-sonnet-4-6",
-        "max_tokens": 2048,
-        "messages": [{"role": "user", "content": prompt}],
-    }).encode("utf-8")
+    payload = json.dumps(
+        {
+            "model": "claude-sonnet-4-6",
+            "max_tokens": 2048,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+    ).encode("utf-8")
 
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
