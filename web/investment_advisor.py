@@ -62,7 +62,9 @@ def _format_asset_table(assets: list[dict]) -> str:
 
     for a in assets:
         min_cap = a.get("min_capital", 0)
-        min_cap_str = f"{min_cap // 10000}만" if min_cap < 100_000_000 else f"{min_cap / 100_000_000:.1f}억"
+        min_cap_str = (
+            f"{min_cap // 10000}만" if min_cap < 100_000_000 else f"{min_cap / 100_000_000:.1f}억"
+        )
         ret_min = a.get("expected_return_min", 0)
         ret_max = a.get("expected_return_max", 0)
         risk = a.get("risk_level", 0)
@@ -83,34 +85,48 @@ def _build_prompt(capital: int, leverage: bool, risk_level: int, assets: list[di
     capital_str = f"{capital_억:.1f}억원" if capital >= 100_000_000 else f"{capital // 10000:,}만원"
     risk_label = _RISK_LABELS.get(risk_level, "중립")
     macro_context = _load_market_context()
-    leverage_text = "활용 가능 (대출·신용·담보 고려 가능)" if leverage else "활용 안 함 (자기자본만 사용)"
+    leverage_text = (
+        "활용 가능 (대출·신용·담보 고려 가능)" if leverage else "활용 안 함 (자기자본만 사용)"
+    )
     asset_table = _format_asset_table(assets)
 
-    return f"""당신은 한국 개인 투자자를 위한 전문 투자 어드바이저입니다.
+    return f"""당신은 "민준"이라는 이름의 한국인 투자 고수입니다.
+30대 후반, 10년 넘게 직접 투자해온 경험자. 부동산·주식·대체투자를 두루 거쳤고,
+레버리지로 자산을 불려본 경험이 있습니다. 말투는 직설적이고 솔직하며,
+"나라면 이렇게 한다"는 식으로 자신의 의견을 강하게 밝힙니다.
+투자 원칙: 현금흐름 먼저, 시세차익은 보너스. 레버리지는 도구일 뿐 목적이 아님.
 
-## 투자자 조건
-- 가용 자본금: {capital:,}원 ({capital_str})
+---
+
+## 이 투자자의 현재 조건
+- 시드머니: {capital:,}원 ({capital_str})
 - 레버리지: {leverage_text}
 - 리스크 성향: {risk_level}/5 ({risk_label})
 
-## 현재 접근 가능한 투자처 (자동 스크리닝 결과)
+## 지금 이 돈으로 접근 가능한 투자처
 
 {asset_table}
 
 ## 현재 시장 환경 (2026년 4월)
 {macro_context}
 
-## 요청 (중요)
-위 투자자 조건과 접근 가능한 투자처 데이터를 바탕으로, **구체적인 투자 전략**을 작성해주세요.
+---
 
-반드시 포함할 내용:
-1. **자산별 투자 금액** — "X자산에 YY만원 (총 자본의 Z%)" 형식으로 구체적 금액 명시
-2. **레버리지 활용 시** — 어떤 자산에 얼마를 대출하고, 예상 이자는 얼마인지
-3. **예상 연 수익률** — 보수적/기대/낙관 시나리오별로
-4. **월 현금흐름** — 배당·임대·이자수익 등 월 수령 예상액
-5. **실행 순서** — 어떤 것부터 시작하면 좋은지 우선순위
+## 민준이 해야 할 일
 
-현실적이고 구체적인 수치로 작성하세요. 한국어로 답변."""
+민준 본인이 이 시드머니를 갖고 있다고 가정하고, **단계별 자산 증식 로드맵**을 직접 짜주세요.
+
+형식:
+- "나라면 이렇게 한다"는 1인칭 직설 어투
+- **1단계 / 2단계 / 3단계**로 시간축 구분 (각 단계별 기간 명시)
+- 각 단계마다:
+  - 어떤 자산에 얼마를 투자하는지 (구체적 금액)
+  - 레버리지 쓴다면 얼마 빌리고, 이자 부담은 얼마인지
+  - 그 기간이 끝나면 총자산이 얼마가 되는지
+  - 다음 단계로 어떻게 전환하는지 (매도·재투자·추가 레버리지 등)
+- 마지막에 최종 목표 자산 규모와 월 현금흐름 제시
+
+현실적인 수치로, 솔직하게. 한국어로."""
 
 
 def _call_claude_cli(prompt: str) -> str:
@@ -131,6 +147,7 @@ def _call_claude(prompt: str) -> str:
     """Claude 호출 (API 우선, CLI 폴백)."""
     try:
         import anthropic
+
         client = anthropic.Anthropic()
         msg = client.messages.create(
             model="claude-sonnet-4-5",
