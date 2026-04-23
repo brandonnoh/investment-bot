@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type TabId = 'overview' | 'portfolio' | 'marcus' | 'discovery' | 'wealth' | 'solar' | 'alerts' | 'system' | 'service-map'
+export type TabId = 'overview' | 'portfolio' | 'marcus' | 'discovery' | 'wealth' | 'solar' | 'alerts' | 'system' | 'service-map' | 'advisor'
 
 interface MCStore {
   activeTab: TabId

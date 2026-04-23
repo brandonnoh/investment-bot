@@ -1,0 +1,53 @@
+/** 투자 자산 카테고리 */
+export type AssetCategory =
+  | 'finance'
+  | 'realestate'
+  | 'derivatives'
+  | 'alternative'
+  | 'private'
+  | 'energy'
+  | 'crowd'
+
+/** 유동성 등급 */
+export type Liquidity = 'instant' | 'days' | 'weeks' | 'months' | 'years'
+
+/** 자산 상태 */
+export type AssetStatus = 'available' | 'restricted' | 'upcoming'
+
+/** 리스크 레벨 (1=보수 ~ 5=공격) */
+export type RiskLevel = 1 | 2 | 3 | 4 | 5
+
+/** 투자 자산 정의 */
+export interface InvestmentAsset {
+  id: string
+  name: string
+  category: AssetCategory
+  min_capital: number
+  min_capital_leveraged: number | null
+  expected_return_min: number
+  expected_return_max: number
+  risk_level: RiskLevel
+  liquidity: Liquidity
+  leverage_available: boolean
+  leverage_ratio: number | null
+  leverage_type: string | null
+  tax_benefit: string | null
+  regulation_note: string | null
+  status: AssetStatus
+  upcoming_date: string | null
+  beginner_friendly: boolean
+  description: string
+  caution: string | null
+}
+
+/** 자산 접근성 상태 */
+export type AccessStatus = 'available' | 'insufficient' | 'conditional' | 'upcoming'
+
+/** 카테고리 필터 옵션 */
+export interface CategoryFilter {
+  key: AssetCategory | 'all'
+  label: string
+}
+
+/** 정렬 옵션 */
+export type SortOption = 'return' | 'risk' | 'capital'

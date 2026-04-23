@@ -38,6 +38,7 @@ from web.api import (
     load_wealth_data,
     run_background,
 )
+from web.investment_advisor import get_investment_advice
 
 PORT = 8421
 
@@ -253,6 +254,11 @@ class MissionControlHandler(BaseHTTPRequestHandler):
                 self.send_json({"ok": True, "id": asset_id}, 201)
             except (KeyError, ValueError) as e:
                 self.send_json({"error": str(e)}, 400)
+
+        elif path == "/api/investment-advice":
+            body = self._read_json_body()
+            result = get_investment_advice(body)
+            self.send_json(result)
 
         else:
             self.send_response(404)
