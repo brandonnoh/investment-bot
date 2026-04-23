@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type TabId = 'overview' | 'portfolio' | 'marcus' | 'discovery' | 'wealth' | 'solar' | 'alerts' | 'system' | 'service-map' | 'advisor'
+export type TabId = 'overview' | 'portfolio' | 'marcus' | 'discovery' | 'wealth' | 'solar' | 'alerts' | 'system' | 'service-map' | 'advisor' | 'saved-strategies'
 
 interface MCStore {
   activeTab: TabId
@@ -18,14 +18,26 @@ interface MCStore {
   jumpToDiscovery: (ticker: string) => void
 }
 
+function getInitialTab(): TabId {
+  if (typeof window === 'undefined') return 'overview'
+  try {
+    return (localStorage.getItem('mc-active-tab') as TabId) ?? 'overview'
+  } catch {
+    return 'overview'
+  }
+}
+
 export const useMCStore = create<MCStore>((set) => ({
-  activeTab: 'overview',
+  activeTab: getInitialTab(),
   pipelineRunning: false,
   marcusRunning: false,
   sseStatus: 'disconnected',
   lastUpdated: '',
   marcusPickedTicker: null,
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab) => {
+    try { localStorage.setItem('mc-active-tab', tab) } catch {}
+    set({ activeTab: tab })
+  },
   setPipelineRunning: (v) => set({ pipelineRunning: v }),
   setMarcusRunning: (v) => set({ marcusRunning: v }),
   setSseStatus: (v) => set({ sseStatus: v }),
