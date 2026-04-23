@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Bookmark, BookmarkCheck } from 'lucide-react'
@@ -10,6 +10,48 @@ import type { InvestmentAsset } from '@/types/advisor'
 const BASE = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE
   ? process.env.NEXT_PUBLIC_API_BASE
   : ''
+
+const STATUS_MESSAGES = [
+  { at: 0,  msg: '시장 데이터 분석 중…' },
+  { at: 15, msg: '자산 포트폴리오 검토 중…' },
+  { at: 30, msg: '레버리지 시나리오 계산 중…' },
+  { at: 50, msg: '단계별 전략 구성 중…' },
+  { at: 70, msg: '수익률·현금흐름 추정 중…' },
+  { at: 85, msg: '최종 로드맵 정리 중…' },
+]
+
+function useAnalysisProgress(loading: boolean) {
+  const [progress, setProgress] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (!loading) {
+      if (timerRef.current) clearInterval(timerRef.current)
+      setProgress(0)
+      return
+    }
+
+    setProgress(0)
+    const start = Date.now()
+
+    timerRef.current = setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000
+      // 0→40%: 빠르게(20s), 40→75%: 보통(30s), 75→92%: 느리게(무한 수렴)
+      let p: number
+      if (elapsed < 20) p = (elapsed / 20) * 40
+      else if (elapsed < 50) p = 40 + ((elapsed - 20) / 30) * 35
+      else p = 75 + (1 - Math.exp(-(elapsed - 50) / 40)) * 17
+      setProgress(Math.min(92, Math.round(p)))
+    }, 300)
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [loading])
+
+  const statusMsg = STATUS_MESSAGES.reduce((acc, s) => progress >= s.at ? s.msg : acc, STATUS_MESSAGES[0].msg)
+  return { progress, statusMsg }
+}
 
 interface AIAdvisorPanelProps {
   capital: number
@@ -25,6 +67,7 @@ export function AIAdvisorPanel({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const { progress, statusMsg } = useAnalysisProgress(loading)
 
   const fetchAdvice = useCallback(async () => {
     setLoading(true)
@@ -93,11 +136,20 @@ export function AIAdvisorPanel({
       {/* 추천 영역 */}
       <div className="min-h-[100px] max-h-[600px] overflow-y-auto rounded bg-mc-bg border border-mc-border p-3">
         {loading && (
-          <div className="space-y-2 animate-pulse">
-            <div className="h-3 bg-mc-border rounded w-3/4" />
-            <div className="h-3 bg-mc-border rounded w-1/2" />
-            <div className="h-3 bg-mc-border rounded w-5/6" />
-            <div className="h-3 bg-mc-border rounded w-2/3" />
+          <div className="flex flex-col items-center justify-center gap-4 py-8">
+            {/* 퍼센트 */}
+            <div className="text-3xl font-mono font-bold text-gold tabular-nums">
+              {progress}<span className="text-lg text-gold/60">%</span>
+            </div>
+            {/* 프로그레스 바 */}
+            <div className="w-full max-w-xs h-1.5 rounded-full bg-mc-border overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gold transition-all duration-300 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            {/* 상태 메시지 */}
+            <p className="text-xs text-muted-foreground font-mono animate-pulse">{statusMsg}</p>
           </div>
         )}
         {!loading && error && (
