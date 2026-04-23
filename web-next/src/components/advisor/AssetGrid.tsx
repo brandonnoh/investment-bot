@@ -63,33 +63,51 @@ function getAccessStatus(
 }
 
 /** 정렬 비교 함수 */
-function sortAssets(assets: InvestmentAsset[], sort: SortOption): InvestmentAsset[] {
+function sortAssets(assets: InvestmentAsset[], sort: SortOption, dir: 'asc' | 'desc'): InvestmentAsset[] {
   const sorted = [...assets]
+  const d = dir === 'asc' ? 1 : -1
   switch (sort) {
     case 'return':
-      sorted.sort((a, b) => b.expected_return_max - a.expected_return_max)
+      sorted.sort((a, b) => d * (a.expected_return_max - b.expected_return_max))
       break
     case 'risk':
-      sorted.sort((a, b) => a.risk_level - b.risk_level)
+      sorted.sort((a, b) => d * (a.risk_level - b.risk_level))
       break
     case 'capital':
-      sorted.sort((a, b) => a.min_capital - b.min_capital)
+      sorted.sort((a, b) => d * (a.min_capital - b.min_capital))
       break
   }
   return sorted
 }
 
+/** 정렬 기준별 기본 방향 */
+const DEFAULT_DIR: Record<SortOption, 'asc' | 'desc'> = {
+  return: 'desc',
+  risk: 'asc',
+  capital: 'asc',
+}
+
 export function AssetGrid({ assets, capital, leverageOn }: AssetGridProps) {
   const [category, setCategory] = useState<AssetCategory | 'all'>('all')
   const [sort, setSort] = useState<SortOption>('return')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(DEFAULT_DIR['return'])
+
+  function handleSort(key: SortOption) {
+    if (key === sort) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSort(key)
+      setSortDir(DEFAULT_DIR[key])
+    }
+  }
 
   const filtered = useMemo(() => {
     let result = assets
     if (category !== 'all') {
       result = result.filter(a => a.category === category)
     }
-    return sortAssets(result, sort)
-  }, [assets, category, sort])
+    return sortAssets(result, sort, sortDir)
+  }, [assets, category, sort, sortDir])
 
   return (
     <div className="rounded-md border border-mc-border bg-mc-card p-4 space-y-3">
@@ -118,20 +136,24 @@ export function AssetGrid({ assets, capital, leverageOn }: AssetGridProps) {
       {/* 정렬 */}
       <div className="flex items-center gap-2">
         <span className="text-[10px] text-muted-foreground">정렬:</span>
-        {SORT_OPTIONS.map(s => (
-          <button
-            key={s.key}
-            onClick={() => setSort(s.key)}
-            aria-pressed={sort === s.key}
-            className={`text-[10px] px-2 py-1.5 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
-              sort === s.key
-                ? 'text-gold underline underline-offset-2'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {s.label}{s.key === 'return' ? '↓' : '↑'}
-          </button>
-        ))}
+        {SORT_OPTIONS.map(s => {
+          const active = sort === s.key
+          const arrow = active ? (sortDir === 'desc' ? '↓' : '↑') : (DEFAULT_DIR[s.key] === 'desc' ? '↓' : '↑')
+          return (
+            <button
+              key={s.key}
+              onClick={() => handleSort(s.key)}
+              aria-pressed={active}
+              className={`text-[10px] px-2 py-1.5 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
+                active
+                  ? 'text-gold underline underline-offset-2'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {s.label}{arrow}
+            </button>
+          )
+        })}
       </div>
 
       {/* 자산 카드 그리드 */}
