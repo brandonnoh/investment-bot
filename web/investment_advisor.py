@@ -5,8 +5,10 @@ Claude에게 접근 가능한 자산 전체 데이터를 넘겨 구체적 투자
 """
 
 import json
+import os
 import shutil
 import subprocess
+import urllib.request
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -20,7 +22,7 @@ _RISK_LABELS = {
     5: "매우 공격적 (최대 수익 추구, 손실 감내)",
 }
 
-CLAUDE_BIN = shutil.which("claude") or "/Users/jarvis/.local/bin/claude"
+CLAUDE_BIN = shutil.which("claude") or "/usr/local/bin/claude"
 
 
 def _load_market_context() -> str:
@@ -81,18 +83,21 @@ def _format_asset_table(assets: list[dict]) -> str:
 
 def _build_prompt(capital: int, leverage_amt: int, risk_level: int, assets: list[dict]) -> str:
     """구체적 투자 전략 요청 프롬프트 구성."""
-    capital_억 = capital / 100_000_000
-    capital_str = f"{capital_억:.1f}억원" if capital >= 100_000_000 else f"{capital // 10000:,}만원"
+    capital_str = (
+        f"{capital / 100_000_000:.1f}억원"
+        if capital >= 100_000_000
+        else f"{capital // 10000:,}만원"
+    )
     risk_label = _RISK_LABELS.get(risk_level, "중립")
     macro_context = _load_market_context()
     if leverage_amt > 0:
-        lev_억 = leverage_amt / 100_000_000
         lev_str = (
-            f"{lev_억:.1f}억원" if leverage_amt >= 100_000_000 else f"{leverage_amt // 10000:,}만원"
+            f"{leverage_amt / 100_000_000:.1f}억원"
+            if leverage_amt >= 100_000_000
+            else f"{leverage_amt // 10000:,}만원"
         )
-        leverage_text = (
-            f"활용 ({lev_str} 대출, 총 투자금 {(capital + leverage_amt) // 100_000_000:.1f}억원)"
-        )
+        total_str = f"{(capital + leverage_amt) / 100_000_000:.1f}억원"
+        leverage_text = f"활용 ({lev_str} 대출, 총 투자금 {total_str})"
     else:
         leverage_text = "활용 안 함 (자기자본만 사용)"
     asset_table = _format_asset_table(assets)
@@ -136,36 +141,55 @@ def _build_prompt(capital: int, leverage_amt: int, risk_level: int, assets: list
 현실적인 수치로, 솔직하게. 한국어로."""
 
 
+def _call_claude_api(prompt: str) -> str:
+    """Anthropic API를 urllib으로 직접 호출 (API 키 있을 때)."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY 없음")
+
+    payload = json.dumps({
+        "model": "claude-sonnet-4-6",
+        "max_tokens": 2048,
+        "messages": [{"role": "user", "content": prompt}],
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return data["content"][0]["text"].strip()
+
+
 def _call_claude_cli(prompt: str) -> str:
-    """Claude CLI stdin으로 호출 (ARG_MAX 방지)."""
+    """Claude CLI stdin으로 호출 (OAuth 인증 사용, 퍼미션 플래그 불필요)."""
     result = subprocess.run(
-        [CLAUDE_BIN, "--dangerously-skip-permissions", "--print", "-p", "-"],
+        [CLAUDE_BIN, "--print", "-p", "-"],
         input=prompt,
         capture_output=True,
         text=True,
         timeout=120,
     )
     if result.returncode != 0 and not result.stdout.strip():
-        raise RuntimeError(f"Claude CLI 실패: {result.stderr[:200]}")
+        raise RuntimeError(f"Claude CLI 실패: {result.stderr[:300]}")
     return result.stdout.strip()
 
 
 def _call_claude(prompt: str) -> str:
-    """Claude 호출 (API 우선, CLI 폴백)."""
+    """Claude 호출 (API 키 우선, CLI 폴백)."""
     try:
-        import anthropic
-
-        client = anthropic.Anthropic()
-        msg = client.messages.create(
-            model="claude-sonnet-4-5",
-            max_tokens=2048,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return msg.content[0].text.strip()
-    except ImportError:
+        return _call_claude_api(prompt)
+    except RuntimeError:
         pass
     except Exception as e:
-        print(f"[advisor] anthropic API 실패, CLI 폴백: {e}")
+        print(f"[advisor] API 호출 실패, CLI 폴백: {e}")
 
     return _call_claude_cli(prompt)
 

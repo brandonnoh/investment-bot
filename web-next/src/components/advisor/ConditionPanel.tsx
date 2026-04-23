@@ -4,9 +4,9 @@ import { useEffect } from 'react'
 import { fmtKrw } from '@/lib/format'
 import type { RiskLevel } from '@/types/advisor'
 
-const STEP = 50_000_000        // 5천만원 단위
-const CAPITAL_MAX = 5_000_000_000  // 50억
-const LEVERAGE_MAX = 3_000_000_000  // 30억
+const STEP = 5_000_000         // 500만원 단위
+const CAPITAL_MAX = 300_000_000   // 3억
+const LEVERAGE_MAX = 300_000_000  // 3억
 
 const RISK_LABELS: Record<RiskLevel, string> = {
   1: '보수',
@@ -81,7 +81,7 @@ export function ConditionPanel({
           className="w-full accent-gold cursor-pointer focus-visible:outline-none focus:ring-2 focus:ring-gold"
         />
         <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-          <span>0</span><span>50억</span>
+          <span>0</span><span>3억</span>
         </div>
       </div>
 
@@ -106,7 +106,7 @@ export function ConditionPanel({
           className="w-full accent-mc-red cursor-pointer focus-visible:outline-none focus:ring-2 focus:ring-mc-red"
         />
         <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-          <span>없음</span><span>30억</span>
+          <span>없음</span><span>3억</span>
         </div>
         {leverageAmt > 0 && (
           <div className="mt-1.5 text-[11px] text-muted-foreground">
