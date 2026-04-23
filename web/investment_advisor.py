@@ -79,15 +79,22 @@ def _format_asset_table(assets: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _build_prompt(capital: int, leverage: bool, risk_level: int, assets: list[dict]) -> str:
+def _build_prompt(capital: int, leverage_amt: int, risk_level: int, assets: list[dict]) -> str:
     """구체적 투자 전략 요청 프롬프트 구성."""
     capital_억 = capital / 100_000_000
     capital_str = f"{capital_억:.1f}억원" if capital >= 100_000_000 else f"{capital // 10000:,}만원"
     risk_label = _RISK_LABELS.get(risk_level, "중립")
     macro_context = _load_market_context()
-    leverage_text = (
-        "활용 가능 (대출·신용·담보 고려 가능)" if leverage else "활용 안 함 (자기자본만 사용)"
-    )
+    if leverage_amt > 0:
+        lev_억 = leverage_amt / 100_000_000
+        lev_str = (
+            f"{lev_억:.1f}억원" if leverage_amt >= 100_000_000 else f"{leverage_amt // 10000:,}만원"
+        )
+        leverage_text = (
+            f"활용 ({lev_str} 대출, 총 투자금 {(capital + leverage_amt) // 100_000_000:.1f}억원)"
+        )
+    else:
+        leverage_text = "활용 안 함 (자기자본만 사용)"
     asset_table = _format_asset_table(assets)
 
     return f"""당신은 "민준"이라는 이름의 한국인 투자 고수입니다.
@@ -163,25 +170,25 @@ def _call_claude(prompt: str) -> str:
     return _call_claude_cli(prompt)
 
 
-def _parse_request(body: dict) -> tuple[int, bool, int, list[dict]]:
+def _parse_request(body: dict) -> tuple[int, int, int, list[dict]]:
     """요청 파싱 및 검증."""
     capital = max(0, int(body.get("capital", 0)))
-    leverage = bool(body.get("leverage", False))
+    leverage_amt = max(0, int(body.get("leverage_amt", 0)))
     risk_level = max(1, min(5, int(body.get("risk_level", 3))))
     assets = body.get("available_assets", [])
     if not isinstance(assets, list):
         assets = []
-    return capital, leverage, risk_level, assets
+    return capital, leverage_amt, risk_level, assets
 
 
 def get_investment_advice(body: dict) -> dict:
     """투자 어드바이스 생성 — 메인 핸들러."""
     try:
-        capital, leverage, risk_level, assets = _parse_request(body)
+        capital, leverage_amt, risk_level, assets = _parse_request(body)
     except (TypeError, ValueError):
-        capital, leverage, risk_level, assets = 0, False, 3, []
+        capital, leverage_amt, risk_level, assets = 0, 0, 3, []
 
-    prompt = _build_prompt(capital, leverage, risk_level, assets)
+    prompt = _build_prompt(capital, leverage_amt, risk_level, assets)
 
     try:
         recommendation = _call_claude(prompt)

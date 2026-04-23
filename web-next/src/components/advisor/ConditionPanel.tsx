@@ -4,13 +4,9 @@ import { useEffect } from 'react'
 import { fmtKrw } from '@/lib/format'
 import type { RiskLevel } from '@/types/advisor'
 
-/** 자본금 슬라이더 단계 (로그 스케일 근사) */
-const CAPITAL_STEPS = [
-  1_000_000, 3_000_000, 5_000_000,
-  10_000_000, 30_000_000, 50_000_000,
-  100_000_000, 300_000_000, 500_000_000,
-  1_000_000_000, 3_000_000_000, 5_000_000_000,
-]
+const STEP = 50_000_000        // 5천만원 단위
+const CAPITAL_MAX = 5_000_000_000  // 50억
+const LEVERAGE_MAX = 3_000_000_000  // 30억
 
 const RISK_LABELS: Record<RiskLevel, string> = {
   1: '보수',
@@ -32,11 +28,14 @@ function formatCapital(capital: number): string {
   return `${fmtKrw(capital)}원`
 }
 
+function snap(v: number, step: number) { return Math.round(v / step) * step }
+function fmtAmt(v: number) { return v >= 100_000_000 ? `${(v / 100_000_000).toFixed(1)}억` : `${(v / 10_000).toLocaleString()}만` }
+
 interface ConditionPanelProps {
   capital: number
   setCapital: (v: number) => void
-  leverageOn: boolean
-  setLeverageOn: (v: boolean) => void
+  leverageAmt: number
+  setLeverageAmt: (v: number) => void
   riskLevel: RiskLevel
   setRiskLevel: (v: RiskLevel) => void
   aiRiskLevel: RiskLevel | null
@@ -46,23 +45,16 @@ interface ConditionPanelProps {
 
 export function ConditionPanel({
   capital, setCapital,
-  leverageOn, setLeverageOn,
+  leverageAmt, setLeverageAmt,
   riskLevel, setRiskLevel,
   aiRiskLevel, aiRiskReason,
   wealthKrw,
 }: ConditionPanelProps) {
-  /* 전재산 데이터 로드 시 초기 자본금 반영 */
   useEffect(() => {
-    if (wealthKrw && wealthKrw > 0) {
-      const closest = CAPITAL_STEPS.reduce((prev, curr) =>
-        Math.abs(curr - wealthKrw) < Math.abs(prev - wealthKrw) ? curr : prev
-      )
-      setCapital(closest)
-    }
+    if (wealthKrw && wealthKrw > 0) setCapital(snap(Math.min(wealthKrw, CAPITAL_MAX), STEP))
   }, [wealthKrw, setCapital])
 
-  const capitalIdx = CAPITAL_STEPS.indexOf(capital)
-  const sliderIdx = capitalIdx >= 0 ? capitalIdx : 0
+  const totalAmt = capital + leverageAmt
 
   return (
     <div className="rounded-md border border-mc-border bg-mc-card p-4 space-y-4">
@@ -74,45 +66,54 @@ export function ConditionPanel({
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <label htmlFor="capital-slider" className="text-xs text-muted-foreground">투자 가용 자본금</label>
-          <span className="text-sm font-mono font-bold text-gold">
-            {formatCapital(capital)}
-          </span>
+          <span className="text-sm font-mono font-bold text-gold">{fmtAmt(capital)}</span>
         </div>
         <input
           id="capital-slider"
           type="range"
           min={0}
-          max={CAPITAL_STEPS.length - 1}
-          value={sliderIdx}
-          onChange={e => setCapital(CAPITAL_STEPS[Number(e.target.value)])}
+          max={CAPITAL_MAX / STEP}
+          step={1}
+          value={capital / STEP}
+          onChange={e => setCapital(Number(e.target.value) * STEP)}
           aria-label="투자 가용 자본금"
-          aria-valuetext={formatCapital(capital)}
+          aria-valuetext={fmtAmt(capital)}
           className="w-full accent-gold cursor-pointer focus-visible:outline-none focus:ring-2 focus:ring-gold"
         />
         <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-          <span>100만</span>
-          <span>50억</span>
+          <span>0</span><span>50억</span>
         </div>
       </div>
 
-      {/* 레버리지 토글 */}
-      <div className="flex items-center justify-between">
-        <label className="text-xs text-muted-foreground">레버리지 활용</label>
-        <button
-          role="switch"
-          aria-checked={leverageOn}
-          aria-label="레버리지 활용"
-          onClick={() => setLeverageOn(!leverageOn)}
-          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
-            leverageOn ? 'bg-gold' : 'bg-mc-border'
-          }`}
-        >
-          <span
-            className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
-              leverageOn ? 'translate-x-[18px]' : 'translate-x-[3px]'
-            }`}
-          />
-        </button>
+      {/* 레버리지 슬라이더 */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label htmlFor="leverage-slider" className="text-xs text-muted-foreground">추가 대출금</label>
+          <span className={`text-sm font-mono font-bold ${leverageAmt > 0 ? 'text-mc-red' : 'text-muted-foreground'}`}>
+            {leverageAmt > 0 ? fmtAmt(leverageAmt) : '없음'}
+          </span>
+        </div>
+        <input
+          id="leverage-slider"
+          type="range"
+          min={0}
+          max={LEVERAGE_MAX / STEP}
+          step={1}
+          value={leverageAmt / STEP}
+          onChange={e => setLeverageAmt(Number(e.target.value) * STEP)}
+          aria-label="추가 대출금"
+          aria-valuetext={leverageAmt > 0 ? fmtAmt(leverageAmt) : '없음'}
+          className="w-full accent-mc-red cursor-pointer focus-visible:outline-none focus:ring-2 focus:ring-mc-red"
+        />
+        <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+          <span>없음</span><span>30억</span>
+        </div>
+        {leverageAmt > 0 && (
+          <div className="mt-1.5 text-[11px] text-muted-foreground">
+            총 투자 가능금액 <span className="text-gold font-mono font-semibold">{fmtAmt(totalAmt)}</span>
+            <span className="ml-1">(자본 {fmtAmt(capital)} + 대출 {fmtAmt(leverageAmt)})</span>
+          </div>
+        )}
       </div>
 
       {/* 리스크 성향 슬라이더 */}

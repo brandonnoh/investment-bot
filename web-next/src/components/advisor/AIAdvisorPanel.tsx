@@ -11,13 +11,13 @@ const BASE = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE
 
 interface AIAdvisorPanelProps {
   capital: number
-  leverageOn: boolean
+  leverageAmt: number
   riskLevel: number
   availableAssets: InvestmentAsset[]
 }
 
 export function AIAdvisorPanel({
-  capital, leverageOn, riskLevel, availableAssets,
+  capital, leverageAmt, riskLevel, availableAssets,
 }: AIAdvisorPanelProps) {
   const [recommendation, setRecommendation] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -32,7 +32,7 @@ export function AIAdvisorPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           capital,
-          leverage: leverageOn,
+          leverage_amt: leverageAmt,
           risk_level: riskLevel,
           available_assets: availableAssets,
         }),
@@ -47,7 +47,7 @@ export function AIAdvisorPanel({
     } finally {
       setLoading(false)
     }
-  }, [capital, leverageOn, riskLevel, availableAssets])
+  }, [capital, leverageAmt, riskLevel, availableAssets])
 
   return (
     <div className="rounded-md border border-mc-border bg-mc-card p-4 space-y-3">

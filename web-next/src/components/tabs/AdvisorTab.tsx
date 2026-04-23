@@ -54,8 +54,8 @@ function getAvailableAssets(
 }
 
 export function AdvisorTab() {
-  const [capital, setCapital] = useState(10_000_000)
-  const [leverageOn, setLeverageOn] = useState(false)
+  const [capital, setCapital] = useState(50_000_000)
+  const [leverageAmt, setLeverageAmt] = useState(0)
   const [riskLevel, setRiskLevel] = useState<RiskLevel>(3)
 
   /* 전재산 데이터 로드 */
@@ -70,6 +70,7 @@ export function AdvisorTab() {
 
   const assets = investmentAssets as InvestmentAsset[]
 
+  const leverageOn = leverageAmt > 0
   const availableAssets = useMemo(
     () => getAvailableAssets(assets, capital, leverageOn),
     [assets, capital, leverageOn],
@@ -83,8 +84,8 @@ export function AdvisorTab() {
       <ConditionPanel
         capital={capital}
         setCapital={stableSetCapital}
-        leverageOn={leverageOn}
-        setLeverageOn={setLeverageOn}
+        leverageAmt={leverageAmt}
+        setLeverageAmt={setLeverageAmt}
         riskLevel={riskLevel}
         setRiskLevel={setRiskLevel}
         aiRiskLevel={aiRisk.level}
@@ -95,7 +96,7 @@ export function AdvisorTab() {
       {/* Panel 2: AI 어드바이저 */}
       <AIAdvisorPanel
         capital={capital}
-        leverageOn={leverageOn}
+        leverageAmt={leverageAmt}
         riskLevel={riskLevel}
         availableAssets={availableAssets}
       />
