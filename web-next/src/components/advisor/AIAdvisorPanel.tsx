@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 const BASE = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE
   ? process.env.NEXT_PUBLIC_API_BASE
@@ -77,8 +79,10 @@ export function AIAdvisorPanel({
           </div>
         )}
         {!loading && !error && recommendation && (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-            {recommendation}
+          <div className="prose prose-sm prose-invert max-w-none text-sm leading-relaxed [&_p]:mb-2 [&_strong]:text-foreground [&_table]:w-full [&_table]:text-xs [&_th]:border [&_th]:border-mc-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:text-gold [&_td]:border [&_td]:border-mc-border [&_td]:px-2 [&_td]:py-1 [&_ul]:list-none [&_ul]:pl-0 [&_li]:text-sm">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {recommendation}
+            </ReactMarkdown>
           </div>
         )}
         {!loading && !error && !recommendation && (
