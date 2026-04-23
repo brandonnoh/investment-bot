@@ -119,6 +119,23 @@ docker restart mc-web
 
 ---
 
+## ⚠️ investment-bot 항상 재시작
+
+**어떤 Track이든 배포 마지막에 반드시 실행:**
+
+```bash
+docker restart investment-bot
+```
+
+이유:
+- Claude OAuth 토큰을 호스트에서 컨테이너로 재복사 (로그인 갱신 반영)
+- 재시작 안 하면 401 인증 오류 발생 가능
+- 다운타임 ~3초, DB 영향 없음 (볼륨 마운트)
+
+Track B (Next.js만 변경)도 예외 없이 실행한다.
+
+---
+
 ## 배포 후 헬스 체크
 
 ```bash
@@ -127,6 +144,30 @@ docker exec investment-bot sh -c "cat /proc/*/cmdline 2>/dev/null | tr '\0' ' ' 
 ```
 
 cron 프로세스가 출력되면 스케줄러 정상 동작.
+
+### 이미지 빌드 날짜 확인 (필수)
+
+배포 후 반드시 이미지가 방금 빌드됐는지 확인한다.
+3일 이상 오래된 이미지는 코드 변경이 반영되지 않은 것이므로 해당 Track으로 재배포 필요.
+
+```bash
+docker images --format "{{.Repository}}\t{{.CreatedSince}}\t{{.Size}}" | grep investment-bot
+```
+
+기대 출력 (배포 직후):
+```
+investment-bot-investment-bot   1 minute ago   1.88GB
+investment-bot-mc-web           1 minute ago   269MB
+```
+
+### GitHub Actions 배포 상태 확인
+
+```bash
+gh run list --limit 3
+```
+
+`failure`가 보이면 배포가 실패한 것 — 이미지가 오래됐을 수 있음.
+실패 원인 확인: `gh run view <run-id> --log-failed`
 
 ---
 
