@@ -38,21 +38,19 @@ function inferRiskLevel(holdings: Array<{ market?: string; current_value_krw?: n
   return { level: 1, reason: `주식 비중 ${stockPct.toFixed(0)}% (보수적)` }
 }
 
-/** 자산 접근성 판정 (가능한 자산 ID 목록 추출용) */
-function getAvailableAssetIds(
+/** 접근 가능한 자산 전체 객체 추출 */
+function getAvailableAssets(
   assets: InvestmentAsset[],
   capital: number,
   leverageOn: boolean,
-): string[] {
-  return assets
-    .filter(asset => {
-      if (asset.status === 'upcoming') return false
-      const minRequired = leverageOn && asset.min_capital_leveraged !== null
-        ? asset.min_capital_leveraged
-        : asset.min_capital
-      return minRequired <= capital
-    })
-    .map(a => a.id)
+): InvestmentAsset[] {
+  return assets.filter(asset => {
+    if (asset.status === 'upcoming') return false
+    const minRequired = leverageOn && asset.min_capital_leveraged !== null
+      ? asset.min_capital_leveraged
+      : asset.min_capital
+    return minRequired <= capital
+  })
 }
 
 export function AdvisorTab() {
@@ -72,8 +70,8 @@ export function AdvisorTab() {
 
   const assets = investmentAssets as InvestmentAsset[]
 
-  const availableAssetIds = useMemo(
-    () => getAvailableAssetIds(assets, capital, leverageOn),
+  const availableAssets = useMemo(
+    () => getAvailableAssets(assets, capital, leverageOn),
     [assets, capital, leverageOn],
   )
 
@@ -99,7 +97,7 @@ export function AdvisorTab() {
         capital={capital}
         leverageOn={leverageOn}
         riskLevel={riskLevel}
-        availableAssetIds={availableAssetIds}
+        availableAssets={availableAssets}
       />
 
       {/* Panel 3: 자산 그리드 */}

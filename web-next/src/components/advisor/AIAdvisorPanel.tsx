@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import type { InvestmentAsset } from '@/types/advisor'
 
 const BASE = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE
   ? process.env.NEXT_PUBLIC_API_BASE
@@ -12,11 +13,11 @@ interface AIAdvisorPanelProps {
   capital: number
   leverageOn: boolean
   riskLevel: number
-  availableAssetIds: string[]
+  availableAssets: InvestmentAsset[]
 }
 
 export function AIAdvisorPanel({
-  capital, leverageOn, riskLevel, availableAssetIds,
+  capital, leverageOn, riskLevel, availableAssets,
 }: AIAdvisorPanelProps) {
   const [recommendation, setRecommendation] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -33,7 +34,7 @@ export function AIAdvisorPanel({
           capital,
           leverage: leverageOn,
           risk_level: riskLevel,
-          available_assets: availableAssetIds,
+          available_assets: availableAssets,
         }),
       })
       if (!res.ok) throw new Error(`서버 오류: ${res.status}`)
@@ -46,7 +47,7 @@ export function AIAdvisorPanel({
     } finally {
       setLoading(false)
     }
-  }, [capital, leverageOn, riskLevel, availableAssetIds])
+  }, [capital, leverageOn, riskLevel, availableAssets])
 
   return (
     <div className="rounded-md border border-mc-border bg-mc-card p-4 space-y-3">
