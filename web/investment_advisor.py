@@ -168,7 +168,7 @@ def _call_claude_api(prompt: str) -> str:
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=240) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     return data["content"][0]["text"].strip()
 
@@ -180,7 +180,7 @@ def _call_claude_cli(prompt: str) -> str:
         input=prompt,
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=240,
     )
     if result.returncode != 0 and not result.stdout.strip():
         raise RuntimeError(f"Claude CLI 실패: {result.stderr[:300]}")

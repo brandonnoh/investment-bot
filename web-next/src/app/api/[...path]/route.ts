@@ -27,7 +27,6 @@ async function proxy(req: NextRequest, path: string[]) {
     method: req.method,
     headers: { 'Content-Type': 'application/json' },
     body: bodyText,
-    signal: AbortSignal.timeout(115_000),
   })
   const data = await res.arrayBuffer()
   return new NextResponse(data, {
