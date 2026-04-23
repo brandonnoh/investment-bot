@@ -21,6 +21,23 @@ CRON_PROMPT_PATH = PROJECT_ROOT / "docs" / "cron-prompt-phase4.md"
 # Claude CLI 경로 자동 탐지
 CLAUDE_BIN = shutil.which("claude") or "/Users/jarvis/.local/bin/claude"
 
+# 도커 재시동 후 갱신된 Claude 인증 토큰 동기화용 경로
+_CREDENTIALS_SRC = Path("/root/.claude-host/.credentials.json")
+_CREDENTIALS_DST = Path("/root/.claude/.credentials.json")
+
+
+def _sync_claude_credentials() -> None:
+    """도커 재시동 후 갱신된 Claude 인증 토큰을 컨테이너 내부로 동기화."""
+    if not _CREDENTIALS_SRC.exists():
+        return
+    try:
+        import shutil as _shutil
+
+        _shutil.copy2(str(_CREDENTIALS_SRC), str(_CREDENTIALS_DST))
+        print("  ✅ Claude 인증 동기화 완료")
+    except Exception as e:
+        print(f"  ⚠️  Claude 인증 동기화 실패: {e}")
+
 
 def _load_file(path: Path, label: str) -> str:
     """파일을 텍스트로 로드 (실패 시 빈 문자열)"""
@@ -149,6 +166,7 @@ def run():
     prompt = _build_prompt_with_data(cron_prompt)
 
     # ── STEP 3: Claude CLI 실행 ──
+    _sync_claude_credentials()  # 도커 재시동 후 갱신 토큰 자동 반영
     print(f"[3/6] Claude CLI 실행 ({CLAUDE_BIN})...")
     claude_output = ""
     try:
@@ -188,6 +206,7 @@ def run():
     print("[5/6] Discord 완료 알림...")
     try:
         from scripts.discord_notify import notify_jarvis_complete
+
         notify_jarvis_complete(OUTPUT_FILE)
     except Exception as e:
         print(f"  ⚠️  Discord 알림 실패: {e}")

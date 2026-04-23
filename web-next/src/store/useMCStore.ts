@@ -8,11 +8,14 @@ interface MCStore {
   marcusRunning: boolean
   sseStatus: 'connected' | 'disconnected'
   lastUpdated: string
+  marcusPickedTicker: string | null
   setActiveTab: (tab: TabId) => void
   setPipelineRunning: (v: boolean) => void
   setMarcusRunning: (v: boolean) => void
   setSseStatus: (v: 'connected' | 'disconnected') => void
   setLastUpdated: (v: string) => void
+  setMarcusPickedTicker: (ticker: string | null) => void
+  jumpToDiscovery: (ticker: string) => void
 }
 
 export const useMCStore = create<MCStore>((set) => ({
@@ -21,9 +24,12 @@ export const useMCStore = create<MCStore>((set) => ({
   marcusRunning: false,
   sseStatus: 'disconnected',
   lastUpdated: '',
+  marcusPickedTicker: null,
   setActiveTab: (tab) => set({ activeTab: tab }),
   setPipelineRunning: (v) => set({ pipelineRunning: v }),
   setMarcusRunning: (v) => set({ marcusRunning: v }),
   setSseStatus: (v) => set({ sseStatus: v }),
   setLastUpdated: (v) => set({ lastUpdated: v }),
+  setMarcusPickedTicker: (ticker) => set({ marcusPickedTicker: ticker }),
+  jumpToDiscovery: (ticker) => set({ activeTab: 'discovery', marcusPickedTicker: ticker }),
 }))

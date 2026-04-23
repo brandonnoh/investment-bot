@@ -16,6 +16,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from analysis.marcus_screener import get_marcus_screened_pool  # noqa: E402
+
 # ── 경로 정의 ──
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -35,6 +37,25 @@ OUTPUT_FILE = INTEL_DIR / "marcus-analysis.md"
 CLAUDE_BIN = shutil.which("claude") or "/Users/jarvis/.local/bin/claude"
 
 KST = timezone(timedelta(hours=9))
+
+# 호스트 마운트 경로 — 도커 재시동 후 토큰 갱신 시 자동 동기화용
+_CLAUDE_HOST_DIR = Path("/root/.claude-host")
+_CLAUDE_DIR = Path("/root/.claude")
+_CREDENTIALS_SRC = _CLAUDE_HOST_DIR / ".credentials.json"
+_CREDENTIALS_DST = _CLAUDE_DIR / ".credentials.json"
+
+
+def _sync_claude_credentials() -> None:
+    """도커 재시동 후 갱신된 Claude 인증 토큰을 컨테이너 내부로 동기화."""
+    if not _CREDENTIALS_SRC.exists():
+        return
+    try:
+        import shutil as _shutil
+
+        _shutil.copy2(str(_CREDENTIALS_SRC), str(_CREDENTIALS_DST))
+        print("  ✅ Claude 인증 동기화 완료")
+    except Exception as e:
+        print(f"  ⚠️  Claude 인증 동기화 실패: {e}")
 
 
 def _load_regime_json() -> dict:
@@ -173,7 +194,7 @@ def _assemble_prompt(
     realtime_output: str,
     engine_status: str,
     price_analysis: str,
-    fundamentals: str,
+    screened_pool: str,
     supply_data: str,
     portfolio_summary: str,
     macro: str,
@@ -204,8 +225,8 @@ def _assemble_prompt(
 ### 기술 분석
 {price_analysis}
 
-### 펀더멘털
-{fundamentals}
+### 스크리닝 풀 (B+ 이상 통과 종목)
+{screened_pool}
 
 ### 수급 데이터
 {supply_data}
@@ -305,7 +326,8 @@ def _call_claude_json(prompt: str, timeout: int = 60) -> dict | None:
     """Claude CLI 호출 후 JSON 파싱. 실패 시 None."""
     try:
         result = subprocess.run(
-            [CLAUDE_BIN, "--output-format", "json", "-p", prompt],
+            [CLAUDE_BIN, "--output-format", "json", "-p", "-"],
+            input=prompt,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -378,7 +400,9 @@ def run():
         print(f"  ✅ 어제 분석 로드 ({len(yesterday_analysis)}자)")
     engine_status = _load_json(INTEL_DIR / "engine_status.json", "engine_status")
     price_analysis = _load_json(INTEL_DIR / "price_analysis.json", "price_analysis")
-    fundamentals = _load_json(INTEL_DIR / "fundamentals.json", "fundamentals")
+    print("  📊 B+ 스크리닝 풀 수집 중...")
+    screened_pool = get_marcus_screened_pool()
+    print(f"  ✅ 스크리닝 풀 {len(screened_pool)}개 종목")
     supply_data = _load_json(INTEL_DIR / "supply_data.json", "supply_data")
     portfolio_summary = _load_json(INTEL_DIR / "portfolio_summary.json", "portfolio_summary")
     macro = _load_json(INTEL_DIR / "macro.json", "macro")
@@ -414,7 +438,7 @@ def run():
         realtime_output=realtime_output,
         engine_status=engine_status,
         price_analysis=price_analysis,
-        fundamentals=fundamentals,
+        screened_pool=json.dumps(screened_pool, ensure_ascii=False),
         supply_data=supply_data,
         portfolio_summary=portfolio_summary,
         macro=macro,
@@ -424,11 +448,13 @@ def run():
     )
 
     # ── STEP 5: Claude CLI 실행 ──
+    _sync_claude_credentials()  # 도커 재시동 후 갱신 토큰 자동 반영
     print(f"[5/9] Claude CLI 실행 ({CLAUDE_BIN})...")
     claude_output = ""
     try:
         result = subprocess.run(
-            [CLAUDE_BIN, "--output-format", "json", "-p", prompt],
+            [CLAUDE_BIN, "--output-format", "json", "-p", "-"],
+            input=prompt,
             capture_output=True,
             text=True,
             timeout=300,

@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Search, X } from 'lucide-react'
 import { useIntelData } from '@/hooks/useIntelData'
 import { useOpportunities, STRATEGIES, type StrategyId } from '@/hooks/useOpportunities'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useMCStore } from '@/store/useMCStore'
 import type { Opportunity } from '@/types/api'
 
 const HOW_IT_WORKS = [
@@ -56,31 +58,31 @@ function FactorBar({ label, value }: { label: string; value: number }) {
   )
 }
 
+
 function SkeletonCard() {
   return (
     <div className="rounded-md border border-mc-border bg-mc-card p-3 space-y-2 animate-pulse">
       <div className="flex justify-between">
-        <div className="space-y-1.5">
-          <div className="h-3.5 w-24 bg-mc-border rounded" />
-          <div className="h-2.5 w-16 bg-mc-border rounded" />
-        </div>
+        <div className="space-y-1.5"><div className="h-3.5 w-24 bg-mc-border rounded" /><div className="h-2.5 w-16 bg-mc-border rounded" /></div>
         <div className="h-6 w-12 bg-mc-border rounded" />
       </div>
       <div className="h-2 w-full bg-mc-border rounded" />
-      <div className="space-y-1">
-        {[1,2,3,4,5].map(i => <div key={i} className="h-1.5 w-full bg-mc-border rounded" />)}
-      </div>
+      <div className="space-y-1">{[1,2,3,4,5].map(i => <div key={i} className="h-1.5 w-full bg-mc-border rounded" />)}</div>
     </div>
   )
 }
 
-function OpportunityCard({ o }: { o: Opportunity }) {
+function OpportunityCard({ o, highlighted, id }: { o: Opportunity; highlighted: boolean; id?: string }) {
   const score = Math.round((o.composite_score ?? 0) * 100)
   const factors = o.factors ?? {}
   const factorOrder = ['quality', 'value', 'flow', 'momentum', 'growth'] as const
 
   return (
-    <div className="rounded-md border border-mc-border bg-mc-card p-3 space-y-2">
+    <div
+      id={id}
+      className="rounded-md border border-mc-border bg-mc-card p-3 space-y-2 transition-all"
+      style={highlighted ? { borderColor: '#4dca7e', boxShadow: '0 0 0 1px #4dca7e' } : undefined}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-baseline gap-1.5 flex-wrap">
@@ -121,46 +123,57 @@ function OpportunityCard({ o }: { o: Opportunity }) {
   )
 }
 
-function MarketList({ opportunities, isLoading, emptyLabel }: {
-  opportunities: Opportunity[]
-  isLoading: boolean
-  emptyLabel: string
+function MarketList({ opportunities, isLoading, emptyLabel, marcusPickedTicker }: {
+  opportunities: Opportunity[]; isLoading: boolean; emptyLabel: string; marcusPickedTicker: string | null
 }) {
   if (isLoading) {
-    return <div className="space-y-2">{[1,2,3].map(i => <SkeletonCard key={i} />)}</div>
+    return <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">{[1,2,3].map(i => <SkeletonCard key={i} />)}</div>
   }
   if (opportunities.length === 0) {
     return <div className="text-center text-muted-foreground text-xs py-8">{emptyLabel}</div>
   }
   return (
-    <div className="space-y-2">
-      {opportunities.map((o) => <OpportunityCard key={o.ticker} o={o} />)}
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+      {opportunities.map((o) => {
+        const highlighted = !!marcusPickedTicker &&
+          (o.ticker === marcusPickedTicker || o.ticker.startsWith(marcusPickedTicker))
+        return <OpportunityCard key={o.ticker} o={o} highlighted={highlighted} id={`opp-${o.ticker}`} />
+      })}
     </div>
   )
 }
 
+type DiscoveryProps = { market: 'kr' | 'us'; search: string; marcusPickedTicker: string | null }
+
+function applyFilter(list: Opportunity[], market: 'kr' | 'us', search: string) {
+  const byMarket = list.filter(o => market === 'kr' ? isKrTicker(o.ticker) : !isKrTicker(o.ticker))
+  if (!search) return byMarket
+  const q = search.toLowerCase()
+  return byMarket.filter(o => o.ticker.toLowerCase().includes(q) || (o.name ?? '').toLowerCase().includes(q))
+}
+
 // composite 전략은 기존 useIntelData에서 가져오는 래퍼
-function CompositeDiscovery({ market }: { market: 'kr' | 'us' }) {
+function CompositeDiscovery({ market, search, marcusPickedTicker }: DiscoveryProps) {
   const { data, isLoading } = useIntelData()
   const all: Opportunity[] = data?.opportunities?.opportunities ?? []
-  const filtered = all.filter(o => market === 'kr' ? isKrTicker(o.ticker) : !isKrTicker(o.ticker))
   return (
     <MarketList
-      opportunities={filtered}
+      opportunities={applyFilter(all, market, search)}
       isLoading={isLoading}
       emptyLabel={`발굴된 ${market === 'kr' ? '국내' : '미국'} 종목 없음`}
+      marcusPickedTicker={marcusPickedTicker}
     />
   )
 }
 
-function StrategyDiscovery({ strategy, market }: { strategy: StrategyId; market: 'kr' | 'us' }) {
+function StrategyDiscovery({ strategy, market, search, marcusPickedTicker }: DiscoveryProps & { strategy: StrategyId }) {
   const { opportunities, isLoading } = useOpportunities(strategy)
-  const filtered = opportunities.filter(o => market === 'kr' ? isKrTicker(o.ticker) : !isKrTicker(o.ticker))
   return (
     <MarketList
-      opportunities={filtered}
+      opportunities={applyFilter(opportunities, market, search)}
       isLoading={isLoading}
       emptyLabel={`이 렌즈로 발굴된 ${market === 'kr' ? '국내' : '미국'} 종목 없음`}
+      marcusPickedTicker={marcusPickedTicker}
     />
   )
 }
@@ -168,8 +181,28 @@ function StrategyDiscovery({ strategy, market }: { strategy: StrategyId; market:
 export function DiscoveryTab() {
   const [strategy, setStrategy] = useState<StrategyId>('composite')
   const [market, setMarket] = useState<'kr' | 'us'>('kr')
+  const [search, setSearch] = useState<string>('')
+
+  const { marcusPickedTicker, setMarcusPickedTicker } = useMCStore()
+
+  // Marcus에서 진입 시 search 자동 반영 + 카드 스크롤
+  useEffect(() => {
+    if (!marcusPickedTicker) return
+    setSearch(marcusPickedTicker)
+    // 필터링 후 카드가 렌더될 때까지 한 프레임 대기
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`opp-${marcusPickedTicker}`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+  }, [marcusPickedTicker])
 
   const currentMeta = STRATEGIES.find(s => s.id === strategy)
+
+  function handleStrategyChange(id: StrategyId) {
+    setStrategy(id)
+    setMarcusPickedTicker(null)
+    setSearch('')
+  }
 
   return (
     <div className="space-y-4">
@@ -192,7 +225,7 @@ export function DiscoveryTab() {
             return (
               <button
                 key={s.id}
-                onClick={() => setStrategy(s.id)}
+                onClick={() => handleStrategyChange(s.id)}
                 className="shrink-0 text-[11px] font-medium px-3 py-1 rounded-full border transition-colors"
                 style={{
                   borderColor: active ? '#4dca7e' : '#2a2420',
@@ -227,6 +260,38 @@ export function DiscoveryTab() {
         )}
       </div>
 
+      {/* 검색창 */}
+      <div className="relative group">
+        <Search
+          size={13}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-[#4dca7e] transition-colors pointer-events-none"
+        />
+        <input
+          type="text"
+          placeholder="종목명 또는 ticker..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            if (!e.target.value) setMarcusPickedTicker(null)
+          }}
+          className="w-full text-xs pl-8 pr-8 py-2 rounded-md border border-mc-border bg-mc-card placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#4dca7e] transition-colors"
+        />
+        {search && (
+          <button
+            onClick={() => { setSearch(''); setMarcusPickedTicker(null) }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X size={12} />
+          </button>
+        )}
+        {marcusPickedTicker && search === marcusPickedTicker && (
+          <span className="absolute right-7 top-1/2 -translate-y-1/2 text-[9px] font-medium px-1.5 py-0.5 rounded"
+            style={{ background: 'rgba(77,202,126,0.12)', color: '#4dca7e' }}>
+            마커스
+          </span>
+        )}
+      </div>
+
       {/* 국장 / 미장 탭 + 결과 */}
       <Card className="bg-mc-card border-mc-border">
         <CardHeader className="py-3 px-4 pb-0">
@@ -252,8 +317,8 @@ export function DiscoveryTab() {
         </CardHeader>
         <CardContent className="px-4 pb-4 pt-3">
           {strategy === 'composite'
-            ? <CompositeDiscovery market={market} />
-            : <StrategyDiscovery strategy={strategy} market={market} />
+            ? <CompositeDiscovery market={market} search={search} marcusPickedTicker={marcusPickedTicker} />
+            : <StrategyDiscovery strategy={strategy} market={market} search={search} marcusPickedTicker={marcusPickedTicker} />
           }
         </CardContent>
       </Card>
