@@ -72,3 +72,38 @@
 - [x] **F30** 시장 국면 고도화 — confidence score + panic_signal 추가
 - [x] **F31** 능동적 알림 — proactive_alerts.json (익절/손절 액션 알림)
 - [x] **F32** 동적 종목 관리 — holdings_proposal.json (추가/제거 제안)
+
+---
+
+## 🔒 6. 시스템 강화 (Security & Hardening — 2026-04-24 감사 결과)
+
+> 참조 계획: `docs/specs/plans/2026-04-24-system-hardening.md`
+> 완료 기준: 구현 + tests.json passing + `docker restart investment-bot` (Python) 또는 `docker compose up -d --build` (인프라) 또는 `cd web-next && npm run build` (Next.js) 후 서비스 정상
+
+### 🔐 보안
+- [ ] **security-001**: config.py — Discord 웹훅 URL 토큰 하드코딩 기본값 제거
+- [ ] **security-002**: server.py — 입력 검증 강화 (경로 순회 차단, int 파라미터 상한, body 크기 제한 10MB, AI rate limit 15초)
+- [ ] **security-003**: server.py — CORS 와일드카드 제거 (ALLOWED_ORIGIN env), 보안 헤더 추가
+
+### ⚙️ 서버
+- [ ] **server-001**: server.py — SSE 큐 maxsize=100 설정 (dead client 메모리 누수 방지)
+- [ ] **server-002**: web/investment_advisor.py — 스트리밍 중단 시 Claude CLI subprocess 종료 (finally cleanup)
+
+### 🗄️ DB/데이터
+- [ ] **db-001**: db/maintenance.py — VACUUM 후 WAL 모드 재설정 (journal_mode=WAL 복구)
+- [ ] **db-002**: PORTFOLIO_LEGACY → DB SSoT 전환 (data/fetch_news.py, analysis/alerts_watch.py, reports/closing.py)
+- [ ] **db-003**: db/connection.py 신설 — WAL + busy_timeout=30초 DB 연결 팩토리 (db/ssot.py, db/ssot_wealth.py, db/maintenance.py, db/aggregate.py, web/api.py 전환)
+
+### 🔄 파이프라인
+- [ ] **pipeline-001**: run_pipeline.py — 핵심 분석 단계 독립 try/except + 실패 시 Discord 웹훅 알림
+
+### 📦 인프라
+- [ ] **deploy-001**: utils/json_io.py 신설 + scripts/refresh_prices.py, analysis/alerts.py — atomic JSON 쓰기 적용
+- [ ] **deploy-002**: scripts/run_jarvis.py — --dangerously-skip-permissions 제거 (root 컨테이너 호환, marcus 방식으로 통일)
+- [ ] **deploy-003**: crontab.docker — 로그 로테이션 크론 + db/maintenance.py 주간 스케줄 등록
+- [ ] **deploy-004**: docker-compose.yml — utils/ 볼륨 마운트 추가, healthcheck 설정, mc-web depends_on condition 강화
+
+### 🎨 프론트엔드
+- [ ] **ui-001**: web-next route.ts — SSE upstream 실패 에러 이벤트 전파, proxy try-catch 추가
+- [ ] **ui-002**: AIAdvisorPanel.tsx — 컴포넌트 언마운트 시 진행 중인 fetch abort
+- [ ] **ui-003**: useWealthData.ts WealthSummary 타입 추가, fmtAmt 중복 정의 lib/format.ts로 통합

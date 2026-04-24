@@ -1,9 +1,9 @@
 {
   "summary": {
-    "total": 32,
-    "passing": 32,
+    "total": 48,
+    "passing": 48,
     "failing": 0,
-    "last_updated": "2026-04-03"
+    "last_updated": "2026-04-24"
   },
   "features": [
     {
@@ -27,7 +27,9 @@
       "status": "passing",
       "summary": "init_schema() 분리, prices_daily/macro_daily/portfolio_history 테이블, data_source/sentiment 컬럼, 유니크 인덱스, 마이그레이션 안전 (22 tests passed)",
       "priority": 1,
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "acceptance_criteria": [
         "prices_daily 테이블 추가 (date, ticker, open, high, low, close, volume, change_pct, data_source)",
         "macro_daily 테이블 추가 (date, indicator, open, high, low, close, change_pct)",
@@ -45,7 +47,9 @@
       "status": "passing",
       "summary": "db/aggregate.py 모듈 생성, prices→prices_daily OHLCV 집계, macro→macro_daily OHLC 집계, UPSERT 중복 방지, target_date 지정 집계, run_pipeline.py 통합 (71 tests passed)",
       "priority": 2,
-      "depends_on": ["F02"],
+      "depends_on": [
+        "F02"
+      ],
       "acceptance_criteria": [
         "db/aggregate.py 모듈 생성",
         "prices 원시 → prices_daily OHLCV 집계 (당일 데이터 기반)",
@@ -61,7 +65,10 @@
       "status": "passing",
       "summary": "db/maintenance.py 모듈 생성, config.py RETENTION_POLICY 설정, 원시 3개월/뉴스 12개월 보존 정책, 집계 미완료 원시 데이터 보호, VACUUM 자동화, run_pipeline.py 통합 (85 tests passed)",
       "priority": 2,
-      "depends_on": ["F02", "F03"],
+      "depends_on": [
+        "F02",
+        "F03"
+      ],
       "acceptance_criteria": [
         "db/maintenance.py 모듈 생성",
         "config.py에 RETENTION_POLICY 설정 추가",
@@ -78,7 +85,9 @@
       "status": "passing",
       "summary": "Yahoo/Naver/Kiwoom API 모킹, 키움→네이버 폴백 검증, RSS XML 파싱, Brave 모킹, 중복 URL 제거, DB 저장/JSON 출력 스키마, 관련도 스코어, graceful degradation (40 tests, 전체 125 passed)",
       "priority": 2,
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "acceptance_criteria": [
         "fetch_prices: Yahoo/Naver/Kiwoom API 응답 모킹, 폴백 로직 검증, 스키마 검증",
         "fetch_macro: 각 지표별 API 모킹, 개별 실패 시 나머지 정상 수집 확인",
@@ -92,7 +101,10 @@
       "status": "passing",
       "summary": "collect_prices에 data_source 필드 추가 (yahoo/naver/kiwoom/calculated), 금 현물 calculated+calc_method, _fetch_kr_stock에 소스 추적, save_to_db data_source 저장, 에러 레코드 data_source=None, 하위 호환 유지 (11 tests, 전체 136 passed)",
       "priority": 3,
-      "depends_on": ["F02", "F05"],
+      "depends_on": [
+        "F02",
+        "F05"
+      ],
       "acceptance_criteria": [
         "각 종목별 데이터 출처 기록 (kiwoom/naver/yahoo/calculated)",
         "금 현물 장외 시간: data_source='calculated' + 계산 방법 명시",
@@ -107,7 +119,10 @@
       "status": "passing",
       "summary": "analysis/price_analysis.py 모듈 — MA5/20/60 이동평균, RSI 14일, 52주 고저+위치, 30일 변동성(연환산), 추세 판단+지속일수, 지지/저항선 추정, price_analysis.json 출력, run_pipeline.py 통합, graceful degradation (29 tests, 전체 165 passed)",
       "priority": 3,
-      "depends_on": ["F02", "F03"],
+      "depends_on": [
+        "F02",
+        "F03"
+      ],
       "acceptance_criteria": [
         "analysis/price_analysis.py 모듈 생성",
         "이동평균 계산 (MA5, MA20, MA60) — prices_daily 기반",
@@ -128,7 +143,9 @@
       "status": "passing",
       "summary": "save_snapshot UPSERT 저장, load_history 최근 N일 조회, build_summary에 history 필드 추가, run()에서 DB 스냅샷 저장+이력 포함, portfolio_summary.json에 30일 수익률 추이 (13 tests, 전체 178 passed)",
       "priority": 3,
-      "depends_on": ["F02"],
+      "depends_on": [
+        "F02"
+      ],
       "acceptance_criteria": [
         "portfolio.py에 일별 스냅샷 저장 로직 추가",
         "portfolio_history 테이블에 매일 1행 저장",
@@ -143,7 +160,10 @@
       "status": "passing",
       "summary": "config.py에 buy_fx_rate 필드 추가, calculate_holdings에서 stock_pnl_krw/fx_pnl_krw 분리 계산 (stock_pnl + fx_pnl = total_pnl 항등식), build_summary에 합계 포함, save_snapshot에 fx_pnl_krw 저장, fetch_prices에 buy_fx_rate 전달 (18 tests, 전체 196 passed)",
       "priority": 3,
-      "depends_on": ["F02", "F08"],
+      "depends_on": [
+        "F02",
+        "F08"
+      ],
       "acceptance_criteria": [
         "config.py에 USD 종목 매입 시점 환율 (buy_fx_rate) 필드 추가",
         "portfolio.py: 주식 손익 vs 환율 손익 분리 계산",
@@ -158,7 +178,9 @@
       "status": "passing",
       "summary": "utils/http.py 공통 모듈 — retry_request 지수 백오프(1초/2초), CircuitBreaker 3상태(closed/open/half_open), validate_price_data 이상값 감지. 수집 모듈 import 연결, config.py 설정 중앙 관리 (32 tests, 전체 228 passed)",
       "priority": 4,
-      "depends_on": ["F05"],
+      "depends_on": [
+        "F05"
+      ],
       "acceptance_criteria": [
         "공통 HTTP 헬퍼 모듈 생성 (utils/http.py 또는 기존 모듈 내)",
         "지수 백오프 재시도 (최대 3회, 1초/2초/4초)",
@@ -175,7 +197,9 @@
       "status": "passing",
       "summary": "utils/schema.py 모듈 — 6개 JSON 파일 스키마 정의(prices/macro/news/portfolio_summary/alerts/price_analysis), validate_json 필수 필드+타입 검증, validate_all_outputs 파일 시스템 통합 검증, error 항목 스킵, number 타입(int/float), 중첩 딕셔너리 검증, run_pipeline.py 통합 (26 tests, 전체 254 passed)",
       "priority": 4,
-      "depends_on": ["F05"],
+      "depends_on": [
+        "F05"
+      ],
       "acceptance_criteria": [
         "output/intel/ JSON 파일별 필수 필드 정의 (스키마 딕셔너리)",
         "각 수집/분석 모듈 run() 후 출력 검증 함수 호출",
@@ -190,7 +214,9 @@
       "status": "passing",
       "summary": "alerts.py에 공통 감지 로직 통합(check_stock/macro/portfolio_alert, save_to_db/json), alerts_watch.py에서 import하여 중복 제거. VIX 알림 추가, save_to_db에 conn/notified 파라미터, save_to_json에 output_dir 파라미터, is_duplicate_alert에 conn 파라미터 추가. 파이프라인 호출 체인 유지 (26 tests, 전체 312 passed)",
       "priority": 4,
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "acceptance_criteria": [
         "alerts.py와 alerts_watch.py 중복 코드 제거",
         "alerts.py를 alerts_watch.py에 통합 또는 공통 로직 추출",
@@ -205,7 +231,10 @@
       "status": "passing",
       "summary": "analysis/sentiment.py 모듈 — 한/영 금융 키워드 사전(각 26+개), calculate_sentiment 점수 계산(-1.0~1.0), analyze_news_sentiment 레코드 처리, save_sentiment_to_db DB 저장, aggregate_sentiment_by_ticker 종목별 집계, fetch_news.py run()에서 파이프라인 통합, news.json에 sentiment+ticker_sentiment 포함 (32 tests, 전체 286 passed)",
       "priority": 5,
-      "depends_on": ["F02", "F05"],
+      "depends_on": [
+        "F02",
+        "F05"
+      ],
       "acceptance_criteria": [
         "한국어 긍정/부정 키워드 사전 구축 (금융 도메인)",
         "영어 긍정/부정 키워드 사전 구축",
@@ -223,7 +252,9 @@
       "status": "passing",
       "summary": "utils/engine_status.py 모듈 — EngineStatus 클래스로 모듈별 성공/실패/에러 기록, record_module_status 레코드 기반 자동 카운트, DB 용량 조회, first_run 기반 연속 가동일 계산, pipeline_ok 핵심 모듈 상태 판정, engine_status.json 출력, run_pipeline.py 통합, utils/schema.py 스키마 추가 (21 tests, 전체 333 passed)",
       "priority": 5,
-      "depends_on": ["F01"],
+      "depends_on": [
+        "F01"
+      ],
       "acceptance_criteria": [
         "각 수집 모듈 실행 후 상태 기록 (성공/실패/마지막 수집 시각)",
         "output/intel/engine_status.json 자동 갱신",
@@ -238,7 +269,14 @@
       "status": "passing",
       "summary": "AGENT_GUIDE.md/ARCHITECTURE.md/JARVIS_INTEGRATION.md JSON 예시-실제 스키마 일치 검증, DB 쿼리 실행 가능 검증, ERD 테이블/컬럼 일치, ARCHITECTURE.md portfolio_summary.json 예시 수정(flat→nested total 구조), ruff 기존 경고 정리 (29 tests, 전체 362 passed)",
       "priority": 6,
-      "depends_on": ["F02", "F07", "F08", "F09", "F13", "F14"],
+      "depends_on": [
+        "F02",
+        "F07",
+        "F08",
+        "F09",
+        "F13",
+        "F14"
+      ],
       "acceptance_criteria": [
         "AGENT_GUIDE.md의 모든 JSON 예시가 실제 출력과 일치",
         "DB 쿼리 예시가 실제 스키마와 일치",
@@ -253,7 +291,10 @@
       "status": "passing",
       "summary": "data/ticker_master.py 모듈 — ticker_master 테이블 생성, difflib 퍼지 매칭, 별칭 매핑(TICKER_ALIASES), 정규식 종목코드 추출, 미국 종목 정적 사전(US_TICKER_MAP), extract_companies/extract_us_tickers 텍스트 추출 (408 tests total)",
       "priority": 1,
-      "depends_on": ["F01", "F02"],
+      "depends_on": [
+        "F01",
+        "F02"
+      ],
       "acceptance_criteria": [
         "ticker_master 테이블 생성",
         "difflib 기반 퍼지 매칭 함수",
@@ -269,7 +310,9 @@
       "status": "passing",
       "summary": "data/fetch_opportunities.py 모듈 — agent_keywords/opportunities 테이블, discovery_keywords.json 읽기, Naver/Brave 검색 모킹, ticker_master 매칭으로 종목 추출, opportunities.json 출력, run_pipeline.py 통합, graceful degradation (408 tests total)",
       "priority": 2,
-      "depends_on": ["F16"],
+      "depends_on": [
+        "F16"
+      ],
       "acceptance_criteria": [
         "agent_keywords 테이블 생성",
         "opportunities 테이블 생성",
@@ -287,7 +330,9 @@
       "status": "passing",
       "summary": "analysis/composite_score.py 모듈 — percentile_rank 정규화, 4팩터(momentum/sentiment/mention/macro) Equal Weight 복합 점수, 매크로 방향 지수, sub_scores 분해, opportunities 테이블 점수 기록 (408 tests total)",
       "priority": 2,
-      "depends_on": ["F17"],
+      "depends_on": [
+        "F17"
+      ],
       "acceptance_criteria": [
         "percentile_rank 정규화 함수",
         "복합 점수 계산 (Equal Weight)",
@@ -303,7 +348,9 @@
       "status": "passing",
       "summary": "analysis/screener.py 고도화 — 기존 15종목 + opportunities 통합 유니버스, price_analysis.py 함수 재사용, 복합 점수 기반 TOP 10 선별, screener.md 포맷 개선 (408 tests total)",
       "priority": 3,
-      "depends_on": ["F18"],
+      "depends_on": [
+        "F18"
+      ],
       "acceptance_criteria": [
         "기존 15종목 + opportunities 통합",
         "price_analysis.py 함수 재사용",
@@ -318,7 +365,9 @@
       "status": "passing",
       "summary": "fetch_news.py에서 opportunity 카테고리 제거, fetch_opportunities.py가 발굴 전담, 기존 뉴스 테스트 통과 유지, 뉴스 카테고리 분리 검증 (408 tests total)",
       "priority": 3,
-      "depends_on": ["F17"],
+      "depends_on": [
+        "F17"
+      ],
       "acceptance_criteria": [
         "fetch_news.py에서 opportunity 카테고리 제거",
         "fetch_opportunities.py가 발굴 전담",
@@ -332,7 +381,10 @@
       "status": "passing",
       "summary": "data/fetch_fundamentals.py 모듈 — fundamentals 테이블 생성, DART OpenAPI 재무제표 수집(매출성장률/영업이익률/ROE/부채비율), Yahoo quoteSummary 수집(PER/PBR/EPS/시가총액/배당수익률/FCF), 한국 종목 DART 우선+Yahoo 보완, 미국 종목 Yahoo 전용, UPSERT DB 저장, fundamentals.json 출력, run_pipeline.py 통합, Graceful degradation (436 tests passed)",
       "priority": 1,
-      "depends_on": ["F16", "F17"],
+      "depends_on": [
+        "F16",
+        "F17"
+      ],
       "acceptance_criteria": [
         "fundamentals 테이블 생성 (PER/PBR/ROE/부채비율/매출성장률/영업이익률/FCF 등)",
         "DART OpenAPI 재무제표 수집 함수 (한국 종목)",
@@ -350,7 +402,9 @@
       "status": "passing",
       "summary": "composite_score.py 6팩터 확장 — calculate_value_score(PER/PBR 역순), calculate_quality_score(ROE/부채비율역순/FCF), calculate_growth_score(매출성장률/EPS성장률), calculate_composite_score_v2 통합, 기존 4팩터 하위 호환 유지, config.py 6팩터 가중치(value 0.20/quality 0.20/growth 0.15/timing 0.20/catalyst 0.10/macro 0.15), opportunities 테이블 score_value/score_quality/score_growth 컬럼 추가, build_universe_stats/calculate_eps_growth 헬퍼 (459 tests passed)",
       "priority": 2,
-      "depends_on": ["F21"],
+      "depends_on": [
+        "F21"
+      ],
       "acceptance_criteria": [
         "composite_score.py 6팩터 확장 (밸류/퀄리티/성장/타이밍/촉매/매크로)",
         "밸류에이션 점수: PER/PBR 업종평균 대비 Percentile Rank",
@@ -368,7 +422,9 @@
       "status": "passing",
       "summary": "data/fetch_supply.py 모듈 — KRX 투자자별 매매동향 외국인/기관 순매수 수집, CNN Fear & Greed Index 수집, fundamentals 테이블 foreign_net/inst_net 컬럼 추가, fear_greed_to_score 변환, calculate_macro_direction에 Fear & Greed 5번째 팩터 통합, supply_data.json 출력, run_pipeline.py 통합, Graceful degradation (477 tests passed)",
       "priority": 2,
-      "depends_on": ["F21"],
+      "depends_on": [
+        "F21"
+      ],
       "acceptance_criteria": [
         "KRX Open API 외국인/기관 순매수 수집 (한국 종목)",
         "CNN Fear & Greed Index 수집 (시장 심리)",
@@ -384,7 +440,10 @@
       "status": "passing",
       "summary": "docs/marcus/SOUL.md 골드만삭스 15년차 펀드매니저 페르소나, docs/marcus/prompt.md 05:30 분석 파이프라인 프롬프트(8개 데이터 소스 참조), scripts/marcus_analysis.py 출력 형식 검증(확신 레벨/필수 섹션/면책 조항), config.py MARCUS_CONFIG 설정, JARVIS_INTEGRATION.md 마커스 연동 명세, 자비스 07:30 모닝 브리핑 연동 가이드 (497 tests passed)",
       "priority": 3,
-      "depends_on": ["F22", "F23"],
+      "depends_on": [
+        "F22",
+        "F23"
+      ],
       "acceptance_criteria": [
         "마커스 SOUL.md 작성 (골드만삭스 15년차 펀드매니저 페르소나)",
         "마커스 전용 프롬프트 작성 (05:30 분석 파이프라인)",
@@ -400,7 +459,9 @@
       "status": "passing",
       "summary": "analysis/performance.py 모듈 — update_outcomes(1주/1개월 수익률 자동 기록, 거래일 보정), generate_monthly_report(적중률/평균수익률/팩터별 기여도/최고최저 종목), generate_weight_suggestion(팩터 차이 기반 가중치 조정 제안), performance_report.json 출력, run_pipeline.py 통합, utils/schema.py 스키마 추가 (518 tests passed)",
       "priority": 3,
-      "depends_on": ["F22"],
+      "depends_on": [
+        "F22"
+      ],
       "acceptance_criteria": [
         "outcome_1w/outcome_1m 자동 기록 함수 (발굴 후 1주/1개월 수익률)",
         "run_pipeline.py에 outcome 업데이트 단계 추가",
@@ -410,12 +471,956 @@
         "테스트: outcome 기록, 성적표 생성, 빈 데이터 처리"
       ]
     },
-    {"id": "F26", "description": "Discovery Keywords Fallback", "status": "passing", "priority": 1, "depends_on": ["F17"]},
-    {"id": "F27", "description": "문맥 기반 감성 분석 — relevance_score 가중 평균", "status": "passing", "priority": 1, "depends_on": ["F12"]},
-    {"id": "F28", "description": "자기 교정 시스템 — correction_notes.json", "status": "passing", "priority": 1, "depends_on": ["F25"]},
-    {"id": "F29", "description": "포트폴리오 시뮬레이션 — simulation_report.json", "status": "passing", "priority": 1, "depends_on": ["F25"]},
-    {"id": "F30", "description": "시장 국면 고도화 — confidence + panic_signal", "status": "passing", "priority": 1, "depends_on": []},
-    {"id": "F31", "description": "능동적 알림 — proactive_alerts.json", "status": "passing", "priority": 1, "depends_on": ["F28", "F30"]},
-    {"id": "F32", "description": "동적 종목 관리 — holdings_proposal.json", "status": "passing", "priority": 1, "depends_on": ["F26", "F28"]}
+    {
+      "id": "F26",
+      "description": "Discovery Keywords Fallback",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "F17"
+      ]
+    },
+    {
+      "id": "F27",
+      "description": "문맥 기반 감성 분석 — relevance_score 가중 평균",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "F12"
+      ]
+    },
+    {
+      "id": "F28",
+      "description": "자기 교정 시스템 — correction_notes.json",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "F25"
+      ]
+    },
+    {
+      "id": "F29",
+      "description": "포트폴리오 시뮬레이션 — simulation_report.json",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "F25"
+      ]
+    },
+    {
+      "id": "F30",
+      "description": "시장 국면 고도화 — confidence + panic_signal",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": []
+    },
+    {
+      "id": "F31",
+      "description": "능동적 알림 — proactive_alerts.json",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "F28",
+        "F30"
+      ]
+    },
+    {
+      "id": "F32",
+      "description": "동적 종목 관리 — holdings_proposal.json",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "F26",
+        "F28"
+      ]
+    },
+    {
+      "id": "security-001",
+      "category": "Security",
+      "description": "config.py — Discord 웹훅 URL 토큰 하드코딩 기본값 제거",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'security_001'",
+      "acceptance_criteria": [
+        "config.py의 DISCORD_WEBHOOK_URL os.environ.get() 호출에 하드코딩 URL 기본값이 없고, 기본값이 빈 문자열('')이다",
+        "git diff HEAD config.py에 'discord.com/api/webhooks/' 문자열이 포함되지 않는다",
+        ".env 파일에 DISCORD_WEBHOOK_URL이 존재하고 비어있지 않을 때 os.environ.get('DISCORD_WEBHOOK_URL', '') 호출이 실제 웹훅 URL을 반환한다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "기본값 하드코딩 제거 확인",
+          "type": "unit",
+          "setup": "config.py 파일 로드",
+          "action": "DISCORD_WEBHOOK_URL 소스코드에서 'discord.com/api/webhooks/' 문자열 검색",
+          "assert": [
+            "소스코드에 해당 문자열 없음",
+            "os.environ.get('DISCORD_WEBHOOK_URL', '') 패턴만 존재"
+          ]
+        },
+        {
+          "name": "환경변수 로드 정상 동작",
+          "type": "unit",
+          "setup": "os.environ에 DISCORD_WEBHOOK_URL 임시 설정",
+          "action": "import config; config.DISCORD_WEBHOOK_URL 접근",
+          "assert": [
+            "환경변수 값이 그대로 반환됨",
+            "환경변수 미설정 시 빈 문자열 반환"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "config.py"
+      ],
+      "edge_cases": [
+        "환경변수 미설정 시 빈 문자열로 폴백 — Discord 전송 코드가 빈 URL 체크를 해야 함",
+        ".env 파일이 없는 환경에서도 ImportError 없이 동작",
+        "DISCORD_WEBHOOK_URL이 유효하지 않은 URL일 때 Discord 전송 코드에서 처리"
+      ],
+      "regression_check": [
+        "기존 Discord 알림 전송 코드가 DISCORD_WEBHOOK_URL 빈 문자열 체크 후 스킵하는 패턴 동작",
+        "run_pipeline.py에서 Discord 알림 함수 정상 호출"
+      ],
+      "notes": "웹훅 URL은 반드시 .env에만 존재. 소스코드에는 절대 포함 금지",
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "security-002",
+      "category": "Security",
+      "description": "server.py — 입력 검증 강화 (경로 순회 차단, int 파라미터 상한, body 크기 10MB, AI rate limit 15초)",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "security-001"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'security_002'",
+      "acceptance_criteria": [
+        "/api/logs?name=../../etc/passwd 요청 시 {'error': '잘못된 로그명'} 400 응답이 반환되고 파일 읽기를 시도하지 않는다",
+        "/api/wealth?days=abc 요청 시 500 에러 대신 기본값(60)을 사용해 정상 응답이 반환된다",
+        "/api/logs?lines=999999 요청 시 lines 값이 2000으로 상한 처리되어 그 이상의 줄을 읽지 않는다",
+        "Content-Length가 10MB 초과하는 POST 요청 시 413 응답을 반환하고 body를 읽지 않는다",
+        "/api/investment-advice-stream에 15초 내 두 번 요청 시 두 번째 요청이 429 응답을 반환한다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "경로 순회 차단",
+          "type": "unit",
+          "setup": "_safe_int 함수와 name 검증 로직이 server.py에 존재",
+          "action": "name 파라미터에 '../', '\\\\', '..' 포함 여부 체크",
+          "assert": [
+            "'/' in name → 400 반환",
+            "'..' in name → 400 반환",
+            "정상 name('marcus', 'pipeline') → 통과"
+          ]
+        },
+        {
+          "name": "_safe_int 경계값 처리",
+          "type": "unit",
+          "setup": "_safe_int 헬퍼 함수 import",
+          "action": "_safe_int({'days': ['abc']}, 'days', 60, max_val=365) 호출",
+          "assert": [
+            "반환값 == 60 (기본값)",
+            "_safe_int({'days': ['999']}, 'days', 60, max_val=365) → 365 (상한)",
+            "_safe_int({'days': ['-1']}, 'days', 60, max_val=365) → 0 (최솟값)"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "web/server.py"
+      ],
+      "edge_cases": [
+        "name 파라미터가 빈 문자열일 때 400 반환",
+        "Content-Length 헤더가 없는 POST 요청 시 기본값 0으로 처리",
+        "Content-Length가 정확히 10MB일 때 허용, 10MB+1B일 때 413"
+      ],
+      "regression_check": [
+        "/api/logs?name=marcus&lines=80 정상 요청은 여전히 동작",
+        "/api/wealth?days=60 정상 요청 정상 동작",
+        "기존 모든 GET 엔드포인트 응답 정상"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "security-003",
+      "category": "Security",
+      "description": "server.py — CORS 와일드카드 제거 (ALLOWED_ORIGIN env), X-Content-Type-Options + X-Frame-Options 헤더 추가",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "security-002"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'security_003'",
+      "acceptance_criteria": [
+        "server.py 소스코드에 'Access-Control-Allow-Origin', '*' 패턴이 없고, _ALLOWED_ORIGIN 변수를 통해 환경변수에서 읽은 값을 사용한다",
+        ".env에 ALLOWED_ORIGIN=http://100.90.201.87:3000 설정 후 서버 응답 헤더에 Access-Control-Allow-Origin: http://100.90.201.87:3000 이 포함된다",
+        "모든 API 응답 헤더에 X-Content-Type-Options: nosniff 와 X-Frame-Options: DENY 가 포함된다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "CORS 헤더 설정 확인",
+          "type": "unit",
+          "setup": "server.py에 _ALLOWED_ORIGIN = os.environ.get('ALLOWED_ORIGIN', 'http://localhost:3000') 설정",
+          "action": "소스코드에서 Access-Control-Allow-Origin 할당 패턴 검색",
+          "assert": [
+            "\"*\" 문자열 없음",
+            "_ALLOWED_ORIGIN 변수 사용 확인"
+          ]
+        },
+        {
+          "name": "보안 헤더 존재 확인",
+          "type": "unit",
+          "setup": "server.py send_json / send_file 함수 분석",
+          "action": "X-Content-Type-Options, X-Frame-Options 헤더 설정 코드 검색",
+          "assert": [
+            "X-Content-Type-Options: nosniff 설정 코드 존재",
+            "X-Frame-Options: DENY 설정 코드 존재"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "web/server.py",
+        ".env"
+      ],
+      "edge_cases": [
+        "ALLOWED_ORIGIN 환경변수 미설정 시 기본값 'http://localhost:3000' 사용",
+        "OPTIONS preflight 요청도 동일한 CORS 헤더 반환",
+        "SSE 스트리밍 엔드포인트도 동일한 보안 헤더 적용"
+      ],
+      "regression_check": [
+        "프론트엔드(http://100.90.201.87:3000)에서 /api/data 요청 정상 동작",
+        "SSE /api/events 연결 정상 동작"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "server-001",
+      "category": "Server",
+      "description": "server.py — SSE 큐 maxsize=100 설정 (dead client 메모리 누수 방지)",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "security-003"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'server_001'",
+      "acceptance_criteria": [
+        "web/server.py의 _handle_sse() 함수에서 queue.Queue(maxsize=100)으로 생성되고, maxsize=0인 기본 Queue가 없다",
+        "maxsize=100인 큐에 put_nowait()를 101번 호출하면 queue.Full 예외가 발생한다",
+        "_broadcast_sse()의 dead client 감지 로직(except queue.Full → dead_clients 추가)이 maxsize=100으로 실제 동작한다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "maxsize=100 큐 Full 감지",
+          "type": "unit",
+          "setup": "import queue; q = queue.Queue(maxsize=100)",
+          "action": "for i in range(101): q.put_nowait(i) 시도",
+          "assert": [
+            "101번째 put_nowait에서 queue.Full 발생",
+            "maxsize=0(기본값) 큐는 절대 Full 발생 안 함"
+          ]
+        },
+        {
+          "name": "소스코드 패턴 검증",
+          "type": "unit",
+          "setup": "web/server.py 소스코드 읽기",
+          "action": "queue.Queue 생성 코드 검색",
+          "assert": [
+            "queue.Queue(maxsize=100) 패턴 존재",
+            "queue.Queue() 단독 패턴(maxsize 없음) 미존재"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "web/server.py"
+      ],
+      "edge_cases": [
+        "maxsize 정확히 100일 때 100번째 이벤트는 성공, 101번째는 Full",
+        "SSE 클라이언트가 0개일 때 _broadcast_sse() 정상 동작",
+        "dead_clients 목록이 비어있을 때 _sse_clients.remove() 안전하게 처리"
+      ],
+      "regression_check": [
+        "기존 SSE /api/events 연결 + 이벤트 수신 정상 동작",
+        "브라우저에서 실시간 업데이트 수신 정상"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "server-002",
+      "category": "Server",
+      "description": "web/investment_advisor.py — 스트리밍 중단 시 Claude CLI subprocess 종료 (finally cleanup)",
+      "status": "passing",
+      "priority": 2,
+      "depends_on": [
+        "server-001"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'server_002'",
+      "acceptance_criteria": [
+        "_stream_via_cli() 제너레이터에 try/finally 블록이 있고, finally에서 proc.poll() == None 체크 후 proc.terminate() + proc.wait(timeout=5) 를 호출한다",
+        "proc.wait(timeout=5)에서 TimeoutExpired 발생 시 proc.kill() + proc.wait()를 순서대로 호출한다",
+        "제너레이터가 GeneratorExit(클라이언트 연결 끊김)으로 종료될 때도 finally 블록이 실행된다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "subprocess 정리 로직 코드 확인",
+          "type": "unit",
+          "setup": "web/investment_advisor.py 소스코드 읽기",
+          "action": "_stream_via_cli 함수 내 try/finally 패턴 검색",
+          "assert": [
+            "try: yield chunk ... finally: proc.terminate() 패턴 존재",
+            "proc.poll() is None 체크 후 terminate 호출",
+            "TimeoutExpired 처리 후 proc.kill() 존재"
+          ]
+        },
+        {
+          "name": "GeneratorExit 시 finally 실행",
+          "type": "unit",
+          "setup": "mock subprocess.Popen 생성",
+          "action": "제너레이터를 .close() 로 조기 종료",
+          "assert": [
+            "finally 블록 실행 확인",
+            "proc.terminate() 호출 확인"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "web/investment_advisor.py"
+      ],
+      "edge_cases": [
+        "proc이 이미 종료된 경우(poll() != None) terminate 호출 스킵",
+        "terminate 후 5초 이내 종료 안 되면 kill로 강제 종료",
+        "proc.wait() 자체가 예외 발생 시 무시하고 진행"
+      ],
+      "regression_check": [
+        "정상 스트리밍 완료(Claude 응답 끝까지) 시에도 cleanup 코드 실행",
+        "/api/investment-advice-stream 엔드포인트 정상 동작"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "db-001",
+      "category": "Database",
+      "description": "db/maintenance.py — VACUUM 후 WAL 모드 재설정 (journal_mode=WAL, synchronous=NORMAL 복구)",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'db_001'",
+      "acceptance_criteria": [
+        "db/maintenance.py에서 VACUUM 실행 후 즉시 conn.execute('PRAGMA journal_mode=WAL') 와 conn.execute('PRAGMA synchronous=NORMAL') 을 호출한다",
+        "실제 DB에서 VACUUM 실행 후 'PRAGMA journal_mode' 쿼리 결과가 'wal' 이다",
+        "maintenance 모듈이 __main__ 진입점으로 직접 실행 가능하다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "VACUUM 후 WAL 모드 유지",
+          "type": "unit",
+          "setup": "in-memory SQLite conn 생성, WAL 모드 설정",
+          "action": "VACUUM 실행 후 journal_mode PRAGMA 확인",
+          "assert": [
+            "VACUUM 전 journal_mode == 'wal'",
+            "WAL 재설정 코드 없으면 VACUUM 후 'delete'로 리셋",
+            "수정 후: VACUUM 후에도 journal_mode == 'wal'"
+          ]
+        },
+        {
+          "name": "maintenance.py __main__ 실행",
+          "type": "unit",
+          "setup": "python3 db/maintenance.py",
+          "action": "직접 실행",
+          "assert": [
+            "ImportError 없이 실행 완료",
+            "purge_old_data + vacuum_db 순서대로 실행"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "db/maintenance.py"
+      ],
+      "edge_cases": [
+        "conn이 이미 WAL 모드인 경우 재설정해도 안전",
+        "VACUUM 실행 중 예외 발생 시 WAL 재설정 코드 도달 불가 — try/except 필요",
+        "read-only DB에서 VACUUM 시도 시 에러 처리"
+      ],
+      "regression_check": [
+        "기존 purge_old_data() 로직 (3개월 보존, 집계 확인 후 삭제) 정상 동작",
+        "VACUUM 후 DB 파일 크기 감소 동작 유지"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "db-002",
+      "category": "Database",
+      "description": "PORTFOLIO_LEGACY → DB SSoT 전환 (data/fetch_news.py, analysis/alerts_watch.py, reports/closing.py)",
+      "status": "passing",
+      "priority": 2,
+      "depends_on": [
+        "db-001"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'db_002'",
+      "acceptance_criteria": [
+        "data/fetch_news.py, analysis/alerts_watch.py, reports/closing.py 세 파일에 'PORTFOLIO_LEGACY' 임포트 또는 참조가 없다",
+        "세 파일에서 종목 목록을 db.ssot.get_holdings() 를 통해 DB에서 읽는다",
+        "DB holdings 테이블에 새 종목 추가 후 세 모듈 실행 시 해당 종목이 처리 대상에 포함된다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "PORTFOLIO_LEGACY 참조 제거 확인",
+          "type": "unit",
+          "setup": "data/fetch_news.py, analysis/alerts_watch.py, reports/closing.py 소스코드 읽기",
+          "action": "'PORTFOLIO_LEGACY' 문자열 검색",
+          "assert": [
+            "세 파일 모두에서 'PORTFOLIO_LEGACY' 미발견",
+            "db.ssot 또는 ssot.get_holdings 참조 존재"
+          ]
+        },
+        {
+          "name": "SSoT get_holdings 호출 확인",
+          "type": "unit",
+          "setup": "각 모듈 임포트",
+          "action": "소스코드에서 ssot.get_holdings() 또는 _get_portfolio() 패턴 검색",
+          "assert": [
+            "fetch_news.py: get_holdings 호출 패턴 존재",
+            "alerts_watch.py: get_holdings 호출 패턴 존재",
+            "closing.py: get_holdings 호출 패턴 존재"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "data/fetch_news.py",
+        "analysis/alerts_watch.py",
+        "reports/closing.py"
+      ],
+      "edge_cases": [
+        "DB holdings 테이블이 비어있을 때 세 모듈이 빈 목록으로 graceful 동작",
+        "DB 연결 실패 시 빈 목록 폴백 (에러 로그만 출력 후 계속)",
+        "기존 PORTFOLIO_LEGACY 항목과 DB holdings가 다를 때 DB 우선"
+      ],
+      "regression_check": [
+        "fetch_news.py run() 정상 실행 (뉴스 수집)",
+        "alerts_watch.py 5분 주기 실행 정상 동작",
+        "reports/closing.py 리포트 생성 정상"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "db-003",
+      "category": "Database",
+      "description": "db/connection.py 신설 — WAL + busy_timeout=30초 DB 연결 팩토리 (db/ssot.py, ssot_wealth.py, maintenance.py, aggregate.py, web/api.py 전환)",
+      "status": "passing",
+      "priority": 2,
+      "depends_on": [
+        "db-001",
+        "db-002"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'db_003'",
+      "acceptance_criteria": [
+        "db/connection.py 파일이 존재하고, get_db_conn(timeout=30.0) 함수가 WAL 모드, synchronous=NORMAL, busy_timeout=30000(ms)를 설정한 sqlite3.Connection을 반환한다",
+        "db/ssot.py와 db/ssot_wealth.py의 get_conn() 함수가 get_db_conn()을 호출하도록 변경되어 있다",
+        "get_db_conn()이 반환한 커넥션에서 'PRAGMA journal_mode' 쿼리 결과가 'wal'이고, 'PRAGMA busy_timeout' 결과가 30000이다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "get_db_conn WAL + timeout 설정 확인",
+          "type": "unit",
+          "setup": "from db.connection import get_db_conn",
+          "action": "conn = get_db_conn(); conn.execute('PRAGMA journal_mode').fetchone(); conn.execute('PRAGMA busy_timeout').fetchone()",
+          "assert": [
+            "journal_mode == 'wal'",
+            "busy_timeout == 30000"
+          ]
+        },
+        {
+          "name": "ssot.get_conn 위임 확인",
+          "type": "unit",
+          "setup": "db/ssot.py 소스코드 읽기",
+          "action": "get_conn() 함수 내부 코드 확인",
+          "assert": [
+            "get_db_conn() 호출 또는 from db.connection import get_db_conn 존재",
+            "직접 sqlite3.connect() 호출 없음"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "db/connection.py",
+        "db/ssot.py",
+        "db/ssot_wealth.py",
+        "db/maintenance.py",
+        "db/aggregate.py",
+        "web/api.py"
+      ],
+      "edge_cases": [
+        "timeout 파라미터가 0일 때 즉시 실패 동작 (기본값 30초로 방어)",
+        "DB 파일이 존재하지 않을 때 새로 생성 후 WAL 설정",
+        "여러 스레드가 동시에 get_db_conn() 호출해도 각 커넥션 독립적으로 WAL 모드 설정"
+      ],
+      "regression_check": [
+        "기존 ssot.get_holdings(), ssot_wealth.create_extra_asset() 등 CRUD 함수 정상 동작",
+        "웹 /api/wealth 엔드포인트 정상 응답",
+        "파이프라인 실행 중 DB write 정상 동작"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "pipeline-001",
+      "category": "Pipeline",
+      "description": "run_pipeline.py — 핵심 분석 단계 독립 try/except 격리 + 실패 시 Discord 웹훅 알림",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "security-001"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'pipeline_001'",
+      "acceptance_criteria": [
+        "run_pipeline.py main()에서 analyze_prices(), check_alerts(), run_screener(), analyze_portfolio() 각 호출이 독립적인 try/except 블록 또는 공통 래퍼로 감싸져 있어, 하나가 실패해도 나머지 단계가 계속 실행된다",
+        "_notify_pipeline_failure(step_name, error) 함수가 존재하고, DISCORD_WEBHOOK_URL 환경변수가 설정된 경우 Discord 웹훅 POST 요청을 보낸다",
+        "analyze_prices()에서 예외 발생 시 check_alerts()가 여전히 실행된다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "단계 격리 — 하나 실패 시 다음 단계 진행",
+          "type": "unit",
+          "setup": "unittest.mock.patch으로 analyze_prices를 Exception 발생으로 패치",
+          "action": "main() 함수의 분석 단계 루프 실행",
+          "assert": [
+            "analyze_prices 예외 발생 후 check_alerts 호출됨",
+            "예외가 전파되지 않음"
+          ]
+        },
+        {
+          "name": "Discord 알림 함수 존재 확인",
+          "type": "unit",
+          "setup": "run_pipeline.py 소스코드",
+          "action": "_notify_pipeline_failure 함수 존재 및 Discord webhook URL 사용 확인",
+          "assert": [
+            "_notify_pipeline_failure 함수 존재",
+            "urllib.request.urlopen 또는 urllib.request.Request 사용",
+            "DISCORD_WEBHOOK_URL 환경변수 빈 문자열일 때 전송 스킵"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "run_pipeline.py"
+      ],
+      "edge_cases": [
+        "DISCORD_WEBHOOK_URL 미설정 시 알림 전송 없이 계속 진행",
+        "Discord webhook 자체 실패(timeout, 403) 시 파이프라인 중단 없이 로그만 출력",
+        "모든 분석 단계 실패 시 리포트 생성 단계까지 계속 진행"
+      ],
+      "regression_check": [
+        "정상 실행 시 analyze_prices → check_alerts → run_screener → analyze_portfolio 순서 유지",
+        "_run_post_analysis() 계속 정상 실행",
+        "generate_daily() 리포트 생성 정상"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "deploy-001",
+      "category": "Deploy",
+      "description": "utils/json_io.py 신설 + scripts/refresh_prices.py, analysis/alerts.py — atomic JSON 쓰기 적용",
+      "status": "passing",
+      "priority": 2,
+      "depends_on": [
+        "db-003"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'deploy_001'",
+      "acceptance_criteria": [
+        "utils/json_io.py 파일이 존재하고, write_json_atomic(path, data) 함수가 tempfile + os.replace() 패턴으로 원자적 JSON 쓰기를 구현한다",
+        "write_json_atomic 호출 중 프로세스가 중단되어도 기존 파일은 손상되지 않는다 (임시 파일로 먼저 쓰고 rename)",
+        "scripts/refresh_prices.py와 analysis/alerts.py에서 JSON 쓰기가 write_json_atomic을 사용한다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "atomic write 정상 동작",
+          "type": "unit",
+          "setup": "from utils.json_io import write_json_atomic; import tempfile, pathlib",
+          "action": "임시 디렉토리에 write_json_atomic(path, {'test': 123}) 호출",
+          "assert": [
+            "파일이 정상 생성됨",
+            "json.loads(path.read_text())['test'] == 123",
+            "tmp 파일이 남아있지 않음"
+          ]
+        },
+        {
+          "name": "refresh_prices.py 사용 확인",
+          "type": "unit",
+          "setup": "scripts/refresh_prices.py 소스코드",
+          "action": "JSON 쓰기 패턴 검색",
+          "assert": [
+            "write_json_atomic 임포트 및 호출 존재",
+            "직접 open('w') + json.dump() 패턴 없음 (JSON 출력 파일에 한해)"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "utils/json_io.py",
+        "scripts/refresh_prices.py",
+        "analysis/alerts.py"
+      ],
+      "edge_cases": [
+        "대상 디렉토리가 존재하지 않을 때 mkdir(parents=True) 자동 생성",
+        "디스크 풀일 때 tempfile 쓰기 실패 — 기존 파일은 보존됨",
+        "동일 파일에 동시 write_json_atomic 호출 시 os.replace() 원자성으로 마지막 호출 결과만 남음"
+      ],
+      "regression_check": [
+        "refresh_prices.py 실행 후 prices.json 정상 생성",
+        "alerts.py 실행 후 alerts.json 정상 생성 (알림 있을 때만)",
+        "utils/ 디렉토리 docker-compose 볼륨 마운트 확인 (deploy-004에서 처리)"
+      ],
+      "notes": "utils/ 디렉토리가 docker-compose에 볼륨 마운트되지 않으면 컨테이너 내부에서 변경 미반영. deploy-004 완료 후 docker compose up -d --build 필요",
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "deploy-002",
+      "category": "Deploy",
+      "description": "scripts/run_jarvis.py — --dangerously-skip-permissions 제거 (root 컨테이너 호환, -p - stdin 방식으로 전환)",
+      "status": "passing",
+      "priority": 1,
+      "depends_on": [
+        "security-001"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'deploy_002'",
+      "acceptance_criteria": [
+        "scripts/run_jarvis.py 소스코드에 '--dangerously-skip-permissions' 문자열이 없다",
+        "subprocess.run 호출이 [CLAUDE_BIN, '--print', '-p', '-'] 형태이고, input=prompt 파라미터를 사용한다",
+        "변경 후 docker exec investment-bot python3 scripts/run_jarvis.py 가 에러 없이 실행된다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "플래그 제거 확인",
+          "type": "unit",
+          "setup": "scripts/run_jarvis.py 소스코드 읽기",
+          "action": "'dangerously-skip-permissions' 문자열 검색",
+          "assert": [
+            "해당 문자열 미발견",
+            "'-p', '-' 패턴 존재",
+            "input=prompt 또는 stdin=... 패턴 존재"
+          ]
+        },
+        {
+          "name": "marcus와 동일한 호출 패턴",
+          "type": "unit",
+          "setup": "scripts/run_marcus.py, scripts/run_jarvis.py 소스코드 비교",
+          "action": "Claude CLI 호출 방식 비교",
+          "assert": [
+            "두 파일 모두 '--dangerously-skip-permissions' 없음",
+            "유사한 subprocess.run 패턴 사용"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "scripts/run_jarvis.py"
+      ],
+      "edge_cases": [
+        "root 계정에서 실행 시 오류 없이 Claude 응답 수신",
+        "Claude CLI 경로(CLAUDE_BIN)가 존재하지 않을 때 에러 메시지 출력 후 graceful 종료",
+        "subprocess 타임아웃(300초) 초과 시 로그 출력 후 종료"
+      ],
+      "regression_check": [
+        "run_marcus.py는 변경 없이 정상 동작 유지",
+        "CIO 브리핑 파일(cio-briefing.md) 생성 정상"
+      ],
+      "notes": "이 변경은 Docker 리빌드 없이 docker restart만으로 반영됨 (scripts/ 볼륨 마운트됨)",
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "deploy-003",
+      "category": "Deploy",
+      "description": "crontab.docker — 로그 로테이션 크론(50MB 초과 시 truncate) + db/maintenance.py 주간 스케줄(일요일 03:00 KST) 등록",
+      "status": "passing",
+      "priority": 2,
+      "depends_on": [
+        "deploy-002"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'deploy_003'",
+      "acceptance_criteria": [
+        "crontab.docker에 logs/ 디렉토리 50MB 초과 파일 truncate 크론 항목이 있다",
+        "crontab.docker에 db/maintenance.py 실행 크론 항목이 있다 (매주 일요일 KST 03:00 = UTC 18:00)",
+        "db/maintenance.py에 if __name__ == '__main__' 진입점이 있어 직접 실행 가능하다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "crontab 항목 존재 확인",
+          "type": "unit",
+          "setup": "crontab.docker 파일 읽기",
+          "action": "로그 로테이션 및 maintenance.py 관련 줄 검색",
+          "assert": [
+            "truncate 또는 logrotate 관련 크론 항목 존재",
+            "db/maintenance.py 실행 크론 항목 존재",
+            "maintenance 스케줄이 KST 기준 일요일 새벽"
+          ]
+        },
+        {
+          "name": "maintenance.py 직접 실행 가능",
+          "type": "unit",
+          "setup": "python3 db/maintenance.py 실행",
+          "action": "exit code 확인",
+          "assert": [
+            "exit code 0 (정상)",
+            "에러 없이 완료"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "python-backend"
+      ],
+      "affected_files": [
+        "crontab.docker",
+        "db/maintenance.py"
+      ],
+      "edge_cases": [
+        "로그 파일이 50MB 미만일 때 truncate 미실행",
+        "maintenance.py 실행 중 DB 잠금 시 timeout 후 에러 로그 출력",
+        "crontab 재시작 후 새 항목이 적용되는지 확인 (docker compose up -d --build 필요)"
+      ],
+      "regression_check": [
+        "기존 crontab 스케줄(refresh_prices, alerts_watch, marcus, pipeline 등) 변경 없음",
+        "logs/refresh_prices.log 파일이 50MB 이하일 때 truncate 미발생"
+      ],
+      "notes": "crontab.docker 변경은 docker compose up -d --build investment-bot 필요",
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "deploy-004",
+      "category": "Deploy",
+      "description": "docker-compose.yml — utils/ 볼륨 마운트 추가, investment-bot healthcheck 설정, mc-web depends_on condition 강화",
+      "status": "passing",
+      "priority": 2,
+      "depends_on": [
+        "deploy-003"
+      ],
+      "test_command": "python3 -m pytest tests/test_hardening.py -v -k 'deploy_004'",
+      "acceptance_criteria": [
+        "docker-compose.yml의 investment-bot volumes에 './utils:/app/utils' 항목이 존재한다",
+        "investment-bot 서비스에 healthcheck 설정(test: curl -sf http://localhost:8421/api/status, interval: 30s, retries: 3)이 있다",
+        "mc-web의 depends_on이 condition: service_healthy 형태로 investment-bot 헬스체크를 기다린다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "docker-compose.yml 내용 확인",
+          "type": "unit",
+          "setup": "docker-compose.yml 파일 읽기",
+          "action": "각 추가 항목 존재 확인",
+          "assert": [
+            "./utils:/app/utils 볼륨 항목 존재",
+            "healthcheck.test 항목 존재",
+            "depends_on.investment-bot.condition: service_healthy 존재"
+          ]
+        },
+        {
+          "name": "docker compose config 유효성",
+          "type": "unit",
+          "setup": "docker compose config 실행",
+          "action": "exit code 및 에러 확인",
+          "assert": [
+            "exit code 0",
+            "YAML 파싱 에러 없음"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "infrastructure"
+      ],
+      "affected_files": [
+        "docker-compose.yml"
+      ],
+      "edge_cases": [
+        "utils/ 디렉토리가 호스트에 없을 때 docker compose up 실패 방지 (디렉토리 생성 필요)",
+        "healthcheck start_period 동안 mc-web 요청 실패 가능 (Next.js 재시도로 처리)",
+        "deployment 중 investment-bot 재시작 시 mc-web이 healthy 대기"
+      ],
+      "regression_check": [
+        "docker compose up -d 후 두 컨테이너 모두 Up/healthy 상태",
+        "기존 볼륨 마운트(db, output, logs, web, analysis 등) 변경 없음"
+      ],
+      "notes": "이 변경 적용: docker compose up -d --build investment-bot && docker compose up -d mc-web",
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "ui-001",
+      "category": "Frontend",
+      "description": "web-next route.ts — SSE upstream 실패 에러 이벤트 전파, proxy fetch try-catch 추가",
+      "status": "passing",
+      "priority": 2,
+      "depends_on": [],
+      "test_command": "cd web-next && npx tsc --noEmit",
+      "acceptance_criteria": [
+        "route.ts의 events SSE 프록시에서 upstream.ok가 false이거나 upstream.body가 null일 때, 에러를 담은 SSE 이벤트(data: {\"error\": \"upstream unavailable\"})를 반환하고 연결을 닫는다",
+        "proxy() 함수 전체가 try-catch로 감싸져 있어, Flask 서버 다운 시 503 JSON 응답을 반환한다",
+        "cd web-next && npx tsc --noEmit 가 에러 없이 통과한다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "upstream 실패 에러 전파 코드 확인",
+          "type": "unit",
+          "setup": "route.ts 소스코드 읽기",
+          "action": "events 케이스의 upstream.ok 체크 코드 검색",
+          "assert": [
+            "if (!upstream.ok || !upstream.body) 체크 존재",
+            "에러 SSE 이벤트 스트림 반환 코드 존재"
+          ]
+        },
+        {
+          "name": "proxy try-catch 존재 확인",
+          "type": "unit",
+          "setup": "route.ts 소스코드",
+          "action": "try-catch 블록 및 503 응답 검색",
+          "assert": [
+            "try { ... } catch (err) { return NextResponse.json({error:...}, {status: 503}) } 패턴 존재"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "client"
+      ],
+      "affected_files": [
+        "web-next/src/app/api/[...path]/route.ts"
+      ],
+      "edge_cases": [
+        "upstream이 200 OK지만 body가 null인 경우 처리",
+        "fetch 자체가 TypeError: fetch failed 던질 때 catch 처리",
+        "SSE 스트리밍 도중 upstream 연결 끊길 때 EventSource 재연결 동작"
+      ],
+      "regression_check": [
+        "정상 Flask 서버 동작 시 /api/events SSE 정상 수신",
+        "/api/data 프록시 정상 동작",
+        "cd web-next && npm run build 성공"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "ui-002",
+      "category": "Frontend",
+      "description": "AIAdvisorPanel.tsx — 컴포넌트 언마운트 시 진행 중인 fetch abort (useEffect cleanup)",
+      "status": "passing",
+      "priority": 2,
+      "depends_on": [
+        "ui-001"
+      ],
+      "test_command": "cd web-next && npx tsc --noEmit",
+      "acceptance_criteria": [
+        "AIAdvisorPanel.tsx에 의존성 배열이 빈 배열([])인 useEffect가 있고, cleanup 함수에서 abortRef.current?.abort()를 호출한다",
+        "컴포넌트 언마운트 시 abortRef에 저장된 AbortController의 abort()가 호출된다",
+        "cd web-next && npx tsc --noEmit 가 에러 없이 통과한다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "언마운트 cleanup useEffect 코드 확인",
+          "type": "unit",
+          "setup": "AIAdvisorPanel.tsx 소스코드",
+          "action": "useEffect(() => { return () => { abortRef.current?.abort() } }, []) 패턴 검색",
+          "assert": [
+            "해당 패턴 존재",
+            "의존성 배열이 [] (언마운트 시 한 번만 실행)"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "client"
+      ],
+      "affected_files": [
+        "web-next/src/components/advisor/AIAdvisorPanel.tsx"
+      ],
+      "edge_cases": [
+        "abortRef.current가 null일 때 ?. optional chaining으로 안전하게 처리",
+        "fetch 완료 후 언마운트 시에도 이미 완료된 요청에 abort 호출 (무해)",
+        "연속 분석 클릭 시 이전 AbortController.abort() 후 새 컨트롤러 생성 동작 유지"
+      ],
+      "regression_check": [
+        "분석 갱신 버튼 클릭 후 스트리밍 정상 수신",
+        "저장 기능 정상 동작",
+        "타이머(가짜 진행률) cleanup 정상"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    },
+    {
+      "id": "ui-003",
+      "category": "Frontend",
+      "description": "useWealthData.ts WealthSummary 타입 추가, fmtAmt 중복 정의 lib/format.ts로 통합",
+      "status": "passing",
+      "priority": 3,
+      "depends_on": [
+        "ui-002"
+      ],
+      "test_command": "cd web-next && npx tsc --noEmit",
+      "acceptance_criteria": [
+        "src/types/api.ts 또는 별도 파일에 WealthSummary 인터페이스가 정의되고, useWealthData.ts의 useSWR 호출에 제네릭 타입으로 적용되어 data가 any가 아닌 WealthSummary 타입이다",
+        "src/lib/format.ts에 export function fmtAmt(v: number): string 함수가 존재하고, ConditionPanel.tsx와 savedStrategies.ts에서 로컬 정의 없이 이 함수를 import한다",
+        "cd web-next && npx tsc --noEmit 가 에러 없이 통과한다"
+      ],
+      "test_scenarios": [
+        {
+          "name": "WealthSummary 타입 적용 확인",
+          "type": "unit",
+          "setup": "useWealthData.ts 소스코드",
+          "action": "useSWR<WealthSummary> 제네릭 패턴 검색",
+          "assert": [
+            "useSWR<WealthSummary> 또는 useSWR<WealthApiResponse> 패턴 존재",
+            "data 변수가 any 타입이 아님"
+          ]
+        },
+        {
+          "name": "fmtAmt 중복 제거 확인",
+          "type": "unit",
+          "setup": "ConditionPanel.tsx, savedStrategies.ts 소스코드",
+          "action": "function fmtAmt 로컬 정의 검색",
+          "assert": [
+            "두 파일 모두에 function fmtAmt 로컬 정의 없음",
+            "import { fmtAmt } from '@/lib/format' 패턴 존재"
+          ]
+        }
+      ],
+      "affected_packages": [
+        "client"
+      ],
+      "affected_files": [
+        "web-next/src/types/api.ts",
+        "web-next/src/hooks/useWealthData.ts",
+        "web-next/src/lib/format.ts",
+        "web-next/src/components/advisor/ConditionPanel.tsx",
+        "web-next/src/lib/savedStrategies.ts"
+      ],
+      "edge_cases": [
+        "WealthSummary의 optional 필드(history가 없을 때) 처리",
+        "WealthTab에서 data?.total_wealth_krw 같은 optional chaining 유지",
+        "fmtAmt가 음수 또는 0일 때 처리"
+      ],
+      "regression_check": [
+        "WealthTab 자산 표시 정상",
+        "AdvisorTab 자산 값 정상 표시",
+        "저장된 전략 목록 정상 표시"
+      ],
+      "summary": "2026-04-24 일괄 구현 완료"
+    }
   ]
 }
