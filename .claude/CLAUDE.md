@@ -254,8 +254,9 @@ DISCORD_WEBHOOK_URL=xxx  # Discord 알림 웹훅
 | `investment-bot` | 8421 | Flask API + 내부 cron 스케줄러 |
 | `mc-web` | 3000 | Next.js standalone 프론트엔드 |
 
-### 볼륨 마운트 (Python 소스 — restart만으로 반영)
-`web/`, `analysis/`, `data/`, `reports/`, `scripts/`, `config.py`, `run_pipeline.py`
+### 볼륨 마운트 (이 목록 = docker restart만으로 반영)
+`web/`, `analysis/`, `data/`, `reports/`, `scripts/`, `db/`, `utils/`,
+`config.py`, `run_pipeline.py`, `crontab.docker`
 
 ### HOST launchd 전부 비활성화. 스케줄은 Docker 내부 cron만 사용.
 
@@ -265,33 +266,44 @@ DISCORD_WEBHOOK_URL=xxx  # Discord 알림 웹훅
 |----|--------|---------|
 | refresh_prices | 매 1분 | `scripts/refresh_prices.py` |
 | alerts_watch | 매 5분 | `analysis/alerts_watch.py` |
-| universe_daily | 평일 07:00 | `data/fetch_universe_daily.py` |
 | marcus | 평일 05:30 | `scripts/run_marcus.py` |
+| universe_daily | 평일 07:00 | `data/fetch_universe_daily.py` |
 | jarvis | 평일 07:30 | `scripts/run_jarvis.py` |
 | pipeline | 평일 07:40 | `run_pipeline.py` |
 | news | 평일 08:00 | `scripts/refresh_news.py` |
 | refresh_solar | 매일 08:30, 19:00 | `scripts/refresh_solar.py` |
+| db_maintenance | 매주 일요일 03:00 | `db/maintenance.py` |
+| log_rotation | 매일 00:05 | find + gzip |
 | monthly-deposit | 매월 1일 00:00 | `scripts/monthly_deposit_cron.py` |
 
 ---
 
-## ⚠️ Next.js 배포 규칙 (docker cp 방식)
+## ⚠️ 배포 규칙 — 변경 파일에 따라 명령이 다르다
 
+| 뭘 바꿨나 | 명령 |
+|-----------|------|
+| 볼륨 마운트 목록 안의 파일 (Python, crontab 등) | `docker restart investment-bot` |
+| `docker-compose.yml` | `docker compose up -d --no-build --no-deps investment-bot` |
+| `web-next/` (Next.js) | `npm run build` → `docker cp` → `docker restart mc-web` |
+| `Dockerfile` / `requirements.txt` (매우 드묾) | `docker compose build` → `docker compose up -d` |
+
+**헬스 체크 (curl 없음 — python 사용):**
 ```bash
-# 반드시 /. 형태로 — 없으면 static/static/ 중첩 경로 버그 발생
+docker exec investment-bot python3 -c \
+  "import urllib.request; print(urllib.request.urlopen('http://localhost:8421/api/status').read().decode()[:80])"
+docker inspect investment-bot --format='{{.State.Health.Status}}'
+```
+
+**Next.js 배포 (반드시 /. 형태):**
+```bash
 cd web-next && npm run build && cd ..
 docker cp web-next/.next/standalone/. mc-web:/app/
 docker cp web-next/.next/static/. mc-web:/app/.next/static/
 docker restart mc-web
 ```
 
-**smart-deploy.sh 사용 권장:**
-```bash
-bash .claude/skills/deploy/scripts/smart-deploy.sh auto  # 자동 감지
-bash .claude/skills/deploy/scripts/smart-deploy.sh python  # Python만
-bash .claude/skills/deploy/scripts/smart-deploy.sh web     # Next.js만
-bash .claude/skills/deploy/scripts/smart-deploy.sh build   # Dockerfile 변경
-```
+**Dockerfile 빌드 시 Keychain 잠겨 있으면 실패한다.**
+이 경우 사용자가 직접 `! security -v unlock-keychain ~/Library/Keychains/login.keychain-db` 실행 후 진행.
 
 ---
 
