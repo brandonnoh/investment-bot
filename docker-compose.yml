@@ -25,7 +25,7 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8421/api/status"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8421/api/status', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
