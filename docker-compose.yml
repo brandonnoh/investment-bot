@@ -20,6 +20,7 @@ services:
       - ./utils:/app/utils
       - ./config.py:/app/config.py
       - ./run_pipeline.py:/app/run_pipeline.py
+      - ./crontab.docker:/etc/cron.d/investment-bot
     environment:
       - TZ=Asia/Seoul
     env_file:
