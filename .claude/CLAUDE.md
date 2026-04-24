@@ -1,26 +1,24 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## 프로젝트 개요
-개인 투자자를 위한 **기관급 금융 인텔리전스 엔진**.
-수집/계산/저장은 이 엔진이, 해석/판단/전략/대화는 AI 에이전트(자비스/OpenClaw)가 담당.
 
-엔진의 데이터 품질이 에이전트의 판단 품질을 결정하며, 미래 투자 자동매매까지 대비하는 인프라.
+개인 투자자를 위한 **기관급 금융 인텔리전스 엔진**.
+수집/계산/저장은 이 엔진이, 해석/판단/전략/대화는 AI 에이전트(자비스/Marcus)가 담당.
 
 ### 3계층 아키텍처
-- **수집 계층 (Collection)**: 다중 소스 폴백, 서킷 브레이커, 이상값 감지
-- **저장 계층 (Storage)**: 다중 해상도(원시→일봉→주봉), 보존 정책, 인덱스 최적화
-- **분석 계층 (Analysis)**: 기술 분석, 포트폴리오 리스크, 감성 분석
+- **수집 계층** `data/` — 다중 소스(Yahoo/Kiwoom/DART/Brave/RSS), 폴백, 이상값 감지
+- **분석 계층** `analysis/` — 기술분석·포트폴리오·레짐·스크리닝·성과추적 (40개 모듈)
+- **서비스 계층** `web/` — Flask HTTP API + SSE 실시간 스트림 (포트 8421)
 
-상세: [ARCHITECTURE.md](../ARCHITECTURE.md) | [AGENT_GUIDE.md](../AGENT_GUIDE.md) | [JARVIS_INTEGRATION.md](../JARVIS_INTEGRATION.md)
+---
 
-## 빌드 & 테스트 명령어
+## 빌드 & 테스트
+
 ```bash
-# 전체 파이프라인
-python3 run_pipeline.py
+python3 run_pipeline.py           # 전체 파이프라인
+python3 run_pipeline.py --weekly  # 주간 리포트 포함
 
-# 개별 모듈 (각각 독립 실행 가능)
+# 개별 모듈
 python3 data/fetch_prices.py
 python3 data/fetch_macro.py
 python3 data/fetch_news.py
@@ -32,43 +30,131 @@ python3 reports/daily.py
 python3 reports/weekly.py
 python3 reports/closing.py
 
-# 테스트
+# 테스트 (43개 파일)
 python3 -m pytest tests/ -v
 
 # 린트
 ruff check .
 ruff format --check .
-
-# 의존성 설치
-pip3 install -r requirements.txt
 ```
+
+---
 
 ## 아키텍처
 
-상세 구조: [ARCHITECTURE.md](../ARCHITECTURE.md)
-자비스 연동 명세: [JARVIS_INTEGRATION.md](../JARVIS_INTEGRATION.md)
+### 파이프라인 실행 순서 (run_pipeline.py)
+
+```
+1. init_db()
+2. _collect_data()
+   ├─ fetch_prices()      → prices.json
+   ├─ fetch_macro()       → macro.json
+   ├─ fetch_news()        → news.json
+   ├─ classify_regime()   → regime.json
+   ├─ sector_intel()      → sector_scores.json
+   ├─ fetch_fundamentals()→ fundamentals.json
+   ├─ fetch_supply()      → supply_data.json
+   ├─ fetch_universe_daily() → DB prices_daily
+   └─ fetch_opportunities()  → opportunities.json
+3. aggregate_daily() + maintain_db()
+4. analyze_prices()      → price_analysis.json
+   check_alerts()        → alerts.json
+   run_screener()        → screener_results.json
+   analyze_portfolio()   → portfolio_summary.json
+5. _run_post_analysis()
+   ├─ track_performance()     → performance_report.json
+   ├─ run_self_correction()   → correction_notes.json
+   ├─ run_proactive_alerts()  → proactive_alerts.json
+   ├─ run_dynamic_holdings()  → holdings_proposal.json
+   └─ run_simulation()        → simulation_report.json
+6. validate_all_outputs() + save_engine_status() → engine_status.json
+7. generate_daily()      → daily_report.md
+8. [--weekly] generate_weekly() → cio-briefing.md
+```
 
 ### 데이터 흐름
+
 ```
-config.py (포트폴리오/지표 정의)
+config.py (설정 SSoT)
     ↓
-수집 (data/) → SQLite DB + JSON 파일 (이중 저장)
+data/ → SQLite(history.db) + output/intel/*.json (이중 저장)
     ↓
-분석 (analysis/) ← JSON 파일 → alerts/screener/portfolio
+analysis/ ← JSON 읽기 → 분석 결과 JSON 생성
     ↓
-리포트 (reports/) ← JSON 파일 → daily/weekly/closing .md
+reports/ → daily_report.md, cio-briefing.md, closing_report.md
     ↓
-output/intel/ → 자비스가 읽는 유일한 인터페이스
+output/intel/ ← web/server.py가 읽어 /api/* 로 노출
+    ↓
+web-next (Next.js) ← /api/[...path] 프록시 → 클라이언트
 ```
 
 ### 핵심 설계 패턴
+
 - **모든 모듈은 `run()` 함수**를 진입점으로 노출. `run_pipeline.py`가 순서대로 호출
-- **이중 저장**: SQLite(`db/history.db`) + JSON(`output/intel/`) 동시 저장
+- **이중 저장**: SQLite + JSON 동시 저장
 - **JSON이 모듈 간 인터페이스**: 분석/리포트 모듈은 DB가 아닌 JSON을 읽음
-- **`output/intel/`이 자비스와의 유일한 인터페이스**
+- **`output/intel/`이 자비스/웹UI와의 유일한 인터페이스**
 - **Graceful degradation**: 개별 실패 시 로깅 후 계속 진행, 파이프라인 중단 금지
 - **alerts.json은 알림 있을 때만 생성**, 없으면 삭제
 - **새 분석 모듈 추가 시 `web/api.py`의 INTEL_FILES 목록도 반드시 함께 추가** (누락 시 `/api/data`로 조회 불가)
+
+---
+
+## Flask API 엔드포인트 (web/server.py)
+
+### GET
+
+| 엔드포인트 | 역할 |
+|-----------|------|
+| `/api/data` | INTEL_FILES 전체 통합 조회 (메인 데이터) |
+| `/api/status` | 파이프라인/Marcus 실행 상태 |
+| `/api/events` | SSE 스트림 (intel/ 변경 감지 → 클라이언트 push) |
+| `/api/analysis-history` | Marcus 분석 이력 목록 |
+| `/api/analysis-history?date=YYYY-MM-DD` | 특정 날짜 상세 |
+| `/api/wealth?days=60` | 전재산 (금융+비금융, 60일 이력) |
+| `/api/logs?name=marcus&lines=80` | 로그 마지막 N줄 |
+| `/api/opportunities?strategy=composite` | 발굴 종목 (전략별) |
+| `/api/solar?limit=100` | 태양광 매물 |
+| `/api/strategies` | 스크리너 전략 메타 |
+| `/api/file?name=X.md` | 마크다운 파일 조회 |
+
+### POST
+
+| 엔드포인트 | 역할 |
+|-----------|------|
+| `/api/run-pipeline` | 파이프라인 백그라운드 실행 |
+| `/api/run-marcus` | Marcus 백그라운드 실행 |
+| `/api/refresh-prices` | 가격 새로고침 |
+| `/api/wealth/assets` | 비금융 자산 추가 |
+| `/api/investment-advice` | AI 투자 어드바이스 (동기) |
+| `/api/investment-advice-stream` | AI 투자 어드바이스 (SSE 스트리밍) |
+
+### PUT / DELETE
+
+| 엔드포인트 | 역할 |
+|-----------|------|
+| `/api/wealth/assets/{id}` | 비금융 자산 수정 / 삭제 |
+
+---
+
+## INTEL_FILES (web/api.py)
+
+`output/intel/` 에서 읽어 `/api/data`로 노출하는 파일 목록.
+**새 분석 모듈 추가 시 반드시 이 목록에도 추가.**
+
+```python
+INTEL_FILES = [
+    "prices.json", "macro.json", "portfolio_summary.json", "alerts.json",
+    "regime.json", "price_analysis.json", "engine_status.json",
+    "opportunities.json", "screener_results.json", "news.json",
+    "fundamentals.json", "supply_data.json", "holdings_proposal.json",
+    "performance_report.json", "simulation_report.json", "sector_scores.json",
+    "proactive_alerts.json", "correction_notes.json",
+]
+MD_FILES = ["marcus-analysis.md", "cio-briefing.md", "daily_report.md"]
+```
+
+---
 
 ## 코드 규칙
 
@@ -76,48 +162,57 @@ output/intel/ → 자비스가 읽는 유일한 인터페이스
 - 마크다운 리포트는 한국어 + 이모지
 - 종목/지표 추가·수정은 **반드시 `config.py`만** 수정 (하드코딩 금지)
 - HTTP 요청은 `urllib.request` 직접 사용 (외부 라이브러리 금지)
-- 외부 패키지 추가 금지 (stdlib + pytest만 허용)
+- 외부 패키지 추가 금지 (stdlib + pytest + ruff + yfinance만 허용)
 - 시간대는 KST (`timezone(timedelta(hours=9))`)
 - `sys.path.insert(0, ...)` 패턴으로 프로젝트 루트를 모듈 경로에 추가
 - **`server.py`에서 내부 모듈 임포트는 반드시 모듈 전체 임포트** (`import web.api as api`). 함수 선택 임포트(`from web.api import ...`) 금지 — 새 함수 추가 시 임포트 목록 누락으로 런타임 NameError 반복 발생
 
-## 현재 개발 단계
+---
 
-**전체 완료 (32/32)**: 모든 Phase 완료
-- Phase 1: config, fetch_prices, fetch_macro, alerts, daily report, pipeline runner
-- Phase 2: fetch_news, screener, portfolio, weekly report, Kiwoom API
-- Phase 2.5: alerts_watch, closing report, realtime.py, 시스템 이벤트 트리거
-- Phase 3: price_analysis, 포트폴리오 이력, 뉴스 감성, 환율 손익, sector_intel, regime_classifier, value_screener, proactive_alerts, self_correction, composite_score, simulation, dynamic_holdings, performance
-
-## DB 스키마 (db/init_db_schema.py)
+## DB 스키마 (db/history.db)
 
 ### 원시 테이블 (10분 해상도, 3개월 보존)
-- `prices`: ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source
-- `macro`: indicator, value, change_pct, timestamp
+| 테이블 | 주요 컬럼 |
+|--------|---------|
+| `prices` | ticker, name, price, prev_close, change_pct, volume, timestamp, market, data_source |
+| `macro` | indicator, value, change_pct, timestamp |
+| `news` | title, summary, source, url, published_at, relevance_score, sentiment, tickers, category |
+| `alerts` | level, event_type, ticker, message, value, threshold, triggered_at, notified |
 
 ### 집계 테이블 (일봉, 영구 보존)
-- `prices_daily`: ticker, date, open, high, low, close, volume, change_pct, data_source
-- `macro_daily`: indicator, date, open, high, low, close, change_pct
+| 테이블 | 주요 컬럼 |
+|--------|---------|
+| `prices_daily` | ticker, date, open, high, low, close, volume, change_pct, data_source |
+| `macro_daily` | indicator, date, open, high, low, close, change_pct |
 
-### 분석/기록 테이블
-- `news`: title, summary, source, url, published_at, relevance_score, sentiment, tickers, category
-- `alerts`: level, event_type, ticker, message, value, threshold, triggered_at, notified
-- `portfolio_history`: date, total_value_krw, total_invested_krw, total_pnl_krw, total_pnl_pct, fx_rate, fx_pnl_krw, holdings_snapshot
-- `analysis_history`: date, regime, confidence_level, today_call, summary, raw_content, model
-- `ticker_master`: ticker, name, market, sector, last_updated
-- `agent_keywords`: keyword, category, weight, source
-- `opportunities`: 종목 발굴 후보 (ticker, name, score 등)
-- `fundamentals`: 기업 펀더멘털 데이터
-- `holdings`: 현재 보유 종목
-- `transactions`: 거래 내역
-- `extra_assets`: 비금융 자산 (부동산, 현금 등)
-- `total_wealth_history`: 전재산 이력 (금융+비금융 통합)
+### SSoT 포트폴리오 (영구 보존)
+| 테이블 | 주요 컬럼 |
+|--------|---------|
+| `holdings` | ticker, name, sector, currency, qty, avg_cost, buy_fx_rate, acquired_at, account, note |
+| `transactions` | ticker, tx_type(BUY/SELL), qty, price, fx_rate, fee, note, executed_at |
+| `extra_assets` | name, asset_type, current_value_krw, monthly_deposit_krw, is_fixed, maturity_date |
+| `total_wealth_history` | date, investment_value_krw, extra_assets_krw, total_wealth_krw, investment_pnl_krw, fx_rate |
+| `portfolio_history` | date, total_value_krw, total_invested_krw, total_pnl_krw, total_pnl_pct, fx_rate, fx_pnl_krw, holdings_snapshot |
 
-## 환경 변수
+### 분석·발굴 테이블
+| 테이블 | 주요 컬럼 |
+|--------|---------|
+| `ticker_master` | ticker(PK), name, name_en, market, sector |
+| `opportunities` | ticker, composite_score, discovered_at, discovered_via, score_*, price_at_discovery, outcome_1w, outcome_1m, status |
+| `fundamentals` | ticker, per, pbr, roe, debt_ratio, revenue_growth, fcf, eps, dividend_yield, market_cap, sector, foreign_net, inst_net |
+| `analysis_history` | date(UNIQUE), content, confidence_level, regime, today_call |
+| `agent_keywords` | keyword, category, priority, reasoning, generated_at |
+| `solar_listings` | source, listing_id, title, capacity_kw, location, price_krw, deal_type, url, status, first_seen_at |
+
+---
+
+## 환경 변수 (.env)
+
 ```bash
-BRAVE_API_KEY=xxx        # 뉴스 수집 (Brave Search)
+BRAVE_API_KEY=xxx        # 뉴스·기회 발굴 (Brave Search)
 KIWOOM_APPKEY=xxx        # 키움증권 REST API (선택)
 KIWOOM_SECRETKEY=xxx     # 키움증권 REST API (선택)
+DISCORD_WEBHOOK_URL=xxx  # Discord 알림 웹훅
 ```
 
 ## ⚠️ Discord 전송 필수 규칙
@@ -130,22 +225,115 @@ KIWOOM_SECRETKEY=xxx     # 키움증권 REST API (선택)
 - Yahoo Finance 과도한 요청 시 rate limit 주의 (10분 간격 권장)
 - `.kiwoom_token.json` — 토큰 캐시 (git 제외)
 
-## RALF 자율 개발 워크플로우
+---
 
-1. `tests.json`에서 다음 eligible 기능 선택 (failing + 의존성 충족 + 최소 priority)
-2. 테스트 먼저 작성 (TDD)
-3. 구현 → `python3 -m pytest tests/ -v` 통과 확인
-4. 통과 시: tests.json → passing, prd.md → [x], git commit
-5. 실패 시: LESSONS.md에 교훈 기록
+## 웹 서비스 아키텍처
 
-참고 파일:
-- `prd.md` — 태스크 체크리스트 (32개 기능, 전체 완료)
-- `tests.json` — 기능 목록 + 수락 기준 + 의존성 그래프
-- `ARCHITECTURE.md` — 3계층 아키텍처 + ERD + 확장 로드맵
-- `AGENT_GUIDE.md` — 에이전트 사용 매뉴얼 (JSON 구조, DB 쿼리 예시)
-- `JARVIS_INTEGRATION.md` — 자비스 연동 명세 + 고도화 요청사항
-- `LESSONS.md` — 학습된 교훈
-- `progress.md` — 반복 진행 기록
+```
+외부 클라이언트 (Tailscale VPN: 100.90.201.87)
+        │ :3000
+        ▼
+┌─────────────────────────┐
+│  mc-web (Next.js)       │  web-next/Dockerfile
+│  standalone 서버        │
+│  /api/[...path] → 프록시┼──────────────────────┐
+│  /api/events → SSE 프록시                      │
+└─────────────────────────┘                      ▼
+                               ┌─────────────────────────┐
+                               │  investment-bot :8421   │  Dockerfile (루트)
+                               │  Flask + cron 스케줄러  │
+                               └─────────────────────────┘
+```
+
+**GitHub push는 코드 백업용 — 자동 배포 없음. 항상 수동 smart-deploy.sh 실행.**
+
+### 컨테이너 구조
+
+| 컨테이너 | 포트 | 역할 |
+|---------|------|------|
+| `investment-bot` | 8421 | Flask API + 내부 cron 스케줄러 |
+| `mc-web` | 3000 | Next.js standalone 프론트엔드 |
+
+### 볼륨 마운트 (Python 소스 — restart만으로 반영)
+`web/`, `analysis/`, `data/`, `reports/`, `scripts/`, `config.py`, `run_pipeline.py`
+
+### HOST launchd 전부 비활성화. 스케줄은 Docker 내부 cron만 사용.
+
+### 스케줄 (KST)
+
+| 잡 | 스케줄 | 스크립트 |
+|----|--------|---------|
+| refresh_prices | 매 1분 | `scripts/refresh_prices.py` |
+| alerts_watch | 매 5분 | `analysis/alerts_watch.py` |
+| universe_daily | 평일 07:00 | `data/fetch_universe_daily.py` |
+| marcus | 평일 05:30 | `scripts/run_marcus.py` |
+| jarvis | 평일 07:30 | `scripts/run_jarvis.py` |
+| pipeline | 평일 07:40 | `run_pipeline.py` |
+| news | 평일 08:00 | `scripts/refresh_news.py` |
+| refresh_solar | 매일 08:30, 19:00 | `scripts/refresh_solar.py` |
+| monthly-deposit | 매월 1일 00:00 | `scripts/monthly_deposit_cron.py` |
+
+---
+
+## ⚠️ Next.js 배포 규칙 (docker cp 방식)
+
+```bash
+# 반드시 /. 형태로 — 없으면 static/static/ 중첩 경로 버그 발생
+cd web-next && npm run build && cd ..
+docker cp web-next/.next/standalone/. mc-web:/app/
+docker cp web-next/.next/static/. mc-web:/app/.next/static/
+docker restart mc-web
+```
+
+**smart-deploy.sh 사용 권장:**
+```bash
+bash .claude/skills/deploy/scripts/smart-deploy.sh auto  # 자동 감지
+bash .claude/skills/deploy/scripts/smart-deploy.sh python  # Python만
+bash .claude/skills/deploy/scripts/smart-deploy.sh web     # Next.js만
+bash .claude/skills/deploy/scripts/smart-deploy.sh build   # Dockerfile 변경
+```
+
+---
+
+## Next.js 프론트엔드 구조 (web-next/)
+
+### 기술 스택
+Next.js 16.2.4 · React 19 · TypeScript 5 · Tailwind CSS 4 · Zustand(상태) · SWR(데이터페칭) · Recharts(차트) · shadcn/ui · react-markdown
+
+### 탭 구성 (11개)
+`overview` · `portfolio` · `marcus` · `discovery` · `wealth` · `solar` · `advisor` · `saved-strategies` · `alerts` · `system` · `service-map`
+
+### 핵심 파일
+| 경로 | 역할 |
+|------|------|
+| `src/app/page.tsx` | 메인 SPA (탭 렌더링) |
+| `src/app/api/[...path]/route.ts` | Flask 프록시 (SSE·스트리밍 특별처리) |
+| `src/store/useMCStore.ts` | Zustand 전역 상태 (activeTab, pipelineRunning 등) |
+| `src/hooks/useIntelData.ts` | SWR `/api/data` (SSE 트리거로 갱신) |
+| `src/hooks/useSSE.ts` | EventSource 관리 → intel-data mutate |
+| `src/lib/api.ts` | fetcher 함수 모음 |
+| `src/lib/format.ts` | `fmtKrw()`, `fmtPct()`, `pctColor()` |
+| `src/data/investment-assets.json` | 투자 자산 정의 (어드바이저용) |
+| `src/types/api.ts` | Flask 응답 타입 (IntelData, PriceItem 등) |
+| `src/types/advisor.ts` | InvestmentAsset, RiskLevel 등 |
+
+### SWR 갱신 전략
+| 키 | 갱신 방식 |
+|----|---------|
+| `intel-data` | 수동 + SSE 트리거 |
+| `process-status` | 5초 폴링 |
+| `marcus-log` | 3초 폴링 (실행 중만) |
+| `opportunities-*` | 5분 캐시 |
+| `/api/wealth` | 1분 폴링 |
+
+### localStorage 키
+| 키 | 내용 |
+|----|------|
+| `mc-active-tab` | 마지막 탭 |
+| `mc-advisor-settings` | capital, leverageAmt, riskLevel |
+| `mc-saved-strategies` | 저장된 AI 어드바이스 |
+
+---
 
 ## gstack
 
@@ -159,79 +347,12 @@ Available skills:
 - `/document-release`, `/codex`, `/cso`, `/autoplan`
 - `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`
 
-## 웹 서비스 아키텍처
+---
 
-```
-외부 클라이언트 (Tailscale VPN)
-        │ http://macmini:3000
-        ▼
-┌──────────────────────────────────────┐
-│  mc-web (port 3000)                  │
-│  Next.js standalone server           │
-│  web-next/Dockerfile                 │
-│                                      │
-│  GET /        → 대시보드 SPA         │
-│  /api/events  → SSE 스트리밍 프록시  │
-│  /api/*       → Flask로 프록시 ──────┼──┐
-└──────────────────────────────────────┘  │
-                                          ▼
-┌──────────────────────────────────────┐
-│  investment-bot (port 8421)          │
-│  Python Flask API 전용               │
-│  Dockerfile (frontend 빌드 없음)     │
-│                                      │
-│  /api/data, /api/wealth, /api/status │
-│  /api/events (SSE), /api/logs        │
-│  POST /api/run-pipeline, /api/run-marcus │
-└──────────────────────────────────────┘
-```
+## Deploy Configuration
 
-### 컨테이너별 역할
-| 컨테이너 | 포트 | 역할 | Dockerfile |
-|---------|------|------|-----------|
-| `mc-web` | 3000 | Next.js 프론트 (standalone) | `web-next/Dockerfile` |
-| `investment-bot` | 8421 | Flask API + cron 스케줄러 | `Dockerfile` (루트) |
-
-### ⚠️ 스케줄러 — Docker 내부 cron (HOST launchd 사용 안 함)
-
-모든 주기적 작업은 `investment-bot` 컨테이너 내부 cron이 실행. HOST launchd는 비활성화됨.
-
-| 잡 | 스케줄 (KST) | 스크립트 |
-|----|-------------|---------|
-| alerts_watch | 매 5분 | `analysis/alerts_watch.py` |
-| refresh_prices | 매 10분 | `scripts/refresh_prices.py` |
-| marcus | 평일 05:30 | `scripts/run_marcus.py` |
-| jarvis | 평일 07:30 | `scripts/run_jarvis.py` |
-| pipeline | 평일 07:40 | `run_pipeline.py` |
-| news | 평일 08:00 | `scripts/refresh_news.py` |
-| monthly-deposit | 매월 1일 00:00 | `scripts/monthly_deposit_cron.py` |
-
-관련 파일: `crontab.docker`, `docker-entrypoint.sh`
-**스케줄 변경 시**: `crontab.docker` 수정 → `docker compose up -d --build investment-bot`
-
-### ⚠️ Next.js 배포 규칙 (docker cp 방식)
-```bash
-# 반드시 /. 형태로 — 없으면 static/static/ 중첩 경로 버그 발생
-docker cp web-next/.next/standalone/. mc-web:/app/
-docker cp web-next/.next/static/. mc-web:/app/.next/static/
-docker restart mc-web
-```
-- `next.config.ts`의 `output: 'standalone'`과 `web-next/Dockerfile`은 항상 일치해야 함
-- output 모드 변경 시 반드시 클린 빌드: `.next/` 삭제 후 `npm run build`
-- `HOSTNAME=0.0.0.0` 필수 (없으면 Tailscale 외부 접근 불가)
-
-## Deploy Configuration (configured by /setup-deploy)
 - Platform: Docker Compose (self-hosted, Mac mini)
-- Production URL: http://100.90.201.87:3000 (프론트엔드 mc-web)
-- API URL: http://100.90.201.87:8421 (Flask API 전용)
-- Deploy workflow: docker compose up -d --build
-- Deploy status command: docker ps --filter name=investment-bot
+- Production URL: http://100.90.201.87:3000 (mc-web)
+- API URL: http://100.90.201.87:8421 (Flask API)
 - Merge method: merge
-- Project type: web app (Python Flask + Next.js, 미션컨트롤 대시보드)
-- Post-deploy health check: http://100.90.201.87:3000
-
-### Custom deploy hooks
-- Pre-merge: none
-- Deploy trigger: GitHub Actions (main 푸시 시 자동) → docker cp + docker restart
-- Deploy status: docker ps --format "{{.Names}}\t{{.Status}}"
-- Health check: http://localhost:3000 (mc-web), http://localhost:8421/api/status (API)
+- Health check: `docker ps` + `docker exec investment-bot curl -sf http://localhost:8421/api/status`
