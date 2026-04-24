@@ -79,6 +79,7 @@ output/intel/ → 자비스가 읽는 유일한 인터페이스
 - 외부 패키지 추가 금지 (stdlib + pytest만 허용)
 - 시간대는 KST (`timezone(timedelta(hours=9))`)
 - `sys.path.insert(0, ...)` 패턴으로 프로젝트 루트를 모듈 경로에 추가
+- **`server.py`에서 내부 모듈 임포트는 반드시 모듈 전체 임포트** (`import web.api as api`). 함수 선택 임포트(`from web.api import ...`) 금지 — 새 함수 추가 시 임포트 목록 누락으로 런타임 NameError 반복 발생
 
 ## 현재 개발 단계
 

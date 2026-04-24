@@ -12,6 +12,13 @@ services:
       - ./docs:/app/docs
       - ~/.claude:/root/.claude-host:ro
       - ~/.claude.json:/root/.claude-host.json:ro
+      - ./web:/app/web
+      - ./analysis:/app/analysis
+      - ./data:/app/data
+      - ./reports:/app/reports
+      - ./scripts:/app/scripts
+      - ./config.py:/app/config.py
+      - ./run_pipeline.py:/app/run_pipeline.py
     environment:
       - TZ=Asia/Seoul
     env_file:
