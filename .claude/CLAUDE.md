@@ -156,6 +156,55 @@ MD_FILES = ["marcus-analysis.md", "cio-briefing.md", "daily_report.md"]
 
 ---
 
+## ⚠️ 반복 실수 — 반드시 숙지
+
+### 임포트 누락 (가장 많이 발생)
+
+Python은 import 누락을 런타임 전까지 잡아주지 않는다. 아래 두 가지 상황에서 반복 발생했다:
+
+1. **새 유틸리티 함수 생성 후 사용처에 import 빠뜨리기**
+   - 예: `db/connection.py`에 `get_db_conn` 신설 → `web/api.py`에서 호출 코드는 추가했지만 `from db.connection import get_db_conn` 누락
+   - **규칙: 새 함수를 만들고 다른 파일에서 쓰면, 그 파일 상단 import를 제일 먼저 추가한다**
+
+2. **base 모듈에 함수 추가 후 import 목록 갱신 누락**
+   - 예: `fetch_solar_base.py`에 `parse_deal_type` 추가 → `fetch_solar_onbid.py` 호출 코드는 넣었지만 import 목록에서 빠짐
+   - **규칙: `from X import (A, B)` 목록을 수정할 때 사용하는 이름 전부 나열됐는지 확인**
+
+3. **`server.py`에서 내부 모듈 선택 임포트 금지**
+   - `from web.api import fn1, fn2` 대신 `import web.api as api` — 새 함수 추가 시 목록 갱신 실수 방지
+
+### import 검증 — 코드 변경 후 반드시 실행
+
+```bash
+python3 -c "import web.api; import web.server; import analysis.solar_alerts"
+```
+
+또는 전체 검사:
+```bash
+bash .claude/skills/deploy/scripts/pre-deploy-check.sh
+```
+
+실패 없이 통과해야 배포 진행.
+
+### 모듈 참조 관계 (새 모듈 추가 시 이 관계 확인)
+
+```
+db/connection.py (get_db_conn)
+  └─ import: web/api.py, db/ssot.py, db/ssot_wealth.py, db/aggregate.py, db/maintenance.py
+
+data/fetch_solar_base.py (SolarListing, parse_capacity, parse_location, parse_price, parse_deal_type, ...)
+  └─ import: data/fetch_solar_allthatsolar.py, solarmarket.py, exchange.py, solartrade.py,
+             solardirect.py, haetbit.py, ssunlab.py, koreari.py, onbid.py
+
+web/api.py (load_intel_data, load_solar_listings, load_wealth, ...)
+  └─ import: web/server.py (전체 모듈 임포트: import web.api as api)
+
+config.py (DB_PATH, PORTFOLIO, ...)
+  └─ import: 거의 모든 모듈
+```
+
+---
+
 ## 코드 규칙
 
 - 모든 주석/docstring은 **한국어**
@@ -165,7 +214,7 @@ MD_FILES = ["marcus-analysis.md", "cio-briefing.md", "daily_report.md"]
 - 외부 패키지 추가 금지 (stdlib + pytest + ruff + yfinance만 허용)
 - 시간대는 KST (`timezone(timedelta(hours=9))`)
 - `sys.path.insert(0, ...)` 패턴으로 프로젝트 루트를 모듈 경로에 추가
-- **`server.py`에서 내부 모듈 임포트는 반드시 모듈 전체 임포트** (`import web.api as api`). 함수 선택 임포트(`from web.api import ...`) 금지 — 새 함수 추가 시 임포트 목록 누락으로 런타임 NameError 반복 발생
+- **`server.py`에서 내부 모듈 임포트는 반드시 모듈 전체 임포트** (`import web.api as api`). 함수 선택 임포트(`from web.api import ...`) 금지
 
 ---
 
