@@ -251,11 +251,19 @@ def main():
     aggregate_daily()
     maintain_db()
 
-    # 4. 분석
-    analyze_prices()
-    check_alerts()
-    run_screener()
-    analyze_portfolio()
+    # 4. 분석 — 각 단계 독립 실행 (실패해도 후속 단계 계속)
+    _failed_steps: list[str] = []
+    for step_name, step_fn in [
+        ("analyze_prices", analyze_prices),
+        ("check_alerts", check_alerts),
+        ("run_screener", run_screener),
+        ("analyze_portfolio", analyze_portfolio),
+    ]:
+        try:
+            step_fn()
+        except Exception as e:
+            print(f"  ⚠️ {step_name} 실패: {e}")
+            _failed_steps.append(step_name)
 
     # 4.1 ~ 4.3. 후처리 분석
     _run_post_analysis()
@@ -272,6 +280,9 @@ def main():
     # 6. 주간 리포트 (--weekly 플래그 시)
     if weekly_mode:
         generate_weekly()
+
+    if _failed_steps:
+        _send_discord(f"⚠️ 파이프라인 분석 단계 실패: {', '.join(_failed_steps)}")
 
     print("=" * 60)
     print("✅ 파이프라인 완료")

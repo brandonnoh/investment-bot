@@ -4,18 +4,17 @@ SSoT Wealth — 자산/입금 관련 API
 비금융 자산, 월 적립, 전체 자산 히스토리/요약 담당
 """
 
-import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import DB_PATH
+from db.connection import get_db_conn
 
 
 def get_conn():
-    """DB 연결 반환 (순환 import 방지용 로컬 정의)"""
-    return sqlite3.connect(str(DB_PATH))
+    """DB 연결 반환 (WAL + busy_timeout=30초)"""
+    return get_db_conn()
 
 
 KST = timezone(timedelta(hours=9))

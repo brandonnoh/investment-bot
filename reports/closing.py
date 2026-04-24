@@ -16,7 +16,6 @@ from pathlib import Path
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import DB_PATH, MACRO_INDICATORS, OUTPUT_DIR
-from config import PORTFOLIO_LEGACY as PORTFOLIO
 from db.init_db import init_db
 
 # 헬퍼 함수 임포트 (하위 호환 re-export 포함)
@@ -52,7 +51,7 @@ def _render_price_section() -> tuple[list, dict]:
         "current_usd": 0,
     }
 
-    for stock in PORTFOLIO:
+    for stock in ssot.get_holdings():
         ticker = stock["ticker"]
         name = stock["name"]
         currency = stock["currency"]
@@ -66,12 +65,8 @@ def _render_price_section() -> tuple[list, dict]:
 
         close = ohlc["close"]
         prev_close = ohlc["prev_close"]
-        change_pct = (
-            round((close - prev_close) / prev_close * 100, 2) if prev_close else None
-        )
-        pnl_pct = (
-            round((close - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
-        )
+        change_pct = round((close - prev_close) / prev_close * 100, 2) if prev_close else None
+        pnl_pct = round((close - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else None
 
         if avg_cost > 0:
             if currency == "KRW":
@@ -116,9 +111,7 @@ def _render_pnl_section(totals: dict) -> list:
         pnl_usd = current_usd - invested_usd
         pnl_pct_usd = pnl_usd / invested_usd * 100
         emoji_usd = "🟢" if pnl_usd >= 0 else "🔴"
-        lines.append(
-            f"- **USD 포트폴리오**: 투자 ${invested_usd:,.2f} → 현재 ${current_usd:,.2f}"
-        )
+        lines.append(f"- **USD 포트폴리오**: 투자 ${invested_usd:,.2f} → 현재 ${current_usd:,.2f}")
         lines.append(f"  - {emoji_usd} 손익: ${pnl_usd:+,.2f} ({pnl_pct_usd:+.2f}%)")
 
     if invested_krw == 0 and invested_usd == 0:
@@ -201,9 +194,7 @@ def generate_closing_report() -> str:
 
 def run():
     """장 마감 리포트 생성 파이프라인"""
-    print(
-        f"\n📈 장 마감 리포트 생성 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}"
-    )
+    print(f"\n📈 장 마감 리포트 생성 — {datetime.now(KST).strftime('%Y-%m-%d %H:%M KST')}")
 
     # DB 초기화 확인
     if not DB_PATH.exists():

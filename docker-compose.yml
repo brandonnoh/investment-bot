@@ -17,12 +17,19 @@ services:
       - ./data:/app/data
       - ./reports:/app/reports
       - ./scripts:/app/scripts
+      - ./utils:/app/utils
       - ./config.py:/app/config.py
       - ./run_pipeline.py:/app/run_pipeline.py
     environment:
       - TZ=Asia/Seoul
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8421/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   mc-web:
     build: ./web-next
@@ -34,4 +41,5 @@ services:
       - PYTHON_API_URL=http://investment-bot:8421
       - HOSTNAME=0.0.0.0
     depends_on:
-      - investment-bot
+      investment-bot:
+        condition: service_healthy

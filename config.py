@@ -273,10 +273,7 @@ MARCUS_CONFIG = {
 # 네이버 개발자센터에서 앱 등록 후 발급
 
 # ── Discord / 알림 설정 ──
-DISCORD_WEBHOOK_URL = os.environ.get(
-    "DISCORD_WEBHOOK_URL",
-    "https://discord.com/api/webhooks/1490306786870165624/0JjO5i_BNWCmIDnFJXQZ0OcDGeWdYsryKnUFGXvoKlqALza6mFPqcjbFz40fWltCIkRR",
-)
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
 # ── 웹 대시보드 ──
 DASHBOARD_PORT = 8421

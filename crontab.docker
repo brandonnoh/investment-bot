@@ -31,3 +31,9 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # 태양광 매물 수집: 매일 08:30, 19:00 KST
 30 8 * * * root cd /app && python3 scripts/refresh_solar.py >> /app/logs/refresh_solar.log 2>&1
 0 19 * * * root cd /app && python3 scripts/refresh_solar.py >> /app/logs/refresh_solar.log 2>&1
+
+# DB 유지보수 (purge + vacuum): 매주 일요일 03:00 KST
+0 3 * * 0 root cd /app && python3 db/maintenance.py >> /app/logs/maintenance.log 2>&1
+
+# 로그 로테이션: 매일 00:05 KST — 10MB 초과 로그 압축 + 7일 이상 삭제
+5 0 * * * root find /app/logs -name "*.log" -size +10M -exec gzip {} \; && find /app/logs -name "*.log.gz" -mtime +7 -delete

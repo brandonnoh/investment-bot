@@ -4,20 +4,19 @@ SSoT (Single Source of Truth) — DB 중심 자산 관리 API
 config.py/JSON 대신 DB를 유일한 진실 소스로 사용
 """
 
-import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import DB_PATH
+from db.connection import get_db_conn
 
 KST = timezone(timedelta(hours=9))
 
 
 def get_conn():
-    """DB 연결 반환"""
-    return sqlite3.connect(str(DB_PATH))
+    """DB 연결 반환 (WAL + busy_timeout=30초)"""
+    return get_db_conn()
 
 
 # ══════════════════════════════════════════════════════════════
@@ -90,9 +89,7 @@ def update_holding(
         updates.append("updated_at = ?")
         params.append(now)
         params.append(ticker)
-        cursor.execute(
-            f"UPDATE holdings SET {', '.join(updates)} WHERE ticker = ?", params
-        )
+        cursor.execute(f"UPDATE holdings SET {', '.join(updates)} WHERE ticker = ?", params)
         conn.commit()
 
     if own_conn:

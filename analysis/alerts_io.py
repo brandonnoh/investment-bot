@@ -4,7 +4,6 @@
 alerts.py에서 분리된 I/O 전용 모듈
 """
 
-import json
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
@@ -89,6 +88,5 @@ def save_alerts_to_json(alerts: list[dict], output_dir=None):
         "count": len(alerts),
         "alerts": alerts,
     }
-    with alerts_path.open("w", encoding="utf-8") as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
+    write_json_atomic(alerts_path, output)
     print(f"  🚨 알림 JSON 저장: {alerts_path} ({len(alerts)}건)")

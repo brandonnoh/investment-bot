@@ -6,13 +6,12 @@ DB 보존 정책 + 자동 정리 모듈
 VACUUM으로 DB 용량 최적화
 """
 
-import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import DB_PATH, RETENTION_POLICY
+from config import RETENTION_POLICY
 
 KST = timezone(timedelta(hours=9))
 
@@ -118,8 +117,11 @@ def purge_old_data(conn, raw_months=None, news_months=None):
 
 
 def vacuum_db(conn):
-    """VACUUM 실행으로 DB 용량 최적화"""
+    """VACUUM 실행 + WAL 모드 복구.
+    SQLite VACUUM은 journal_mode를 DELETE로 리셋할 수 있으므로 반드시 WAL 재설정 필요.
+    """
     conn.execute("VACUUM")
+    conn.execute("PRAGMA journal_mode=WAL")
 
 
 def run(conn=None):
@@ -135,16 +137,13 @@ def run(conn=None):
 
     own_conn = conn is None
     if own_conn:
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
+        conn = get_db_conn()
 
     try:
         result = purge_old_data(conn)
         vacuum_db(conn)
 
-        total = (
-            result["prices_deleted"] + result["macro_deleted"] + result["news_deleted"]
-        )
+        total = result["prices_deleted"] + result["macro_deleted"] + result["news_deleted"]
         skipped = result["prices_skipped_no_agg"] + result["macro_skipped_no_agg"]
 
         print(

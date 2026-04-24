@@ -29,7 +29,6 @@ from analysis.alerts import (
 # Discord 발송 모듈 (분리된 alerts_watch_notify에서 re-export)
 from analysis.alerts_watch_notify import fire_discord_alert  # noqa: F401
 from config import DB_PATH
-from config import PORTFOLIO_LEGACY as PORTFOLIO
 from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))
@@ -103,8 +102,8 @@ def get_latest_prices_from_db() -> list[dict]:
         rows = cursor.fetchall()
         results = []
         for row in rows:
-            # PORTFOLIO에서 avg_cost, currency, qty 매칭
-            stock_info = next((s for s in PORTFOLIO if s["ticker"] == row[0]), {})
+            # DB SSoT에서 avg_cost, currency, qty 매칭
+            stock_info = next((s for s in ssot.get_holdings() if s["ticker"] == row[0]), {})
             results.append(
                 {
                     "ticker": row[0],
@@ -143,8 +142,7 @@ def get_latest_macro_from_db() -> list[dict]:
         """)
         rows = cursor.fetchall()
         return [
-            {"indicator": r[0], "value": r[1], "change_pct": r[2], "timestamp": r[3]}
-            for r in rows
+            {"indicator": r[0], "value": r[1], "change_pct": r[2], "timestamp": r[3]} for r in rows
         ]
     finally:
         conn.close()
@@ -153,9 +151,7 @@ def get_latest_macro_from_db() -> list[dict]:
 # ── 중복 방지 (실시간 모드 전용) ──
 
 
-def is_duplicate_alert(
-    event_type: str, ticker: str | None, direction: str, conn=None
-) -> bool:
+def is_duplicate_alert(event_type: str, ticker: str | None, direction: str, conn=None) -> bool:
     """같은 종목+같은 방향 알림이 최근 1시간 내에 이미 발송되었는지 확인
 
     Args:
@@ -173,9 +169,7 @@ def is_duplicate_alert(
 
     try:
         cursor = conn.cursor()
-        cutoff = (
-            datetime.now(KST) - timedelta(seconds=DEDUP_INTERVAL_SECONDS)
-        ).isoformat()
+        cutoff = (datetime.now(KST) - timedelta(seconds=DEDUP_INTERVAL_SECONDS)).isoformat()
 
         if ticker:
             cursor.execute(

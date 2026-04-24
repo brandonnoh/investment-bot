@@ -15,7 +15,6 @@ from pathlib import Path
 # 프로젝트 루트를 모듈 경로에 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import DB_PATH, OUTPUT_DIR
-from config import PORTFOLIO_LEGACY as PORTFOLIO
 from data.fetch_news_db import (  # noqa: F401  re-export
     ensure_category_column,
     save_to_db,
@@ -134,7 +133,7 @@ def _collect_rss_stock_news(now: str, seen_urls: set) -> tuple[list[dict], int]:
     """종목별 RSS 뉴스 수집. (items, count) 반환"""
     items = []
     count = 0
-    for stock in PORTFOLIO:
+    for stock in ssot.get_holdings():
         ticker = stock["ticker"]
         name = stock["name"]
         keywords = TICKER_KEYWORDS.get(ticker)

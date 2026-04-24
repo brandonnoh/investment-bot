@@ -6,6 +6,7 @@ ThreadingHTTPServer + SSE 실시간 업데이트
 
 import contextlib
 import json
+import os
 import queue
 import sys
 import threading
@@ -26,6 +27,15 @@ import web.api as api  # noqa: E402
 import web.investment_advisor as investment_advisor  # noqa: E402
 
 PORT = 8421
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
+
+# AI 스트림 rate limit: 클라이언트 IP → 마지막 요청 시각
+_stream_last: dict[str, float] = {}
+_stream_lock = threading.Lock()
+_STREAM_MIN_INTERVAL = 15.0  # 초
+
+# 허용된 로그 이름 (경로 순회 방지)
+_ALLOWED_LOG_NAMES = {"marcus", "pipeline", "jarvis", "alerts_watch", "refresh_prices"}
 
 # 확장자별 Content-Type 매핑
 _CONTENT_TYPES: dict[str, str] = {
@@ -73,7 +83,9 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
         self.end_headers()
         self.wfile.write(body)
 
@@ -94,7 +106,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         """CORS preflight 처리."""
         self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
@@ -166,11 +178,20 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             else:
                 self.send_json(api.load_analysis_history())
         elif path == "/api/wealth":
-            days = int(params.get("days", ["60"])[0])
+            try:
+                days = max(1, min(365, int(params.get("days", ["60"])[0])))
+            except (ValueError, TypeError):
+                days = 60
             self.send_json(api.load_wealth_data(days))
         elif path == "/api/logs":
             name = params.get("name", ["marcus"])[0]
-            lines = int(params.get("lines", ["80"])[0])
+            if name not in _ALLOWED_LOG_NAMES:
+                self.send_json({"error": "허용되지 않은 로그 이름"}, 400)
+                return
+            try:
+                lines = max(1, min(1000, int(params.get("lines", ["80"])[0])))
+            except (ValueError, TypeError):
+                lines = 80
             log_path = api.PID_DIR / f"{name}.log"
             self.send_json(api.load_log_tail(log_path, lines))
         elif path == "/api/opportunities":
@@ -188,7 +209,10 @@ class MissionControlHandler(BaseHTTPRequestHandler):
                 }
             )
         elif path == "/api/solar":
-            limit = int(params.get("limit", ["100"])[0])
+            try:
+                limit = max(1, min(1000, int(params.get("limit", ["100"])[0])))
+            except (ValueError, TypeError):
+                limit = 100
             listings = api.load_solar_listings(limit)
             self.send_json({"listings": listings, "count": len(listings)})
         elif path == "/api/strategies":
@@ -246,12 +270,20 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.send_json(result)
 
         elif path == "/api/investment-advice-stream":
+            client_ip = self.client_address[0]
+            now = time.time()
+            with _stream_lock:
+                last = _stream_last.get(client_ip, 0.0)
+                if now - last < _STREAM_MIN_INTERVAL:
+                    self.send_json({"error": "요청 빈도 초과. 잠시 후 다시 시도하세요."}, 429)
+                    return
+                _stream_last[client_ip] = now
             body = self._read_json_body()
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Connection", "keep-alive")
-            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
             self.end_headers()
             try:
                 for chunk in investment_advisor.stream_investment_advice(body):
@@ -268,8 +300,10 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def _read_json_body(self) -> dict:
-        """요청 바디를 JSON으로 파싱."""
+        """요청 바디를 JSON으로 파싱 (최대 10MB)."""
         length = int(self.headers.get("Content-Length", 0))
+        if length > 10 * 1024 * 1024:
+            raise ValueError("요청 바디가 너무 큽니다 (최대 10MB)")
         return json.loads(self.rfile.read(length)) if length else {}
 
     def do_PUT(self):
@@ -316,11 +350,11 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "keep-alive")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.end_headers()
 
-        # 클라이언트 큐 등록
-        client_queue: queue.Queue = queue.Queue()
+        # 클라이언트 큐 등록 (maxsize=100: 초과 시 put_nowait → Full → dead client 감지)
+        client_queue: queue.Queue = queue.Queue(maxsize=100)
         with _sse_lock:
             _sse_clients.append(client_queue)
 

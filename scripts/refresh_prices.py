@@ -129,13 +129,15 @@ def _touch_engine_status():
     """engine_status.json의 updated_at을 현재 시각으로 갱신"""
     import json
 
+    from utils.json_io import write_json_atomic
+
     status_path = Path(__file__).resolve().parent.parent / "output" / "intel" / "engine_status.json"
     if not status_path.exists():
         return
     try:
         data = json.loads(status_path.read_text())
         data["updated_at"] = _now_kst_iso()
-        status_path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+        write_json_atomic(status_path, data)
     except Exception as e:
         print(f"[{_now_kst()}] engine_status 갱신 실패: {e}")
 

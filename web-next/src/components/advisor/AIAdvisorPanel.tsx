@@ -43,6 +43,11 @@ export function AIAdvisorPanel({
   const abortRef = useRef<AbortController | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // 컴포넌트 언마운트 시 진행 중인 fetch 취소 (탭 전환 등)
+  useEffect(() => {
+    return () => { abortRef.current?.abort() }
+  }, [])
+
   // 실제 스트림 데이터가 없는 동안 타이머로 가짜 진행률 표시 (Claude 응답 대기 중임을 알림)
   useEffect(() => {
     if (loading && !streamText) {

@@ -5,12 +5,10 @@ prices/macro 원시 데이터(10분 해상도) → OHLCV 일봉 집계
 중복 집계 방지 (UPSERT 패턴)
 """
 
-import sqlite3
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import DB_PATH
 
 
 def _extract_date(timestamp):
@@ -177,8 +175,7 @@ def run(conn=None, target_date=None):
     print("📊 일봉 집계 시작...")
 
     if conn is None:
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
+        conn = get_db_conn()
         try:
             result = aggregate_daily(conn, target_date)
         finally:
@@ -186,9 +183,7 @@ def run(conn=None, target_date=None):
     else:
         result = aggregate_daily(conn, target_date)
 
-    print(
-        f"  ✅ prices_daily: {result['prices_daily']}건, macro_daily: {result['macro_daily']}건"
-    )
+    print(f"  ✅ prices_daily: {result['prices_daily']}건, macro_daily: {result['macro_daily']}건")
     return result
 
 

@@ -4,53 +4,70 @@ export const maxDuration = 120
 
 const API_BASE = process.env.PYTHON_API_URL ?? 'http://localhost:8421'
 
-async function proxy(req: NextRequest, path: string[]) {
-  const url = `${API_BASE}/api/${path.join('/')}${req.nextUrl.search}`
+const SSE_HEADERS = {
+  'Content-Type': 'text/event-stream',
+  'Cache-Control': 'no-cache',
+  Connection: 'keep-alive',
+  'Access-Control-Allow-Origin': '*',
+}
 
-  // SSE는 스트리밍 프록시 처리
-  if (path.join('/') === 'events') {
-    const upstream = await fetch(url, { headers: { Accept: 'text/event-stream' } })
-    return new NextResponse(upstream.body, {
-      status: upstream.status,
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-      },
-    })
+async function proxy(req: NextRequest, path: string[]) {
+  const pathStr = path.join('/')
+  const url = `${API_BASE}/api/${pathStr}${req.nextUrl.search}`
+
+  // SSE 이벤트 스트림 프록시
+  if (pathStr === 'events') {
+    try {
+      const upstream = await fetch(url, { headers: { Accept: 'text/event-stream' } })
+      if (!upstream.ok) {
+        const errMsg = `data: {"error":"upstream ${upstream.status}"}\n\n`
+        return new NextResponse(errMsg, { status: 200, headers: SSE_HEADERS })
+      }
+      return new NextResponse(upstream.body, { status: 200, headers: SSE_HEADERS })
+    } catch (e) {
+      const errMsg = `data: {"error":"upstream unavailable"}\n\n`
+      return new NextResponse(errMsg, { status: 200, headers: SSE_HEADERS })
+    }
   }
 
-  if (path.join('/') === 'investment-advice-stream') {
-    const bodyText = await req.text()
-    const upstream = await fetch(url, {
-      method: 'POST',
+  // AI 어드바이저 스트리밍 프록시
+  if (pathStr === 'investment-advice-stream') {
+    try {
+      const bodyText = await req.text()
+      const upstream = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: bodyText,
+      })
+      if (!upstream.ok) {
+        const errJson = await upstream.text()
+        return new NextResponse(errJson, {
+          status: upstream.status,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new NextResponse(upstream.body, { status: 200, headers: SSE_HEADERS })
+    } catch (e) {
+      return NextResponse.json({ error: 'upstream unavailable' }, { status: 502 })
+    }
+  }
+
+  try {
+    const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
+    const bodyText = hasBody ? await req.text() : undefined
+    const res = await fetch(url, {
+      method: req.method,
       headers: { 'Content-Type': 'application/json' },
       body: bodyText,
     })
-    return new NextResponse(upstream.body, {
-      status: upstream.status,
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-      },
+    const data = await res.arrayBuffer()
+    return new NextResponse(data, {
+      status: res.status,
+      headers: { 'Content-Type': res.headers.get('Content-Type') ?? 'application/json' },
     })
+  } catch (e) {
+    return NextResponse.json({ error: 'upstream unavailable' }, { status: 502 })
   }
-
-  const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
-  const bodyText = hasBody ? await req.text() : undefined
-  const res = await fetch(url, {
-    method: req.method,
-    headers: { 'Content-Type': 'application/json' },
-    body: bodyText,
-  })
-  const data = await res.arrayBuffer()
-  return new NextResponse(data, {
-    status: res.status,
-    headers: { 'Content-Type': res.headers.get('Content-Type') ?? 'application/json' },
-  })
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {

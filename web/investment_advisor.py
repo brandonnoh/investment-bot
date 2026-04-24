@@ -254,13 +254,20 @@ def _stream_via_cli(prompt: str):
     proc.stdin.write(prompt)
     proc.stdin.close()
 
-    while True:
-        chunk = proc.stdout.read(8)
-        if not chunk:
-            break
-        yield chunk
-
-    proc.wait()
+    try:
+        while True:
+            chunk = proc.stdout.read(8)
+            if not chunk:
+                break
+            yield chunk
+    finally:
+        # 클라이언트 단절 시에도 subprocess가 고아 프로세스로 남지 않도록 종료
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
 
 def _parse_request(body: dict) -> tuple[int, int, int, list[dict]]:

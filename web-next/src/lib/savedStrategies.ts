@@ -35,11 +35,7 @@ export function deleteStrategy(id: string): void {
   localStorage.setItem(KEY, JSON.stringify(list))
 }
 
-export function fmtAmt(v: number): string {
-  return v >= 100_000_000
-    ? `${(v / 100_000_000).toFixed(1)}억`
-    : `${(v / 10_000).toLocaleString()}만`
-}
+export { fmtAmt } from '@/lib/format'
 
 const RISK_LABELS: Record<number, string> = {
   1: '보수', 2: '보수-중립', 3: '중립', 4: '공격', 5: '초공격',

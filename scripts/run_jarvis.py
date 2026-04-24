@@ -171,7 +171,8 @@ def run():
     claude_output = ""
     try:
         result = subprocess.run(
-            [CLAUDE_BIN, "--dangerously-skip-permissions", "--print", "-p", prompt],
+            [CLAUDE_BIN, "--print", "-p", "-"],
+            input=prompt,
             capture_output=True,
             text=True,
             timeout=300,

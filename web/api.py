@@ -6,7 +6,6 @@ JSON 파일 로드, 프로세스 실행 관리
 
 import json
 import os
-import sqlite3
 import subprocess
 import threading
 from pathlib import Path
@@ -182,8 +181,7 @@ def load_analysis_history(limit: int = 30) -> list[dict]:
     if not DB_PATH.exists():
         return []
     try:
-        with sqlite3.connect(str(DB_PATH)) as conn:
-            conn.row_factory = sqlite3.Row
+        with get_db_conn() as conn:
             rows = conn.execute(
                 """
                 SELECT date, confidence_level, regime, regime as stance, today_call, created_at
@@ -248,8 +246,7 @@ def load_solar_listings(limit: int = 100) -> list[dict]:
     if not DB_PATH.exists():
         return []
     try:
-        with sqlite3.connect(str(DB_PATH)) as conn:
-            conn.row_factory = sqlite3.Row
+        with get_db_conn() as conn:
             rows = conn.execute(
                 """
                 SELECT source, listing_id, title, capacity_kw, location,
@@ -271,8 +268,7 @@ def load_analysis_detail(date: str) -> dict | None:
     if not DB_PATH.exists():
         return None
     try:
-        with sqlite3.connect(str(DB_PATH)) as conn:
-            conn.row_factory = sqlite3.Row
+        with get_db_conn() as conn:
             row = conn.execute("SELECT * FROM analysis_history WHERE date = ?", (date,)).fetchone()
         return dict(row) if row else None
     except Exception as e:

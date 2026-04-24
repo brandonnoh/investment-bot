@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { fmtKrw } from '@/lib/format'
+import { fmtAmt, fmtKrw } from '@/lib/format'
 import type { RiskLevel } from '@/types/advisor'
 
 const STEP = 5_000_000         // 500만원 단위
@@ -29,7 +29,6 @@ function formatCapital(capital: number): string {
 }
 
 function snap(v: number, step: number) { return Math.round(v / step) * step }
-function fmtAmt(v: number) { return v >= 100_000_000 ? `${(v / 100_000_000).toFixed(1)}억` : `${(v / 10_000).toLocaleString()}만` }
 
 interface ConditionPanelProps {
   capital: number
