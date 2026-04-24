@@ -53,7 +53,7 @@ export function SystemTab() {
             <CardTitle className="text-xs font-mono">모듈 현황</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
               {Object.keys(engine.modules).map(mod => (
                 <Badge
                   key={mod}

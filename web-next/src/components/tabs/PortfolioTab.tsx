@@ -16,8 +16,8 @@ export function PortfolioTab() {
 
   return (
     <div className="space-y-4">
-      {/* 요약 카드 - 항상 2x2 grid */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* 요약 카드 - 모바일 2열, 데스크탑 4열 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: '투자원금', value: `${fmtKrw(total?.invested_krw)}원`, color: undefined },
           { label: '평가금액', value: `${fmtKrw(total?.current_value_krw)}원`, color: undefined },

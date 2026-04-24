@@ -212,7 +212,7 @@ export function WealthTab() {
 
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[1fr_1.6fr] lg:gap-4 lg:items-start">
       {/* 전체 자산 Hero */}
       <Card className="bg-mc-card border-mc-border">
         <CardContent className="pt-5 pb-5 px-5">

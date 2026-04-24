@@ -323,57 +323,64 @@ export function SolarTab() {
       </div>
 
       {!isLoading && allListings.length > 0 && (
-        <div className="space-y-2 pb-2 border-b border-mc-border">
-          {/* 보기 모드 */}
-          <div className="flex gap-1">
-            <FilterChip active={viewMode === 'all'}     onClick={() => setViewMode('all')}>전체</FilterChip>
-            <FilterChip active={viewMode === 'unread'}  onClick={() => setViewMode('unread')}>
-              미열람{unreadCount != null ? ` ${unreadCount}` : ''}
-            </FilterChip>
-            <FilterChip active={viewMode === 'starred'} onClick={() => setViewMode('starred')}>
-              ★ 별표{starredCount ? ` ${starredCount}` : ''}
-            </FilterChip>
-          </div>
-
-          {/* 거래유형 */}
-          <div className="flex gap-1">
-            <FilterChip active={dealType === ''}     onClick={() => setDealType('')}>전체</FilterChip>
-            <FilterChip active={dealType === '매매'} onClick={() => setDealType(dealType === '매매' ? '' : '매매')}>매매</FilterChip>
-            <FilterChip active={dealType === '분양'} onClick={() => setDealType(dealType === '분양' ? '' : '분양')}>분양</FilterChip>
-          </div>
-
-          {/* 출처 */}
-          <div className="flex flex-wrap gap-1">
-            {availableSources.map(src => (
-              <FilterChip key={src} active={selectedSources.has(src)} onClick={() => toggleSource(src)}>
-                {SOURCE_LABELS[src] ?? src}
-              </FilterChip>
-            ))}
-          </div>
-
-          {/* 지역 */}
-          {availableRegions.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              <FilterChip active={selectedRegion === ''} onClick={() => setSelectedRegion('')}>전체지역</FilterChip>
-              {availableRegions.map(r => (
-                <FilterChip
-                  key={r}
-                  active={selectedRegion === r}
-                  onClick={() => setSelectedRegion(r === selectedRegion ? '' : r)}
-                >
-                  {r}
+        <div className="pb-2 border-b border-mc-border">
+          {/* 모바일: 세로 스택 / 데스크탑: 2열 그리드 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-y-2 gap-x-6">
+            <div className="space-y-2">
+              {/* 보기 모드 */}
+              <div className="flex gap-1">
+                <FilterChip active={viewMode === 'all'}     onClick={() => setViewMode('all')}>전체</FilterChip>
+                <FilterChip active={viewMode === 'unread'}  onClick={() => setViewMode('unread')}>
+                  미열람{unreadCount != null ? ` ${unreadCount}` : ''}
                 </FilterChip>
-              ))}
-            </div>
-          )}
+                <FilterChip active={viewMode === 'starred'} onClick={() => setViewMode('starred')}>
+                  ★ 별표{starredCount ? ` ${starredCount}` : ''}
+                </FilterChip>
+              </div>
 
-          {/* 용량 */}
-          <div className="flex flex-wrap gap-1">
-            {CAP_RANGES.map((range, i) => (
-              <FilterChip key={range.label} active={capRangeIdx === i} onClick={() => setCapRangeIdx(i)}>
-                {range.label}
-              </FilterChip>
-            ))}
+              {/* 거래유형 */}
+              <div className="flex gap-1">
+                <FilterChip active={dealType === ''}     onClick={() => setDealType('')}>전체</FilterChip>
+                <FilterChip active={dealType === '매매'} onClick={() => setDealType(dealType === '매매' ? '' : '매매')}>매매</FilterChip>
+                <FilterChip active={dealType === '분양'} onClick={() => setDealType(dealType === '분양' ? '' : '분양')}>분양</FilterChip>
+              </div>
+
+              {/* 용량 */}
+              <div className="flex flex-wrap gap-1">
+                {CAP_RANGES.map((range, i) => (
+                  <FilterChip key={range.label} active={capRangeIdx === i} onClick={() => setCapRangeIdx(i)}>
+                    {range.label}
+                  </FilterChip>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {/* 출처 */}
+              <div className="flex flex-wrap gap-1">
+                {availableSources.map(src => (
+                  <FilterChip key={src} active={selectedSources.has(src)} onClick={() => toggleSource(src)}>
+                    {SOURCE_LABELS[src] ?? src}
+                  </FilterChip>
+                ))}
+              </div>
+
+              {/* 지역 */}
+              {availableRegions.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  <FilterChip active={selectedRegion === ''} onClick={() => setSelectedRegion('')}>전체지역</FilterChip>
+                  {availableRegions.map(r => (
+                    <FilterChip
+                      key={r}
+                      active={selectedRegion === r}
+                      onClick={() => setSelectedRegion(r === selectedRegion ? '' : r)}
+                    >
+                      {r}
+                    </FilterChip>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -397,7 +404,7 @@ export function SolarTab() {
       )}
 
       {!isLoading && filtered.length > 0 && (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
           {filtered.map(listing => {
             const key = listingKey(listing)
             return (

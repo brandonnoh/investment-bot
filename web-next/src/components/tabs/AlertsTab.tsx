@@ -28,7 +28,7 @@ export function AlertsTab() {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
       {alerts.map((alert, i) => (
         <div key={i} className={`p-3 rounded border ${LEVEL_STYLES[alert.level] ?? LEVEL_STYLES.info}`}>
           <div className="flex items-center gap-2 mb-1">
