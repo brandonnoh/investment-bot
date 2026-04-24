@@ -107,14 +107,26 @@ docker restart mc-web
 
 ---
 
-## Git Push
+## 배포 순서 — 반드시 이 순서로
 
-배포 전 커밋 확인:
+**1. 커밋 & 푸시**
 ```bash
-git status
-git add <파일> && git commit -m "..."
-git push
+git add <파일> && git commit -m "..." && git push
 ```
+
+**2. 배포 전 전수 검사 (필수)**
+```bash
+bash .claude/skills/deploy/scripts/pre-deploy-check.sh
+```
+실패 항목이 있으면 배포 중단. 수정 후 재검사.
+
+**3. 배포 명령 실행** (위 상황별 명령 참조)
+
+**4. 배포 후 재검사**
+```bash
+bash .claude/skills/deploy/scripts/pre-deploy-check.sh
+```
+전수 검사 통과 확인 후 완료 보고.
 
 ---
 

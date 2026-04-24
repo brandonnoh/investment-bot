@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from data.fetch_solar_base import (
     SolarListing,
     parse_capacity,
+    parse_deal_type,
     parse_location,
     parse_price,
 )

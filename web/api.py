@@ -10,6 +10,7 @@ import subprocess
 import threading
 from pathlib import Path
 
+from db.connection import get_db_conn
 from web.portfolio_refresh import refresh_portfolio_with_live_prices
 
 # 프로젝트 루트
