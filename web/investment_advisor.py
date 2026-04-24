@@ -199,6 +199,70 @@ def _call_claude(prompt: str) -> str:
     return _call_claude_cli(prompt)
 
 
+def _stream_via_api(prompt: str):
+    """Anthropic API SSE 스트리밍 — content_block_delta 이벤트에서 텍스트 청크 yield."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY 없음")
+
+    payload = json.dumps(
+        {
+            "model": "claude-sonnet-4-6",
+            "max_tokens": 2048,
+            "stream": True,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+    ).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=240) as resp:
+        for raw_line in resp:
+            line = raw_line.decode("utf-8").strip()
+            if not line.startswith("data:"):
+                continue
+            data_str = line[5:].strip()
+            if data_str == "[DONE]":
+                break
+            try:
+                event = json.loads(data_str)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "content_block_delta":
+                text = event.get("delta", {}).get("text", "")
+                if text:
+                    yield text
+
+
+def _stream_via_cli(prompt: str):
+    """Claude CLI Popen으로 stdout 스트리밍 — 8자씩 yield."""
+    proc = subprocess.Popen(
+        [CLAUDE_BIN, "--print", "-p", "-"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    proc.stdin.write(prompt)
+    proc.stdin.close()
+
+    while True:
+        chunk = proc.stdout.read(8)
+        if not chunk:
+            break
+        yield chunk
+
+    proc.wait()
+
+
 def _parse_request(body: dict) -> tuple[int, int, int, list[dict]]:
     """요청 파싱 및 검증."""
     capital = max(0, int(body.get("capital", 0)))
@@ -228,3 +292,22 @@ def get_investment_advice(body: dict) -> dict:
             "recommendation": "AI 분석 일시 불가. 잠시 후 다시 시도해주세요.",
             "error": True,
         }
+
+
+def stream_investment_advice(body: dict):
+    """스트리밍 투자 어드바이스 — 텍스트 청크 제너레이터 (API 키 우선, CLI 폴백)."""
+    try:
+        capital, leverage_amt, risk_level, assets = _parse_request(body)
+    except (TypeError, ValueError):
+        capital, leverage_amt, risk_level, assets = 0, 0, 3, []
+
+    prompt = _build_prompt(capital, leverage_amt, risk_level, assets)
+
+    try:
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            yield from _stream_via_api(prompt)
+        else:
+            yield from _stream_via_cli(prompt)
+    except Exception as e:
+        print(f"[advisor] 스트리밍 실패: {e}")
+        yield "AI 분석 일시 불가. 잠시 후 다시 시도해주세요."

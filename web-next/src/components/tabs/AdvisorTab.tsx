@@ -47,23 +47,33 @@ function getAvailableAssets(
 }
 
 export function AdvisorTab() {
-  const saved = loadSettings()
-  const [capital, setCapital] = useState(saved?.capital ?? 50_000_000)
-  const [leverageAmt, setLeverageAmt] = useState(saved?.leverageAmt ?? 0)
-  const [riskLevel, setRiskLevel] = useState<RiskLevel>(saved?.riskLevel ?? 3)
+  const [capital, setCapital] = useState(50_000_000)
+  const [leverageAmt, setLeverageAmt] = useState(0)
+  const [riskLevel, setRiskLevel] = useState<RiskLevel>(3)
   const [wealthApplied, setWealthApplied] = useState(false)
+
+  // localStorage는 마운트 후에만 읽어야 SSR hydration 불일치를 막는다
+  useEffect(() => {
+    const saved = loadSettings()
+    if (saved) {
+      setCapital(saved.capital)
+      setLeverageAmt(saved.leverageAmt)
+      setRiskLevel(saved.riskLevel)
+      setWealthApplied(true)
+    }
+  }, [])
 
   const { data: wealthData } = useSWR(`${BASE}/api/wealth`, fetcher)
   const wealthKrw: number | null = wealthData?.total_wealth_krw ?? null
 
-  // 전재산 로드 시 한 번만 자본금 초기화 (사용자가 직접 설정한 적 없을 때만)
+  // 전재산 로드 시 한 번만 자본금 초기화 (localStorage에 저장된 설정 없을 때만)
   useEffect(() => {
-    if (wealthKrw && wealthKrw > 0 && !wealthApplied && !saved) {
+    if (wealthKrw && wealthKrw > 0 && !wealthApplied) {
       const snapped = Math.round(Math.min(wealthKrw, 300_000_000) / 5_000_000) * 5_000_000
       setCapital(snapped)
       setWealthApplied(true)
     }
-  }, [wealthKrw, wealthApplied, saved])
+  }, [wealthKrw, wealthApplied])
 
   // 설정 변경 시 localStorage 저장
   useEffect(() => {

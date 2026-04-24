@@ -21,6 +21,24 @@ async function proxy(req: NextRequest, path: string[]) {
     })
   }
 
+  if (path.join('/') === 'investment-advice-stream') {
+    const bodyText = await req.text()
+    const upstream = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: bodyText,
+    })
+    return new NextResponse(upstream.body, {
+      status: upstream.status,
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+      },
+    })
+  }
+
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
   const bodyText = hasBody ? await req.text() : undefined
   const res = await fetch(url, {

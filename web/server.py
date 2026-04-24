@@ -19,26 +19,11 @@ from urllib.parse import parse_qs, urlparse
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from analysis.value_screener_strategies import STRATEGY_META, get_opportunities_cached
-from db.ssot_wealth import (
-    create_extra_asset,
-    delete_extra_asset_by_id,
-    update_extra_asset_by_id,
-)
-from web.api import (
-    INTEL_DIR,
-    PID_DIR,
-    get_process_status,
-    load_analysis_detail,
-    load_analysis_history,
-    load_intel_data,
-    load_log_tail,
-    load_md_file,
-    load_solar_listings,
-    load_wealth_data,
-    run_background,
-)
-from web.investment_advisor import get_investment_advice
+# 모듈 전체 임포트 — 함수를 추가해도 이 파일은 수정 불필요
+import analysis.value_screener_strategies as screener  # noqa: E402
+import db.ssot_wealth as ssot  # noqa: E402
+import web.api as api  # noqa: E402
+import web.investment_advisor as investment_advisor  # noqa: E402
 
 PORT = 8421
 
@@ -116,7 +101,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
 
     def _handle_api_data(self):
         """인텔 데이터 JSON 응답"""
-        data = load_intel_data()
+        data = api.load_intel_data()
         self.send_json(data)
 
     def _handle_api_file(self, params: dict):
@@ -126,7 +111,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.send_json({"error": "잘못된 파일명"}, 400)
             return
         if name.endswith(".md"):
-            content = load_md_file(name)
+            content = api.load_md_file(name)
             body = content.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/markdown; charset=utf-8")
@@ -134,7 +119,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif name.endswith(".json"):
-            self.send_file(INTEL_DIR / name, "application/json; charset=utf-8")
+            self.send_file(api.INTEL_DIR / name, "application/json; charset=utf-8")
         else:
             self.send_json({"error": "지원하지 않는 파일 형식"}, 400)
 
@@ -170,44 +155,44 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         elif path == "/api/file":
             self._handle_api_file(params)
         elif path == "/api/status":
-            self.send_json(get_process_status())
+            self.send_json(api.get_process_status())
         elif path == "/api/events":
             self._handle_sse()
         elif path == "/api/analysis-history":
             date = params.get("date", [None])[0]
             if date:
-                result = load_analysis_detail(date)
+                result = api.load_analysis_detail(date)
                 self.send_json(result if result else {})
             else:
-                self.send_json(load_analysis_history())
+                self.send_json(api.load_analysis_history())
         elif path == "/api/wealth":
             days = int(params.get("days", ["60"])[0])
-            self.send_json(load_wealth_data(days))
+            self.send_json(api.load_wealth_data(days))
         elif path == "/api/logs":
             name = params.get("name", ["marcus"])[0]
             lines = int(params.get("lines", ["80"])[0])
-            log_path = PID_DIR / f"{name}.log"
-            self.send_json(load_log_tail(log_path, lines))
+            log_path = api.PID_DIR / f"{name}.log"
+            self.send_json(api.load_log_tail(log_path, lines))
         elif path == "/api/opportunities":
             strategy = params.get("strategy", ["composite"])[0]
-            if strategy not in STRATEGY_META:
+            if strategy not in screener.STRATEGY_META:
                 self.send_json({"error": "알 수 없는 전략"}, 400)
                 return
-            opps = get_opportunities_cached(strategy)
+            opps = screener.get_opportunities_cached(strategy)
             self.send_json(
                 {
                     "strategy": strategy,
-                    "meta": STRATEGY_META[strategy],
+                    "meta": screener.STRATEGY_META[strategy],
                     "opportunities": opps,
                     "total_count": len(opps),
                 }
             )
         elif path == "/api/solar":
             limit = int(params.get("limit", ["100"])[0])
-            listings = load_solar_listings(limit)
+            listings = api.load_solar_listings(limit)
             self.send_json({"listings": listings, "count": len(listings)})
         elif path == "/api/strategies":
-            self.send_json({"strategies": list(STRATEGY_META.values())})
+            self.send_json({"strategies": list(screener.STRATEGY_META.values())})
         else:
             self._serve_static(path)
 
@@ -216,21 +201,21 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
 
         if path == "/api/run-pipeline":
-            result = run_background(
+            result = api.run_background(
                 "pipeline",
                 ["python3", str(PROJECT_ROOT / "run_pipeline.py")],
             )
             self.send_json(result)
 
         elif path == "/api/run-marcus":
-            result = run_background(
+            result = api.run_background(
                 "marcus",
                 ["python3", str(PROJECT_ROOT / "scripts" / "run_marcus.py")],
             )
             self.send_json(result)
 
         elif path == "/api/refresh-prices":
-            result = run_background(
+            result = api.run_background(
                 "refresh_prices",
                 [
                     "python3",
@@ -242,7 +227,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         elif path == "/api/wealth/assets":
             body = self._read_json_body()
             try:
-                asset_id = create_extra_asset(
+                asset_id = ssot.create_extra_asset(
                     name=body["name"],
                     asset_type=body["asset_type"],
                     current_value_krw=float(body["current_value_krw"]),
@@ -257,8 +242,26 @@ class MissionControlHandler(BaseHTTPRequestHandler):
 
         elif path == "/api/investment-advice":
             body = self._read_json_body()
-            result = get_investment_advice(body)
+            result = investment_advisor.get_investment_advice(body)
             self.send_json(result)
+
+        elif path == "/api/investment-advice-stream":
+            body = self._read_json_body()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            try:
+                for chunk in investment_advisor.stream_investment_advice(body):
+                    payload = json.dumps({"text": chunk}, ensure_ascii=False)
+                    self.wfile.write(f"data: {payload}\n\n".encode())
+                    self.wfile.flush()
+                self.wfile.write(b"data: [DONE]\n\n")
+                self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError):
+                pass
 
         else:
             self.send_response(404)
@@ -276,7 +279,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             try:
                 asset_id = int(path.rsplit("/", 1)[-1])
                 body = self._read_json_body()
-                ok = update_extra_asset_by_id(
+                ok = ssot.update_extra_asset_by_id(
                     asset_id=asset_id,
                     name=body["name"],
                     asset_type=body["asset_type"],
@@ -299,7 +302,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/wealth/assets/"):
             try:
                 asset_id = int(path.rsplit("/", 1)[-1])
-                ok = delete_extra_asset_by_id(asset_id)
+                ok = ssot.delete_extra_asset_by_id(asset_id)
                 self.send_json({"ok": ok}, 200 if ok else 404)
             except ValueError:
                 self.send_json({"error": "잘못된 id"}, 400)
@@ -367,9 +370,9 @@ def _watch_intel_dir():
     last_mtime = 0.0
     while True:
         try:
-            if INTEL_DIR.exists():
+            if api.INTEL_DIR.exists():
                 # 디렉토리 내 모든 파일의 최신 mtime 계산
-                mtimes = [f.stat().st_mtime for f in INTEL_DIR.iterdir() if f.is_file()]
+                mtimes = [f.stat().st_mtime for f in api.INTEL_DIR.iterdir() if f.is_file()]
                 if mtimes:
                     current_mtime = max(mtimes)
                     if current_mtime > last_mtime:
