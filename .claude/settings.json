@@ -7,7 +7,9 @@
       "Bash(git add *)", "Bash(git commit *)", "Bash(git push *)", "Bash(git branch *)", "Bash(git checkout *)",
       "Bash(ls *)", "Bash(cat *)", "Bash(head *)", "Bash(tail *)",
       "Bash(wc *)", "Bash(find *)", "Bash(mkdir *)", "Bash(cp *)", "Bash(mv *)", "Bash(echo *)",
-      "Bash(jq *)", "Bash(sqlite3 *)", "Bash(ruff *)"
+      "Bash(jq *)", "Bash(sqlite3 *)", "Bash(ruff *)",
+      "Bash(docker *)", "Bash(npm *)", "Bash(bash *)",
+      "Bash(touch *)", "Bash(kill *)", "Bash(nohup *)"
     ],
     "deny": [
       "Bash(rm -rf *)", "Bash(rm -r / *)", "Bash(sudo *)",
