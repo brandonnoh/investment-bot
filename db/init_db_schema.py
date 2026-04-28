@@ -358,7 +358,115 @@ MIGRATION_COLUMNS = [
     ("fundamentals", "sector", "TEXT"),
     # 태양광 거래 유형 (매매 / 분양)
     ("solar_listings", "deal_type", "TEXT"),
+    # 어드바이저 저장 전략 — 대출 상세 및 월 추가 투자금
+    ("advisor_strategies", "loans_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ("advisor_strategies", "monthly_savings", "INTEGER NOT NULL DEFAULT 0"),
 ]
+
+# ── 파이프라인 이력 테이블 (regime / sector / correction / performance) ──
+
+CREATE_TABLE_REGIME_HISTORY = """
+    CREATE TABLE IF NOT EXISTS regime_history (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        date           TEXT NOT NULL,
+        classified_at  TEXT NOT NULL,
+        regime         TEXT NOT NULL,
+        confidence     REAL,
+        panic_signal   INTEGER DEFAULT 0,
+        vix            REAL,
+        fx_change      REAL,
+        oil_change     REAL,
+        strategy_json  TEXT,
+        UNIQUE(date)
+    )
+"""
+
+CREATE_INDEX_REGIME_HISTORY_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_regime_history_date ON regime_history (date DESC)"
+)
+
+CREATE_TABLE_SECTOR_SCORES_HISTORY = """
+    CREATE TABLE IF NOT EXISTS sector_scores_history (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        date         TEXT NOT NULL,
+        regime       TEXT,
+        sectors_json TEXT NOT NULL,
+        updated_at   TEXT NOT NULL,
+        UNIQUE(date)
+    )
+"""
+
+CREATE_INDEX_SECTOR_SCORES_HISTORY_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_sector_scores_history_date ON sector_scores_history (date DESC)"
+)
+
+CREATE_TABLE_CORRECTION_NOTES_HISTORY = """
+    CREATE TABLE IF NOT EXISTS correction_notes_history (
+        id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+        date                   TEXT NOT NULL,
+        period                 TEXT,
+        weak_factors_json      TEXT,
+        strong_factors_json    TEXT,
+        weight_adjustment_json TEXT,
+        summary                TEXT,
+        generated_at           TEXT NOT NULL,
+        UNIQUE(date)
+    )
+"""
+
+CREATE_INDEX_CORRECTION_NOTES_HISTORY_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_correction_notes_history_date "
+    "ON correction_notes_history (date DESC)"
+)
+
+CREATE_TABLE_PERFORMANCE_REPORT_HISTORY = """
+    CREATE TABLE IF NOT EXISTS performance_report_history (
+        id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+        date                   TEXT NOT NULL,
+        outcome_summary_json   TEXT,
+        monthly_report_json    TEXT,
+        weight_suggestion_json TEXT,
+        updated_at             TEXT NOT NULL,
+        UNIQUE(date)
+    )
+"""
+
+CREATE_INDEX_PERFORMANCE_REPORT_HISTORY_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_performance_report_history_date "
+    "ON performance_report_history (date DESC)"
+)
+
+# ── 투자 어드바이저 자산 정의 ──
+
+CREATE_TABLE_INVESTMENT_ASSETS = """
+    CREATE TABLE IF NOT EXISTS investment_assets (
+        id                    TEXT PRIMARY KEY,
+        name                  TEXT NOT NULL,
+        category              TEXT NOT NULL,
+        min_capital           INTEGER,
+        min_capital_leveraged INTEGER,
+        expected_return_min   REAL,
+        expected_return_max   REAL,
+        risk_level            INTEGER,
+        liquidity             TEXT,
+        leverage_available    INTEGER DEFAULT 0,
+        leverage_ratio        REAL,
+        leverage_type         TEXT,
+        tax_benefit           TEXT,
+        regulation_note       TEXT,
+        status                TEXT DEFAULT 'available',
+        upcoming_date         TEXT,
+        beginner_friendly     INTEGER DEFAULT 0,
+        description           TEXT,
+        caution               TEXT,
+        updated_at            TEXT NOT NULL
+    )
+"""
+
+CREATE_INDEX_INVESTMENT_ASSETS_CATEGORY = (
+    "CREATE INDEX IF NOT EXISTS idx_investment_assets_category "
+    "ON investment_assets (category, risk_level)"
+)
 
 # ── 태양광 발전소 매물 모니터링 ──
 
@@ -384,4 +492,94 @@ CREATE_TABLE_SOLAR_LISTINGS = """
 CREATE_INDEX_SOLAR_LISTINGS_SOURCE = (
     "CREATE INDEX IF NOT EXISTS idx_solar_listings_source "
     "ON solar_listings (source, first_seen_at DESC)"
+)
+
+# ── 파이프라인 분석 이력 (4개 JSON → DB 누적 저장) ──
+
+CREATE_TABLE_REGIME_HISTORY = """
+    CREATE TABLE IF NOT EXISTS regime_history (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        date           TEXT NOT NULL,
+        classified_at  TEXT NOT NULL,
+        regime         TEXT NOT NULL,
+        confidence     REAL,
+        panic_signal   INTEGER DEFAULT 0,
+        vix            REAL,
+        fx_change      REAL,
+        oil_change     REAL,
+        strategy_json  TEXT,
+        UNIQUE(date)
+    )
+"""
+
+CREATE_INDEX_REGIME_HISTORY_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_regime_history_date ON regime_history (date DESC)"
+)
+
+CREATE_TABLE_SECTOR_SCORES_HISTORY = """
+    CREATE TABLE IF NOT EXISTS sector_scores_history (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        date         TEXT NOT NULL,
+        regime       TEXT,
+        sectors_json TEXT NOT NULL,
+        updated_at   TEXT NOT NULL,
+        UNIQUE(date)
+    )
+"""
+
+CREATE_INDEX_SECTOR_SCORES_HISTORY_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_sector_scores_history_date ON sector_scores_history (date DESC)"
+)
+
+CREATE_TABLE_CORRECTION_NOTES_HISTORY = """
+    CREATE TABLE IF NOT EXISTS correction_notes_history (
+        id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+        date                   TEXT NOT NULL,
+        period                 TEXT,
+        weak_factors_json      TEXT,
+        strong_factors_json    TEXT,
+        weight_adjustment_json TEXT,
+        summary                TEXT,
+        generated_at           TEXT NOT NULL,
+        UNIQUE(date)
+    )
+"""
+
+CREATE_INDEX_CORRECTION_NOTES_HISTORY_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_correction_notes_history_date "
+    "ON correction_notes_history (date DESC)"
+)
+
+CREATE_TABLE_PERFORMANCE_REPORT_HISTORY = """
+    CREATE TABLE IF NOT EXISTS performance_report_history (
+        id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+        date                   TEXT NOT NULL,
+        outcome_summary_json   TEXT,
+        monthly_report_json    TEXT,
+        weight_suggestion_json TEXT,
+        updated_at             TEXT NOT NULL,
+        UNIQUE(date)
+    )
+"""
+
+CREATE_INDEX_PERFORMANCE_REPORT_HISTORY_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_performance_report_history_date "
+    "ON performance_report_history (date DESC)"
+)
+
+# ── 어드바이저 저장 전략 이력 ──
+
+CREATE_TABLE_ADVISOR_STRATEGIES = """
+    CREATE TABLE IF NOT EXISTS advisor_strategies (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        capital       INTEGER NOT NULL,
+        leverage_amt  INTEGER NOT NULL DEFAULT 0,
+        risk_level    INTEGER NOT NULL DEFAULT 3,
+        recommendation TEXT NOT NULL,
+        saved_at      TEXT NOT NULL
+    )
+"""
+
+CREATE_INDEX_ADVISOR_STRATEGIES_DATE = (
+    "CREATE INDEX IF NOT EXISTS idx_advisor_strategies_date ON advisor_strategies (saved_at DESC)"
 )

@@ -252,6 +252,20 @@ config.py (DB_PATH, PORTFOLIO, ...)
 | `analysis_history` | date(UNIQUE), content, confidence_level, regime, today_call |
 | `agent_keywords` | keyword, category, priority, reasoning, generated_at |
 | `solar_listings` | source, listing_id, title, capacity_kw, location, price_krw, deal_type, url, status, first_seen_at |
+| `investment_assets` | id(PK), name, category, min_capital, min_capital_leveraged, expected_return_min/max, risk_level, leverage_*, tax_benefit, status |
+
+### 파이프라인 이력 테이블 (JSON 덮어쓰기 보완 — 2026-04-24 추가)
+파이프라인 실행 시 JSON을 덮어쓰는 문제를 보완. 매 실행마다 DB에 UPSERT(date UNIQUE).
+
+| 테이블 | 주요 컬럼 | Writer 모듈 |
+|--------|---------|------------|
+| `regime_history` | date(UNIQUE), regime, confidence, panic_signal, vix, fx_change, oil_change, strategy_json | `analysis/regime_classifier.py` |
+| `sector_scores_history` | date(UNIQUE), regime, sectors_json, updated_at | `analysis/sector_intel.py` |
+| `correction_notes_history` | date(UNIQUE), period, weak_factors_json, strong_factors_json, weight_adjustment_json, summary | `analysis/self_correction.py` |
+| `performance_report_history` | date(UNIQUE), outcome_summary_json, monthly_report_json, weight_suggestion_json, updated_at | `analysis/performance_report.py` |
+
+이력 조회 API: `GET /api/regime-history?days=90` · `GET /api/sector-scores-history?days=90` · `GET /api/correction-notes-history?limit=30` · `GET /api/performance-report-history?days=90`
+조회 함수: `web/api_history.py` (api.py 300줄 초과 방지용 분리 모듈)
 
 ---
 

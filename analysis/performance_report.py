@@ -96,12 +96,8 @@ def _calc_factor_analysis(rows) -> dict:
             else:
                 miss_scores.append(score)
         factor_analysis[factor] = {
-            "avg_score_hit": round(sum(hit_scores) / len(hit_scores), 4)
-            if hit_scores
-            else 0.0,
-            "avg_score_miss": round(sum(miss_scores) / len(miss_scores), 4)
-            if miss_scores
-            else 0.0,
+            "avg_score_hit": round(sum(hit_scores) / len(hit_scores), 4) if hit_scores else 0.0,
+            "avg_score_miss": round(sum(miss_scores) / len(miss_scores), 4) if miss_scores else 0.0,
             "hit_count": len(hit_scores),
             "miss_count": len(miss_scores),
         }
@@ -225,9 +221,7 @@ def _build_weight_reasoning(adjustments: dict) -> list[str]:
     reasoning = []
     for factor, adj in adjustments.items():
         if adj > 0.1:
-            reasoning.append(
-                f"{factor}: 적중 그룹 점수가 높음 (+{adj:.3f}) → 가중치 증가 권장"
-            )
+            reasoning.append(f"{factor}: 적중 그룹 점수가 높음 (+{adj:.3f}) → 가중치 증가 권장")
         elif adj < -0.1:
             reasoning.append(
                 f"{factor}: 미적중 그룹 점수가 오히려 높음 ({adj:.3f}) → 가중치 감소 권장"
@@ -312,4 +306,31 @@ def save_performance_report(conn=None, output_dir=None):
         json.dump(report, f, ensure_ascii=False, indent=2)
 
     logger.info(f"성과 리포트 저장: {filepath}")
+
+    try:
+        from db.connection import get_db_conn
+
+        date = report["updated_at"][:10]
+        with get_db_conn() as _conn:
+            _conn.execute(
+                """INSERT INTO performance_report_history
+                       (date, outcome_summary_json, monthly_report_json,
+                        weight_suggestion_json, updated_at)
+                   VALUES (?,?,?,?,?)
+                   ON CONFLICT(date) DO UPDATE SET
+                       outcome_summary_json=excluded.outcome_summary_json,
+                       monthly_report_json=excluded.monthly_report_json,
+                       weight_suggestion_json=excluded.weight_suggestion_json,
+                       updated_at=excluded.updated_at""",
+                (
+                    date,
+                    json.dumps(report.get("outcome_summary"), ensure_ascii=False),
+                    json.dumps(report.get("monthly_report"), ensure_ascii=False),
+                    json.dumps(report.get("weight_suggestion"), ensure_ascii=False),
+                    report["updated_at"],
+                ),
+            )
+    except Exception as e:
+        logger.error(f"[performance_report] DB 이력 저장 실패: {e}")
+
     return report

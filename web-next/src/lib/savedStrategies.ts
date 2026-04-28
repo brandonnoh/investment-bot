@@ -1,38 +1,70 @@
+const BASE = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE
+  ? process.env.NEXT_PUBLIC_API_BASE
+  : ''
+
 export interface SavedStrategy {
-  id: string
-  savedAt: string
+  id: number
+  saved_at: string
   capital: number
-  leverageAmt: number
-  riskLevel: number
+  leverage_amt: number
+  risk_level: number
   recommendation: string
+  loans_json?: string      // JSON array: [{type,amount,rate,...}]
+  monthly_savings?: number
 }
 
-const KEY = 'mc-saved-strategies'
+export interface SavedLoan {
+  type: 'minus' | 'credit'
+  amount: number
+  rate: number
+  grace_period?: number
+  repay_period?: number
+}
 
-export function loadStrategies(): SavedStrategy[] {
-  if (typeof window === 'undefined') return []
+export function parseLoans(loansJson: string | undefined): SavedLoan[] {
+  if (!loansJson) return []
+  try { return JSON.parse(loansJson) as SavedLoan[] } catch { return [] }
+}
+
+export async function loadStrategies(limit = 20): Promise<SavedStrategy[]> {
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? '[]')
+    const res = await fetch(`${BASE}/api/advisor-strategies?limit=${limit}`)
+    if (!res.ok) return []
+    return await res.json()
   } catch {
     return []
   }
 }
 
-export function saveStrategy(strategy: Omit<SavedStrategy, 'id' | 'savedAt'>): SavedStrategy {
-  const entry: SavedStrategy = {
-    ...strategy,
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    savedAt: new Date().toISOString(),
+export async function saveStrategy(
+  capital: number,
+  leverage_amt: number,
+  risk_level: number,
+  recommendation: string,
+  loans: SavedLoan[] = [],
+  monthly_savings = 0,
+): Promise<number | null> {
+  try {
+    const res = await fetch(`${BASE}/api/advisor-strategies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ capital, leverage_amt, risk_level, recommendation, loans, monthly_savings }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.id ?? null
+  } catch {
+    return null
   }
-  const list = loadStrategies()
-  list.unshift(entry)
-  localStorage.setItem(KEY, JSON.stringify(list))
-  return entry
 }
 
-export function deleteStrategy(id: string): void {
-  const list = loadStrategies().filter(s => s.id !== id)
-  localStorage.setItem(KEY, JSON.stringify(list))
+export async function deleteStrategy(id: number): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE}/api/advisor-strategies/${id}`, { method: 'DELETE' })
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
 export { fmtAmt } from '@/lib/format'

@@ -51,3 +51,17 @@ export interface CategoryFilter {
 
 /** 정렬 옵션 */
 export type SortOption = 'return' | 'risk' | 'capital'
+
+/** 마이너스통장 설정 (이자만 납입, 수시 상환 가능) */
+export interface MinusLoanConfig {
+  amount: number   // 원
+  rate: number     // 연이율 %
+}
+
+/** 신용대출 설정 (고정금리, 원리금균등상환) */
+export interface CreditLoanConfig {
+  amount: number
+  rate: number
+  gracePeriod: number   // 거치기간 (개월)
+  repayPeriod: number   // 상환기간 (개월)
+}

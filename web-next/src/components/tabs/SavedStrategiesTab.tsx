@@ -7,9 +7,11 @@ import { Trash2, ChevronDown, ChevronUp, BookMarked } from 'lucide-react'
 import {
   loadStrategies,
   deleteStrategy,
+  parseLoans,
   fmtAmt,
   riskLabel,
   type SavedStrategy,
+  type SavedLoan,
 } from '@/lib/savedStrategies'
 
 function formatDate(iso: string): string {
@@ -41,51 +43,64 @@ function ContextChip({ children, color = 'gold' }: { children: React.ReactNode; 
   )
 }
 
+function LoanChips({ loansJson }: { loansJson?: string }) {
+  const loans: SavedLoan[] = parseLoans(loansJson)
+  if (loans.length === 0) return null
+  return (
+    <>
+      {loans.map((l, i) => (
+        <ContextChip key={i} color="red">
+          {l.type === 'minus' ? '마통' : '신용'} {fmtAmt(l.amount)} {l.rate}%
+        </ContextChip>
+      ))}
+    </>
+  )
+}
+
 function StrategyCard({
   strategy,
   onDelete,
 }: {
   strategy: SavedStrategy
-  onDelete: (id: string) => void
+  onDelete: (id: number) => void
 }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
     <div className={`rounded-lg border transition-colors ${expanded ? 'border-gold/30 bg-mc-card' : 'border-mc-border bg-mc-card hover:border-mc-border/80'}`}>
-      {/* 헤더 */}
       <button
         className="w-full text-left p-4 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-inset rounded-lg"
         onClick={() => setExpanded(e => !e)}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0 space-y-2">
-            {/* 날짜 + 컨텍스트 칩 */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] text-muted-foreground font-mono">
-                {formatDate(strategy.savedAt)}
+                {formatDate(strategy.saved_at)}
               </span>
               <span className="text-muted-foreground/40 text-[10px]">·</span>
               <ContextChip>자본 {fmtAmt(strategy.capital)}</ContextChip>
-              {strategy.leverageAmt > 0 && (
-                <ContextChip color="red">대출 {fmtAmt(strategy.leverageAmt)}</ContextChip>
+              <LoanChips loansJson={strategy.loans_json} />
+              {(!strategy.loans_json || strategy.loans_json === '[]') && strategy.leverage_amt > 0 && (
+                <ContextChip color="red">대출 {fmtAmt(strategy.leverage_amt)}</ContextChip>
               )}
-              <ContextChip color="muted">Lv.{strategy.riskLevel} {riskLabel(strategy.riskLevel)}</ContextChip>
+              {strategy.monthly_savings != null && strategy.monthly_savings > 0 && (
+                <ContextChip color="muted">월 {fmtAmt(strategy.monthly_savings)}</ContextChip>
+              )}
+              <ContextChip color="muted">Lv.{strategy.risk_level} {riskLabel(strategy.risk_level)}</ContextChip>
             </div>
-            {/* 미리보기 */}
             {!expanded && (
               <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                 {previewText(strategy.recommendation)}…
               </p>
             )}
           </div>
-          {/* 확장 아이콘 */}
           <div className="shrink-0 text-muted-foreground mt-0.5">
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </div>
         </div>
       </button>
 
-      {/* 펼쳐진 본문 */}
       {expanded && (
         <div className="border-t border-mc-border">
           <div className="p-4 max-h-[600px] overflow-y-auto">
@@ -107,7 +122,6 @@ function StrategyCard({
               </ReactMarkdown>
             </div>
           </div>
-          {/* 삭제 버튼 */}
           <div className="flex justify-end px-4 pb-3">
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(strategy.id) }}
@@ -127,17 +141,16 @@ export function SavedStrategiesTab() {
   const [strategies, setStrategies] = useState<SavedStrategy[]>([])
 
   useEffect(() => {
-    setStrategies(loadStrategies())
+    loadStrategies().then(setStrategies)
   }, [])
 
-  const handleDelete = useCallback((id: string) => {
-    deleteStrategy(id)
-    setStrategies(prev => prev.filter(s => s.id !== id))
+  const handleDelete = useCallback(async (id: number) => {
+    const ok = await deleteStrategy(id)
+    if (ok) setStrategies(prev => prev.filter(s => s.id !== id))
   }, [])
 
   return (
     <div className="space-y-4">
-      {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BookMarked size={14} className="text-gold" />
@@ -152,12 +165,11 @@ export function SavedStrategiesTab() {
         </div>
       </div>
 
-      {/* 목록 */}
       {strategies.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <BookMarked size={32} className="text-mc-border" />
           <p className="text-sm text-muted-foreground">저장된 전략이 없습니다.</p>
-          <p className="text-xs text-muted-foreground/60">어드바이저 탭에서 AI 분석 후 저장하세요.</p>
+          <p className="text-xs text-muted-foreground/60">어드바이저 탭에서 AI 분석하면 자동으로 저장됩니다.</p>
         </div>
       ) : (
         <div className="space-y-2">

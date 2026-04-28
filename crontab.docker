@@ -7,6 +7,9 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # alerts_watch: 5분마다 (launchd KeepAlive 대체 — run-once 스크립트)
 */5 * * * * root cd /app && python3 analysis/alerts_watch.py >> /app/logs/alerts_watch.log 2>&1
 
+# Claude 크레덴셜 자동 동기화: 1분마다 (호스트 재로그인 후 60초 내 반영)
+*/1 * * * * root cp /root/.claude-host/.credentials.json /root/.claude/.credentials.json 2>/dev/null || true
+
 # 가격 갱신: 1분마다 (스크립트 내부에서 장중 여부 판단 — 장외엔 즉시 종료)
 */1 * * * * root cd /app && python3 scripts/refresh_prices.py >> /app/logs/refresh_prices.log 2>&1
 

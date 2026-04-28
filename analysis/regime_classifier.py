@@ -127,9 +127,7 @@ class RegimeClassifier:
         signals.append(1.0 if kospi_chg > 1.5 else (-1.0 if kospi_chg < -1.5 else 0.0))
         signals.append(1.0 if vix < 18 else (-1.0 if vix > 28 else 0.0))
         signals.append(1.0 if usdkrw < 1350 else (-1.0 if usdkrw > 1450 else 0.0))
-        signals.append(
-            1.0 if nasdaq_chg > 1.0 else (-1.0 if nasdaq_chg < -1.0 else 0.0)
-        )
+        signals.append(1.0 if nasdaq_chg > 1.0 else (-1.0 if nasdaq_chg < -1.0 else 0.0))
 
         mean_strength = sum(abs(s) for s in signals) / len(signals)
         directional_agreement = abs(sum(signals)) / len(signals)
@@ -254,13 +252,51 @@ def run(macro_data: dict | None = None, output_dir: Path | None = None) -> dict:
     with regime_path.open("w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
+    # DB 이력 저장 (실패해도 JSON은 이미 저장됐으므로 계속 진행)
+    try:
+        import sys as _sys
+
+        _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        import json as _json
+
+        from db.connection import get_db_conn
+
+        date = output["classified_at"][:10]
+        with get_db_conn() as conn:
+            conn.execute(
+                """INSERT INTO regime_history
+                       (date, classified_at, regime, confidence, panic_signal,
+                        vix, fx_change, oil_change, strategy_json)
+                   VALUES (?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT(date) DO UPDATE SET
+                       classified_at=excluded.classified_at,
+                       regime=excluded.regime,
+                       confidence=excluded.confidence,
+                       panic_signal=excluded.panic_signal,
+                       vix=excluded.vix,
+                       fx_change=excluded.fx_change,
+                       oil_change=excluded.oil_change,
+                       strategy_json=excluded.strategy_json""",
+                (
+                    date,
+                    output["classified_at"],
+                    output["regime"],
+                    output["confidence"],
+                    int(output["panic_signal"]),
+                    output["vix"],
+                    output["fx_change"],
+                    output["oil_change"],
+                    _json.dumps(output["strategy"], ensure_ascii=False),
+                ),
+            )
+    except Exception as e:
+        print(f"[regime_classifier] DB 이력 저장 실패: {e}")
+
     print(
         f"  레짐: {regime} | confidence={enhanced['confidence']} | panic={enhanced['panic_signal']}"
     )
     print(f"  VIX={vix} | FX변동={fx_change}% | 유가변동={oil_change}%")
-    print(
-        f"  전략: {strategy['stance']} (현금비중 {strategy['cash_ratio'] * 100:.0f}%)"
-    )
+    print(f"  전략: {strategy['stance']} (현금비중 {strategy['cash_ratio'] * 100:.0f}%)")
 
     return output
 

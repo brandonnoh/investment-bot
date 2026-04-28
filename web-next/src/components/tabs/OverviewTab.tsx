@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useIntelData } from '@/hooks/useIntelData'
 import { fmtKrw, fmtPct, pctColor } from '@/lib/format'
 import { SyncBadge } from '@/components/SyncBadge'
@@ -9,14 +10,44 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 
+const GOLD_TICKER = 'GOLD_KRW_G'
+
 // ── 데스크탑 War Room: 좌측 포트폴리오 패널 ─────────────────
 
-function PortfolioPanel() {
+function PortfolioPanel({ excludeGold, onToggleGold }: { excludeGold: boolean; onToggleGold: () => void }) {
   const { data } = useIntelData()
   const total = data?.portfolio_summary?.total
-  const pnlPct = total?.pnl_pct ?? 0
-  const pnlKrw = total?.pnl_krw ?? 0
-  const currentKrw = total?.current_value_krw ?? 0
+  const holdings = data?.portfolio_summary?.holdings ?? []
+
+  const pnlPct: number = (() => {
+    if (!excludeGold) return total?.pnl_pct ?? 0
+    const f = holdings.filter(h => h.ticker !== GOLD_TICKER)
+    const inv = f.reduce((s, h) => s + (h.invested_krw ?? 0), 0)
+    const cur = f.reduce((s, h) => s + (h.current_value_krw ?? 0), 0)
+    return inv > 0 ? ((cur - inv) / inv) * 100 : 0
+  })()
+
+  const pnlKrw: number = (() => {
+    if (!excludeGold) return total?.pnl_krw ?? 0
+    const f = holdings.filter(h => h.ticker !== GOLD_TICKER)
+    const inv = f.reduce((s, h) => s + (h.invested_krw ?? 0), 0)
+    const cur = f.reduce((s, h) => s + (h.current_value_krw ?? 0), 0)
+    return cur - inv
+  })()
+
+  const currentKrw: number = (() => {
+    if (!excludeGold) return total?.current_value_krw ?? 0
+    return holdings
+      .filter(h => h.ticker !== GOLD_TICKER)
+      .reduce((s, h) => s + (h.current_value_krw ?? 0), 0)
+  })()
+
+  const investedKrw: number | undefined = (() => {
+    if (!excludeGold) return total?.invested_krw
+    return holdings
+      .filter(h => h.ticker !== GOLD_TICKER)
+      .reduce((s, h) => s + (h.invested_krw ?? 0), 0)
+  })()
 
   const aPct = useCountUp(pnlPct)
   const aKrw = useCountUp(pnlKrw)
@@ -27,8 +58,20 @@ function PortfolioPanel() {
 
   return (
     <div className="flex flex-col justify-center py-8 px-8 border-r border-mc-border">
-      <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase mb-4">
-        Portfolio P&amp;L
+      <div className="flex items-center gap-2 mb-4">
+        <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">
+          Portfolio P&amp;L
+        </div>
+        <button
+          onClick={onToggleGold}
+          className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+            excludeGold
+              ? 'bg-gold/10 text-gold border-gold/30'
+              : 'text-muted-foreground border-mc-border hover:border-gold/30 hover:text-gold'
+          }`}
+        >
+          {excludeGold ? '금 제외 ✓' : '금 포함'}
+        </button>
       </div>
       <div
         className={`font-mono font-bold leading-none tabular-nums ${color}`}
@@ -44,7 +87,7 @@ function PortfolioPanel() {
           평가금액 ₩{Math.round(aCurrent).toLocaleString()}
         </div>
         <div className="text-xs text-muted-foreground font-mono">
-          투자원금 {fmtKrw(total?.invested_krw)}원
+          투자원금 {fmtKrw(investedKrw)}원
         </div>
       </div>
     </div>
@@ -192,16 +235,19 @@ function HoldingsTable() {
 // ── 메인 ────────────────────────────────────────────────────
 
 export function OverviewTab() {
+  const [excludeGold, setExcludeGold] = useState(false)
+  const toggleGold = () => setExcludeGold(e => !e)
+
   return (
     <div className="space-y-3">
       <div className="lg:hidden space-y-3">
-        <MobileHero />
+        <MobileHero excludeGold={excludeGold} onToggle={toggleGold} />
         <MobileMarketBar />
         <MobileHoldingsList />
       </div>
       <div className="hidden lg:block space-y-4">
         <div className="grid grid-cols-[3fr_2fr] border border-mc-border bg-mc-card rounded-lg overflow-hidden">
-          <PortfolioPanel />
+          <PortfolioPanel excludeGold={excludeGold} onToggleGold={toggleGold} />
           <MarketPanel />
         </div>
         <HoldingsTable />

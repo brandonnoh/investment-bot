@@ -24,7 +24,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import analysis.value_screener_strategies as screener  # noqa: E402
 import db.ssot_wealth as ssot  # noqa: E402
 import web.api as api  # noqa: E402
+import web.api_advisor as api_advisor  # noqa: E402
+import web.api_history as api_history  # noqa: E402
 import web.investment_advisor as investment_advisor  # noqa: E402
+from db.init_db import init_db  # noqa: E402
+
+# 서버 시작 시 DB 스키마 보장 (테이블 신규 생성 + 마이그레이션)
+init_db()
 
 PORT = 8421
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
@@ -155,6 +161,13 @@ class MissionControlHandler(BaseHTTPRequestHandler):
                 self.send_response(404)
                 self.end_headers()
 
+    def _parse_int_param(self, params: dict, key: str, default: int, lo: int, hi: int) -> int:
+        """쿼리 파라미터를 정수로 파싱. 범위 초과 시 클램핑."""
+        try:
+            return max(lo, min(hi, int(params.get(key, [str(default)])[0])))
+        except (ValueError, TypeError):
+            return default
+
     def do_GET(self):
         """GET 요청 라우팅."""
         parsed = urlparse(self.path)
@@ -178,20 +191,14 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             else:
                 self.send_json(api.load_analysis_history())
         elif path == "/api/wealth":
-            try:
-                days = max(1, min(365, int(params.get("days", ["60"])[0])))
-            except (ValueError, TypeError):
-                days = 60
+            days = self._parse_int_param(params, "days", 60, 1, 365)
             self.send_json(api.load_wealth_data(days))
         elif path == "/api/logs":
             name = params.get("name", ["marcus"])[0]
             if name not in _ALLOWED_LOG_NAMES:
                 self.send_json({"error": "허용되지 않은 로그 이름"}, 400)
                 return
-            try:
-                lines = max(1, min(1000, int(params.get("lines", ["80"])[0])))
-            except (ValueError, TypeError):
-                lines = 80
+            lines = self._parse_int_param(params, "lines", 80, 1, 1000)
             log_path = api.PID_DIR / f"{name}.log"
             self.send_json(api.load_log_tail(log_path, lines))
         elif path == "/api/opportunities":
@@ -209,14 +216,28 @@ class MissionControlHandler(BaseHTTPRequestHandler):
                 }
             )
         elif path == "/api/solar":
-            try:
-                limit = max(1, min(1000, int(params.get("limit", ["100"])[0])))
-            except (ValueError, TypeError):
-                limit = 100
+            limit = self._parse_int_param(params, "limit", 100, 1, 1000)
             listings = api.load_solar_listings(limit)
             self.send_json({"listings": listings, "count": len(listings)})
         elif path == "/api/strategies":
             self.send_json({"strategies": list(screener.STRATEGY_META.values())})
+        elif path == "/api/investment-assets":
+            self.send_json(api.load_investment_assets())
+        elif path == "/api/advisor-strategies":
+            limit = self._parse_int_param(params, "limit", 20, 1, 100)
+            self.send_json(api_advisor.load_advisor_strategies(limit))
+        elif path == "/api/regime-history":
+            days = self._parse_int_param(params, "days", 90, 1, 365)
+            self.send_json(api_history.load_regime_history(days))
+        elif path == "/api/sector-scores-history":
+            days = self._parse_int_param(params, "days", 90, 1, 365)
+            self.send_json(api_history.load_sector_scores_history(days))
+        elif path == "/api/correction-notes-history":
+            limit = self._parse_int_param(params, "limit", 30, 1, 200)
+            self.send_json(api_history.load_correction_notes_history(limit))
+        elif path == "/api/performance-report-history":
+            days = self._parse_int_param(params, "days", 90, 1, 365)
+            self.send_json(api_history.load_performance_report_history(days))
         else:
             self._serve_static(path)
 
@@ -286,14 +307,32 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
             self.end_headers()
             try:
-                for chunk in investment_advisor.stream_investment_advice(body):
-                    payload = json.dumps({"text": chunk}, ensure_ascii=False)
+                for event in investment_advisor.stream_investment_advice(body):
+                    payload = json.dumps(event, ensure_ascii=False)
                     self.wfile.write(f"data: {payload}\n\n".encode())
                     self.wfile.flush()
                 self.wfile.write(b"data: [DONE]\n\n")
                 self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError):
                 pass
+
+        elif path == "/api/advisor-strategies":
+            body = self._read_json_body()
+            try:
+                loans = body.get("loans", [])
+                if not isinstance(loans, list):
+                    loans = []
+                strategy_id = api_advisor.save_advisor_strategy(
+                    capital=int(body["capital"]),
+                    leverage_amt=int(body.get("leverage_amt", 0)),
+                    risk_level=int(body.get("risk_level", 3)),
+                    recommendation=body["recommendation"],
+                    loans=loans,
+                    monthly_savings=int(body.get("monthly_savings", 0)),
+                )
+                self.send_json({"ok": True, "id": strategy_id}, 201)
+            except (KeyError, ValueError) as e:
+                self.send_json({"error": str(e)}, 400)
 
         else:
             self.send_response(404)
@@ -331,12 +370,19 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_DELETE(self):
-        """DELETE 요청 라우팅 (자산 삭제)."""
+        """DELETE 요청 라우팅."""
         path = urlparse(self.path).path
         if path.startswith("/api/wealth/assets/"):
             try:
                 asset_id = int(path.rsplit("/", 1)[-1])
                 ok = ssot.delete_extra_asset_by_id(asset_id)
+                self.send_json({"ok": ok}, 200 if ok else 404)
+            except ValueError:
+                self.send_json({"error": "잘못된 id"}, 400)
+        elif path.startswith("/api/advisor-strategies/"):
+            try:
+                strategy_id = int(path.rsplit("/", 1)[-1])
+                ok = api_advisor.delete_advisor_strategy(strategy_id)
                 self.send_json({"ok": ok}, 200 if ok else 404)
             except ValueError:
                 self.send_json({"error": "잘못된 id"}, 400)

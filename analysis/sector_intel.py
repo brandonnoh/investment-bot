@@ -231,6 +231,28 @@ def run() -> dict:
         encoding="utf-8",
     )
 
+    try:
+        from db.connection import get_db_conn
+
+        date = result["updated_at"][:10]
+        with get_db_conn() as conn:
+            conn.execute(
+                """INSERT INTO sector_scores_history (date, regime, sectors_json, updated_at)
+                   VALUES (?,?,?,?)
+                   ON CONFLICT(date) DO UPDATE SET
+                       regime=excluded.regime,
+                       sectors_json=excluded.sectors_json,
+                       updated_at=excluded.updated_at""",
+                (
+                    date,
+                    result["regime"],
+                    json.dumps(result["sectors"], ensure_ascii=False),
+                    result["updated_at"],
+                ),
+            )
+    except Exception as e:
+        print(f"[sector_intel] DB 이력 저장 실패: {e}")
+
     top = sectors_out[0] if sectors_out else {"name": "N/A", "score": 0}
     print(f"  \u2705 섹터 점수화 완료: top={top['name']}({top['score']})")
     return result

@@ -4,24 +4,74 @@ import { useIntelData } from '@/hooks/useIntelData'
 import { fmtKrw, fmtPct, pctColor } from '@/lib/format'
 import { fgStyle } from '@/hooks/useCountUp'
 
-export function MobileHero() {
+const GOLD_TICKER = 'GOLD_KRW_G'
+
+export function MobileHero({ excludeGold, onToggle }: { excludeGold: boolean; onToggle: () => void }) {
   const { data } = useIntelData()
   const total = data?.portfolio_summary?.total
-  const pnlPct = total?.pnl_pct ?? 0
+  const holdings = data?.portfolio_summary?.holdings ?? []
+
+  const pnlPct: number = (() => {
+    if (!excludeGold) return total?.pnl_pct ?? 0
+    const f = holdings.filter(h => h.ticker !== GOLD_TICKER)
+    const inv = f.reduce((s, h) => s + (h.invested_krw ?? 0), 0)
+    const cur = f.reduce((s, h) => s + (h.current_value_krw ?? 0), 0)
+    return inv > 0 ? ((cur - inv) / inv) * 100 : 0
+  })()
+
+  const pnlKrw: number = (() => {
+    if (!excludeGold) return total?.pnl_krw ?? 0
+    const f = holdings.filter(h => h.ticker !== GOLD_TICKER)
+    const inv = f.reduce((s, h) => s + (h.invested_krw ?? 0), 0)
+    const cur = f.reduce((s, h) => s + (h.current_value_krw ?? 0), 0)
+    return cur - inv
+  })()
+
+  const currentKrw: number = (() => {
+    if (!excludeGold) return total?.current_value_krw ?? 0
+    return holdings
+      .filter(h => h.ticker !== GOLD_TICKER)
+      .reduce((s, h) => s + (h.current_value_krw ?? 0), 0)
+  })()
+
+  const investedKrw: number | undefined = (() => {
+    if (!excludeGold) return total?.invested_krw
+    return holdings
+      .filter(h => h.ticker !== GOLD_TICKER)
+      .reduce((s, h) => s + (h.invested_krw ?? 0), 0)
+  })()
+
   const isNeg = pnlPct < 0
   const color = pctColor(pnlPct)
 
   return (
     <div className="border border-mc-border bg-mc-card rounded-lg px-5 py-5">
-      <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase mb-3">Portfolio P&amp;L</div>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">Portfolio P&amp;L</div>
+        <button
+          onClick={onToggle}
+          className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+            excludeGold
+              ? 'bg-gold/10 text-gold border-gold/30'
+              : 'text-muted-foreground border-mc-border hover:border-gold/30 hover:text-gold'
+          }`}
+        >
+          {excludeGold ? '금 제외 ✓' : '금 포함'}
+        </button>
+      </div>
       <div className={`text-5xl font-mono font-bold tabular-nums leading-none ${color}`}>
-        {isNeg ? '' : '+'}{pnlPct?.toFixed(2)}%
+        {isNeg ? '' : '+'}{pnlPct.toFixed(2)}%
       </div>
       <div className={`text-base font-mono mt-2 tabular-nums ${color}`}>
-        {isNeg ? '' : '+'}₩{total?.pnl_krw?.toLocaleString()}
+        {isNeg ? '' : '+'}₩{Math.round(pnlKrw).toLocaleString()}
       </div>
-      <div className="text-xs text-muted-foreground font-mono mt-4 tabular-nums">
-        평가금액 ₩{total?.current_value_krw?.toLocaleString()}
+      <div className="mt-4 space-y-0.5">
+        <div className="text-xs text-muted-foreground font-mono tabular-nums">
+          평가금액 ₩{Math.round(currentKrw).toLocaleString()}
+        </div>
+        <div className="text-xs text-muted-foreground font-mono">
+          투자원금 {fmtKrw(investedKrw)}원
+        </div>
       </div>
     </div>
   )

@@ -5,8 +5,7 @@ import useSWR from 'swr'
 import { ConditionPanel } from '@/components/advisor/ConditionPanel'
 import { AIAdvisorPanel } from '@/components/advisor/AIAdvisorPanel'
 import { AssetGrid } from '@/components/advisor/AssetGrid'
-import type { InvestmentAsset, RiskLevel } from '@/types/advisor'
-import investmentAssets from '@/data/investment-assets.json'
+import type { InvestmentAsset, RiskLevel, MinusLoanConfig, CreditLoanConfig } from '@/types/advisor'
 
 const BASE = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE
   ? process.env.NEXT_PUBLIC_API_BASE
@@ -16,19 +15,34 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 const LS_KEY = 'mc-advisor-settings'
 
-function loadSettings(): { capital: number; leverageAmt: number; riskLevel: RiskLevel } | null {
+interface SavedSettings {
+  capital: number
+  riskLevel: RiskLevel
+  minusLoan?: MinusLoanConfig | null
+  creditLoan?: CreditLoanConfig | null
+  monthlySavings?: number
+  leverageAmt?: number   // 구 형식 호환
+}
+
+function loadSettings(): SavedSettings | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = localStorage.getItem(LS_KEY)
-    return raw ? JSON.parse(raw) : null
+    return raw ? (JSON.parse(raw) as SavedSettings) : null
   } catch {
     return null
   }
 }
 
-function saveSettings(capital: number, leverageAmt: number, riskLevel: RiskLevel) {
+function saveSettings(
+  capital: number,
+  riskLevel: RiskLevel,
+  minusLoan: MinusLoanConfig | null,
+  creditLoan: CreditLoanConfig | null,
+  monthlySavings: number,
+) {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({ capital, leverageAmt, riskLevel }))
+    localStorage.setItem(LS_KEY, JSON.stringify({ capital, riskLevel, minusLoan, creditLoan, monthlySavings }))
   } catch {}
 }
 
@@ -48,21 +62,30 @@ function getAvailableAssets(
 
 export function AdvisorTab() {
   const [capital, setCapital] = useState(50_000_000)
-  const [leverageAmt, setLeverageAmt] = useState(0)
+  const [minusLoan, setMinusLoan] = useState<MinusLoanConfig | null>(null)
+  const [creditLoan, setCreditLoan] = useState<CreditLoanConfig | null>(null)
+  const [monthlySavings, setMonthlySavings] = useState(0)
   const [riskLevel, setRiskLevel] = useState<RiskLevel>(3)
   const [wealthApplied, setWealthApplied] = useState(false)
 
   // localStorage는 마운트 후에만 읽어야 SSR hydration 불일치를 막는다
   useEffect(() => {
     const saved = loadSettings()
-    if (saved) {
-      setCapital(saved.capital)
-      setLeverageAmt(saved.leverageAmt)
-      setRiskLevel(saved.riskLevel)
-      setWealthApplied(true)
+    if (!saved) return
+    setCapital(saved.capital)
+    setRiskLevel(saved.riskLevel)
+    setMonthlySavings(saved.monthlySavings ?? 0)
+    if ('minusLoan' in saved) {
+      setMinusLoan(saved.minusLoan ?? null)
+      setCreditLoan(saved.creditLoan ?? null)
+    } else if (saved.leverageAmt && saved.leverageAmt > 0) {
+      // 구 형식: leverageAmt → 마이너스통장으로 마이그레이션
+      setMinusLoan({ amount: saved.leverageAmt, rate: 4.0 })
     }
+    setWealthApplied(true)
   }, [])
 
+  const { data: assetsData } = useSWR<InvestmentAsset[]>(`${BASE}/api/investment-assets`, fetcher)
   const { data: wealthData } = useSWR(`${BASE}/api/wealth`, fetcher)
   const wealthKrw: number | null = wealthData?.total_wealth_krw ?? null
 
@@ -77,18 +100,21 @@ export function AdvisorTab() {
 
   // 설정 변경 시 localStorage 저장
   useEffect(() => {
-    saveSettings(capital, leverageAmt, riskLevel)
-  }, [capital, leverageAmt, riskLevel])
+    saveSettings(capital, riskLevel, minusLoan, creditLoan, monthlySavings)
+  }, [capital, riskLevel, minusLoan, creditLoan, monthlySavings])
 
-  const assets = investmentAssets as InvestmentAsset[]
+  const leverageAmt = (minusLoan?.amount ?? 0) + (creditLoan?.amount ?? 0)
   const leverageOn = leverageAmt > 0
+  const assets = assetsData ?? []
   const availableAssets = useMemo(
     () => getAvailableAssets(assets, capital, leverageOn),
     [assets, capital, leverageOn],
   )
 
   const stableSetCapital = useCallback((v: number) => setCapital(v), [])
-  const stableSetLeverageAmt = useCallback((v: number) => setLeverageAmt(v), [])
+  const stableSetMinusLoan = useCallback((v: MinusLoanConfig | null) => setMinusLoan(v), [])
+  const stableSetCreditLoan = useCallback((v: CreditLoanConfig | null) => setCreditLoan(v), [])
+  const stableSetMonthlySavings = useCallback((v: number) => setMonthlySavings(v), [])
   const stableSetRiskLevel = useCallback((v: RiskLevel) => setRiskLevel(v), [])
 
   return (
@@ -96,15 +122,21 @@ export function AdvisorTab() {
       <ConditionPanel
         capital={capital}
         setCapital={stableSetCapital}
-        leverageAmt={leverageAmt}
-        setLeverageAmt={stableSetLeverageAmt}
+        minusLoan={minusLoan}
+        setMinusLoan={stableSetMinusLoan}
+        creditLoan={creditLoan}
+        setCreditLoan={stableSetCreditLoan}
+        monthlySavings={monthlySavings}
+        setMonthlySavings={stableSetMonthlySavings}
         riskLevel={riskLevel}
         setRiskLevel={stableSetRiskLevel}
         wealthKrw={wealthKrw}
       />
       <AIAdvisorPanel
         capital={capital}
-        leverageAmt={leverageAmt}
+        minusLoan={minusLoan}
+        creditLoan={creditLoan}
+        monthlySavings={monthlySavings}
         riskLevel={riskLevel}
         availableAssets={availableAssets}
       />

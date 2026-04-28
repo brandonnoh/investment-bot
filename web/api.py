@@ -264,6 +264,26 @@ def load_solar_listings(limit: int = 100) -> list[dict]:
         return []
 
 
+def load_investment_assets() -> list[dict]:
+    """investment_assets 테이블 전체 조회 (DB SSoT)."""
+    try:
+        with get_db_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM investment_assets ORDER BY category, risk_level"
+            ).fetchall()
+        return [
+            {
+                **dict(r),
+                "leverage_available": bool(r["leverage_available"]),
+                "beginner_friendly": bool(r["beginner_friendly"]),
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        print(f"[api] investment_assets 조회 실패: {e}")
+        return []
+
+
 def load_analysis_detail(date: str) -> dict | None:
     """특정 날짜의 전체 분석 내용 조회."""
     if not DB_PATH.exists():

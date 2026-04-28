@@ -4,6 +4,7 @@
 performance_report.json → correction_notes.json
 Marcus가 다음 분석 시 이 파일을 읽어 판단 보정에 활용
 """
+
 from __future__ import annotations
 
 import json
@@ -46,11 +47,13 @@ def generate_correction_notes(performance_data: dict) -> dict:
 
     # 팩터 강약 분류: avg_score_hit 기준
     weak_factors = [
-        f for f, data in factor_analysis.items()
+        f
+        for f, data in factor_analysis.items()
         if data.get("avg_score_hit", data.get("hit_rate", 0.5)) < WEAK_THRESHOLD
     ]
     strong_factors = [
-        f for f, data in factor_analysis.items()
+        f
+        for f, data in factor_analysis.items()
         if data.get("avg_score_hit", data.get("hit_rate", 0.5)) > STRONG_THRESHOLD
     ]
 
@@ -80,13 +83,9 @@ def generate_correction_notes(performance_data: dict) -> dict:
         f"평균 수익률 {avg_return_display}."
     ]
     if weak_factors:
-        summary_parts.append(
-            f"약한 팩터: {', '.join(weak_factors)} — 해당 종목 추천 시 신중히."
-        )
+        summary_parts.append(f"약한 팩터: {', '.join(weak_factors)} — 해당 종목 추천 시 신중히.")
     if strong_factors:
-        summary_parts.append(
-            f"강한 팩터: {', '.join(strong_factors)} — 해당 신호 신뢰도 높음."
-        )
+        summary_parts.append(f"강한 팩터: {', '.join(strong_factors)} — 해당 신호 신뢰도 높음.")
     if weight_suggestion:
         summary_parts.append("가중치 조정 적용됨.")
 
@@ -112,6 +111,7 @@ def save_correction_notes(notes: dict, output_path: Path) -> None:
     output_path = Path(output_path)
     output_path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
     logger.info(f"교정 노트 저장: {output_path}")
+    return data
 
 
 def run(
@@ -127,7 +127,9 @@ def run(
     Returns:
         교정 노트 dict, 또는 None (입력 없거나 오류 시)
     """
-    perf_path = Path(performance_path) if performance_path else OUTPUT_DIR / "performance_report.json"
+    perf_path = (
+        Path(performance_path) if performance_path else OUTPUT_DIR / "performance_report.json"
+    )
     out_dir = Path(output_dir) if output_dir else OUTPUT_DIR
 
     if not perf_path.exists():
@@ -146,5 +148,35 @@ def run(
 
     notes = generate_correction_notes(data)
     out_dir.mkdir(parents=True, exist_ok=True)
-    save_correction_notes(notes, out_dir / "correction_notes.json")
+    saved = save_correction_notes(notes, out_dir / "correction_notes.json")
+
+    try:
+        from db.connection import get_db_conn
+
+        date = saved["generated_at"][:10]
+        with get_db_conn() as conn:
+            conn.execute(
+                """INSERT INTO correction_notes_history
+                       (date, period, weak_factors_json, strong_factors_json,
+                        weight_adjustment_json, summary, generated_at)
+                   VALUES (?,?,?,?,?,?,?)
+                   ON CONFLICT(date) DO UPDATE SET
+                       period=excluded.period,
+                       weak_factors_json=excluded.weak_factors_json,
+                       strong_factors_json=excluded.strong_factors_json,
+                       weight_adjustment_json=excluded.weight_adjustment_json,
+                       summary=excluded.summary,
+                       generated_at=excluded.generated_at""",
+                (
+                    date,
+                    saved.get("period"),
+                    json.dumps(saved.get("weak_factors"), ensure_ascii=False),
+                    json.dumps(saved.get("strong_factors"), ensure_ascii=False),
+                    json.dumps(saved.get("weight_adjustment"), ensure_ascii=False),
+                    saved.get("summary"),
+                    saved["generated_at"],
+                ),
+            )
+    except Exception as e:
+        logger.error(f"[self_correction] DB 이력 저장 실패: {e}")
     return notes
