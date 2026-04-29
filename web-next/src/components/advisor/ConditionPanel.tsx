@@ -1,7 +1,7 @@
 'use client'
 
 import { fmtAmt } from '@/lib/format'
-import type { RiskLevel, MinusLoanConfig, CreditLoanConfig } from '@/types/advisor'
+import type { RiskLevel, MinusLoanConfig, CreditLoanConfig, PortfolioMode } from '@/types/advisor'
 
 const STEP = 5_000_000
 const CAPITAL_MAX = 300_000_000
@@ -40,6 +40,7 @@ interface ConditionPanelProps {
   creditLoan: CreditLoanConfig | null; setCreditLoan: (v: CreditLoanConfig | null) => void
   monthlySavings: number; setMonthlySavings: (v: number) => void
   riskLevel: RiskLevel; setRiskLevel: (v: RiskLevel) => void
+  portfolioMode: PortfolioMode; setPortfolioMode: (v: PortfolioMode) => void
   wealthKrw: number | null
 }
 
@@ -54,6 +55,7 @@ export function ConditionPanel({
   creditLoan, setCreditLoan,
   monthlySavings, setMonthlySavings,
   riskLevel, setRiskLevel,
+  portfolioMode, setPortfolioMode,
   wealthKrw,
 }: ConditionPanelProps) {
   // 전재산 자동 반영은 AdvisorTab에서 처리 (중복 방지)
@@ -70,6 +72,38 @@ export function ConditionPanel({
       <h3 className="text-xs font-mono font-semibold text-muted-foreground tracking-wider uppercase">
         투자 조건 설정
       </h3>
+
+      {/* 분석 모드 */}
+      <div>
+        <div className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase mb-1.5">분석 모드</div>
+        <div className="grid grid-cols-2 rounded border border-mc-border overflow-hidden text-[10px] font-mono">
+          <button
+            onClick={() => setPortfolioMode('include')}
+            className={`py-1.5 px-2 transition-colors text-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold ${
+              portfolioMode === 'include'
+                ? 'bg-gold/10 text-gold'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            포트폴리오 정리 포함
+          </button>
+          <button
+            onClick={() => setPortfolioMode('ignore')}
+            className={`py-1.5 px-2 transition-colors text-center border-l border-mc-border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold ${
+              portfolioMode === 'ignore'
+                ? 'bg-gold/10 text-gold'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            신규 자본만
+          </button>
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          {portfolioMode === 'include'
+            ? '기존 종목 정리·전환 방안을 전략에 포함'
+            : '입력한 자본금·대출·납입금만으로 전략 수립'}
+        </p>
+      </div>
 
       {/* 자본금 */}
       <div>

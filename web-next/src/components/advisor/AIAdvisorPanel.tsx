@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { saveStrategy, type SavedLoan } from '@/lib/savedStrategies'
-import type { InvestmentAsset, MinusLoanConfig, CreditLoanConfig } from '@/types/advisor'
+import type { InvestmentAsset, MinusLoanConfig, CreditLoanConfig, PortfolioMode } from '@/types/advisor'
 
 const BASE = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE
   ? process.env.NEXT_PUBLIC_API_BASE
@@ -16,11 +16,12 @@ interface AIAdvisorPanelProps {
   creditLoan: CreditLoanConfig | null
   monthlySavings: number
   riskLevel: number
+  portfolioMode: PortfolioMode
   availableAssets: InvestmentAsset[]
 }
 
 export function AIAdvisorPanel({
-  capital, minusLoan, creditLoan, monthlySavings, riskLevel, availableAssets,
+  capital, minusLoan, creditLoan, monthlySavings, riskLevel, portfolioMode, availableAssets,
 }: AIAdvisorPanelProps) {
   const [recommendation, setRecommendation] = useState<string | null>(null)
   const [streamText, setStreamText] = useState('')
@@ -74,6 +75,7 @@ export function AIAdvisorPanel({
           leverage_amt: leverageAmt,
           risk_level: riskLevel,
           monthly_savings: monthlySavings,
+          portfolio_mode: portfolioMode,
           loans,
           available_assets: availableAssets,
         }),

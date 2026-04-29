@@ -44,12 +44,40 @@ _SYSTEM_PROMPT = """당신은 "민준"이라는 한국인 투자 고수입니다
 - 현실적 수치, 한국어"""
 
 
+def _portfolio_section(portfolio_mode: str, portfolio: str) -> str:
+    """포트폴리오 섹션 — 모드에 따라 내용·지시문 분기."""
+    if portfolio_mode == "ignore":
+        return ""
+    return f"""<current_portfolio>
+(기존 보유 자산 — 단계별 전략에 정리·유지·전환 방안을 반드시 포함할 것.
+어떤 종목을 언제 어떻게 청산·유지하고, 시드머니와 합산해 재배치할지 구체적으로 서술.)
+
+{portfolio}
+</current_portfolio>
+
+"""
+
+
+def _instructions_section(portfolio_mode: str) -> str:
+    """분석 모드에 따른 instructions 문구."""
+    if portfolio_mode == "ignore":
+        return (
+            "입력한 자본금·대출·월 납입금만을 기반으로 단계별 자산 증식 로드맵을 작성하라. "
+            "기존 보유 자산은 고려 대상 외."
+        )
+    return (
+        "기존 포트폴리오 정리·재배치 방안과 시드머니를 결합한 단계별 자산 증식 로드맵을 작성하라. "
+        "기존 종목 중 유지·청산·전환 대상을 명시하고 시드머니와 합산한 단계별 재배치 계획을 구체적으로 서술."
+    )
+
+
 def _build_user_message(
     capital: int,
     leverage_amt: int,
     risk_level: int,
     monthly_savings: int,
     loans: list,
+    portfolio_mode: str = "include",
 ) -> str:
     """동적 user 메시지 구성 — 데이터 상단, 지시 하단."""
     capital_str = (
@@ -64,9 +92,11 @@ def _build_user_message(
     market_period = datetime.now(KST).strftime("%Y년 %-m월")
 
     market_ctx = _load_market_context()
-    portfolio = _load_portfolio()
+    portfolio = _load_portfolio() if portfolio_mode != "ignore" else ""
     asset_table = _format_asset_table(_load_assets_from_db(total_capital, leverage_on))
     loan_section = format_loans(loans, monthly_savings)
+    portfolio_block = _portfolio_section(portfolio_mode, portfolio)
+    instructions = _instructions_section(portfolio_mode)
 
     return f"""<market_context period="{market_period}">
 (아래 데이터는 투자 레짐 판단·섹터 선택의 핵심 입력값.
@@ -75,13 +105,7 @@ VIX 20↑이면 변동성 경계, 레짐 PANIC이면 현금 비중 확대 우선
 {market_ctx}
 </market_context>
 
-<current_portfolio>
-(신규 시드머니와 별개인 기존 보유 자산. 종목 편중·중복을 피하고 전체 자산 관점에서 조언할 것.)
-
-{portfolio}
-</current_portfolio>
-
-<available_assets total_capital="{total_capital:,}원">
+{portfolio_block}<available_assets total_capital="{total_capital:,}원">
 (총 가용자본 기준으로 진입 가능한 투자처. 기대수익은 연간 기준.)
 
 {asset_table}
@@ -95,8 +119,7 @@ VIX 20↑이면 변동성 경계, 레짐 PANIC이면 현금 비중 확대 우선
 </investor_profile>
 
 <instructions>
-위 데이터를 바탕으로 민준 본인이 이 시드머니를 갖고 있다고 가정하고
-단계별 자산 증식 로드맵을 직접 작성하라.
+{instructions}
 </instructions>"""
 
 
@@ -112,17 +135,28 @@ def _parse_request(body: dict) -> dict:
     if not loans and legacy_lev > 0:
         loans = [{"type": "minus", "amount": legacy_lev, "rate": 4.0}]
     leverage_amt = sum(max(0, int(l.get("amount", 0))) for l in loans)
+    portfolio_mode = body.get("portfolio_mode", "include")
+    if portfolio_mode not in ("include", "ignore"):
+        portfolio_mode = "include"
     return {
         "capital": capital,
         "leverage_amt": leverage_amt,
         "risk_level": risk_level,
         "monthly_savings": monthly_savings,
         "loans": loans,
+        "portfolio_mode": portfolio_mode,
     }
 
 
 def _default_parsed() -> dict:
-    return {"capital": 0, "leverage_amt": 0, "risk_level": 3, "monthly_savings": 0, "loans": []}
+    return {
+        "capital": 0,
+        "leverage_amt": 0,
+        "risk_level": 3,
+        "monthly_savings": 0,
+        "loans": [],
+        "portfolio_mode": "include",
+    }
 
 
 def get_investment_advice(body: dict) -> dict:
@@ -138,6 +172,7 @@ def get_investment_advice(body: dict) -> dict:
         parsed["risk_level"],
         parsed["monthly_savings"],
         parsed["loans"],
+        parsed["portfolio_mode"],
     )
     try:
         recommendation = call_claude(user_msg, system=_SYSTEM_PROMPT)
@@ -162,6 +197,7 @@ def stream_investment_advice(body: dict):
             parsed["risk_level"],
             parsed["monthly_savings"],
             parsed["loans"],
+            parsed["portfolio_mode"],
         )
         if os.environ.get("ANTHROPIC_API_KEY"):
             yield {"type": "log", "msg": "Anthropic API 호출 중..."}

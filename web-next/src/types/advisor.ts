@@ -52,6 +52,9 @@ export interface CategoryFilter {
 /** 정렬 옵션 */
 export type SortOption = 'return' | 'risk' | 'capital'
 
+/** AI 어드바이저 포트폴리오 분석 모드 */
+export type PortfolioMode = 'include' | 'ignore'
+
 /** 마이너스통장 설정 (이자만 납입, 수시 상환 가능) */
 export interface MinusLoanConfig {
   amount: number   // 원

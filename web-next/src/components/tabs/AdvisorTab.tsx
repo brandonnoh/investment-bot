@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import { ConditionPanel } from '@/components/advisor/ConditionPanel'
 import { AIAdvisorPanel } from '@/components/advisor/AIAdvisorPanel'
 import { AssetGrid } from '@/components/advisor/AssetGrid'
-import type { InvestmentAsset, RiskLevel, MinusLoanConfig, CreditLoanConfig } from '@/types/advisor'
+import type { InvestmentAsset, RiskLevel, MinusLoanConfig, CreditLoanConfig, PortfolioMode } from '@/types/advisor'
 
 const BASE = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_BASE
   ? process.env.NEXT_PUBLIC_API_BASE
@@ -21,6 +21,7 @@ interface SavedSettings {
   minusLoan?: MinusLoanConfig | null
   creditLoan?: CreditLoanConfig | null
   monthlySavings?: number
+  portfolioMode?: PortfolioMode
   leverageAmt?: number   // 구 형식 호환
 }
 
@@ -40,9 +41,10 @@ function saveSettings(
   minusLoan: MinusLoanConfig | null,
   creditLoan: CreditLoanConfig | null,
   monthlySavings: number,
+  portfolioMode: PortfolioMode,
 ) {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({ capital, riskLevel, minusLoan, creditLoan, monthlySavings }))
+    localStorage.setItem(LS_KEY, JSON.stringify({ capital, riskLevel, minusLoan, creditLoan, monthlySavings, portfolioMode }))
   } catch {}
 }
 
@@ -66,6 +68,7 @@ export function AdvisorTab() {
   const [creditLoan, setCreditLoan] = useState<CreditLoanConfig | null>(null)
   const [monthlySavings, setMonthlySavings] = useState(0)
   const [riskLevel, setRiskLevel] = useState<RiskLevel>(3)
+  const [portfolioMode, setPortfolioMode] = useState<PortfolioMode>('include')
   const [wealthApplied, setWealthApplied] = useState(false)
 
   // localStorage는 마운트 후에만 읽어야 SSR hydration 불일치를 막는다
@@ -82,6 +85,7 @@ export function AdvisorTab() {
       // 구 형식: leverageAmt → 마이너스통장으로 마이그레이션
       setMinusLoan({ amount: saved.leverageAmt, rate: 4.0 })
     }
+    if (saved.portfolioMode) setPortfolioMode(saved.portfolioMode)
     setWealthApplied(true)
   }, [])
 
@@ -100,7 +104,7 @@ export function AdvisorTab() {
 
   // 설정 변경 시 localStorage 저장
   useEffect(() => {
-    saveSettings(capital, riskLevel, minusLoan, creditLoan, monthlySavings)
+    saveSettings(capital, riskLevel, minusLoan, creditLoan, monthlySavings, portfolioMode)
   }, [capital, riskLevel, minusLoan, creditLoan, monthlySavings])
 
   const leverageAmt = (minusLoan?.amount ?? 0) + (creditLoan?.amount ?? 0)
@@ -116,6 +120,7 @@ export function AdvisorTab() {
   const stableSetCreditLoan = useCallback((v: CreditLoanConfig | null) => setCreditLoan(v), [])
   const stableSetMonthlySavings = useCallback((v: number) => setMonthlySavings(v), [])
   const stableSetRiskLevel = useCallback((v: RiskLevel) => setRiskLevel(v), [])
+  const stableSetPortfolioMode = useCallback((v: PortfolioMode) => setPortfolioMode(v), [])
 
   return (
     <div className="space-y-4">
@@ -130,6 +135,8 @@ export function AdvisorTab() {
         setMonthlySavings={stableSetMonthlySavings}
         riskLevel={riskLevel}
         setRiskLevel={stableSetRiskLevel}
+        portfolioMode={portfolioMode}
+        setPortfolioMode={stableSetPortfolioMode}
         wealthKrw={wealthKrw}
       />
       <AIAdvisorPanel
@@ -138,6 +145,7 @@ export function AdvisorTab() {
         creditLoan={creditLoan}
         monthlySavings={monthlySavings}
         riskLevel={riskLevel}
+        portfolioMode={portfolioMode}
         availableAssets={availableAssets}
       />
       <AssetGrid
