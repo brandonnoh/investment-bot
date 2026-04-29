@@ -102,7 +102,7 @@ def _call_claude_cli(prompt: str, system: str = "") -> str:
         input=full_prompt,
         capture_output=True,
         text=True,
-        timeout=300,
+        timeout=600,
         cwd=str(PROJECT_ROOT),
     )
     combined = result.stdout + result.stderr
@@ -179,7 +179,7 @@ def stream_via_cli(prompt: str, system: str = ""):
         input=full_prompt,
         capture_output=True,
         text=True,
-        timeout=300,
+        timeout=600,
         cwd=str(PROJECT_ROOT),
     )
     combined = result.stdout + result.stderr

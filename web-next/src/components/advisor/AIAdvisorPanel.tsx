@@ -101,6 +101,7 @@ export function AIAdvisorPanel({
           if (!line.startsWith('data:')) continue
           const data = line.slice(5).trim()
           if (data === '[DONE]') {
+            reader.cancel().catch(() => {})  // 연결 정리
             setRecommendation(fullText)
             setStreamText('')
             setLoading(false)
@@ -135,7 +136,7 @@ export function AIAdvisorPanel({
     } finally {
       setLoading(false)
     }
-  }, [capital, minusLoan, creditLoan, monthlySavings, riskLevel, availableAssets])
+  }, [capital, minusLoan, creditLoan, monthlySavings, riskLevel, portfolioMode, availableAssets])
 
   const displayText = loading ? streamText : recommendation
 

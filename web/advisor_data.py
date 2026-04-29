@@ -169,8 +169,12 @@ def _load_assets_from_db(total_capital: int, leverage_on: bool) -> list[dict]:
 def _format_asset_table(assets: list[dict]) -> str:
     if not assets:
         return "(접근 가능한 자산 없음)"
-    lines = ["| 자산명 | 최소자본 | 기대수익(연) | 리스크 | 레버리지 | 세제혜택 |"]
-    lines.append("|--------|---------|------------|------|---------|---------|")
+    lines = [
+        "| 자산명 | 최소자본 | 기대수익(연) | 리스크 | 레버리지 | 세제혜택 | 실제 비용 (진입/보유/출구/숨은비용) |"
+    ]
+    lines.append(
+        "|--------|---------|------------|------|---------|---------|----------------------------------|"
+    )
     for a in assets:
         min_cap = a.get("min_capital", 0)
         min_cap_str = (
@@ -181,7 +185,8 @@ def _format_asset_table(assets: list[dict]) -> str:
         risk = a.get("risk_level", 0)
         lev = a.get("leverage_type") or ("가능" if a.get("leverage_available") else "불가")
         tax = a.get("tax_benefit") or "-"
+        real_costs = a.get("real_costs") or "-"
         lines.append(
-            f"| {a.get('name', '')} | {min_cap_str} | {ret_min}~{ret_max}% | {risk}/5 | {lev} | {tax} |"
+            f"| {a.get('name', '')} | {min_cap_str} | {ret_min}~{ret_max}% | {risk}/5 | {lev} | {tax} | {real_costs} |"
         )
     return "\n".join(lines)

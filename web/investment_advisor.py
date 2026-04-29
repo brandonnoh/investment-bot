@@ -98,6 +98,19 @@ def _build_user_message(
     portfolio_block = _portfolio_section(portfolio_mode, portfolio)
     instructions = _instructions_section(portfolio_mode)
 
+    total_capital_str = (
+        f"{total_capital / 100_000_000:.1f}억원"
+        if total_capital >= 100_000_000
+        else f"{total_capital // 10000:,}만원"
+    )
+    capital_breakdown = (
+        f"- 총 배분 가능 자본: {total_capital:,}원 ({total_capital_str}) ← 이 금액 전체를 단계별로 배분할 것\n"
+        f"  · 자기자본: {capital:,}원 ({capital_str})\n"
+        f"  · 대출 활용: {leverage_amt:,}원 (아래 대출 현황 참조)"
+        if leverage_on
+        else f"- 총 배분 가능 자본: {capital:,}원 ({capital_str})"
+    )
+
     return f"""<market_context period="{market_period}">
 (아래 데이터는 투자 레짐 판단·섹터 선택의 핵심 입력값.
 VIX 20↑이면 변동성 경계, 레짐 PANIC이면 현금 비중 확대 우선.)
@@ -112,7 +125,7 @@ VIX 20↑이면 변동성 경계, 레짐 PANIC이면 현금 비중 확대 우선
 </available_assets>
 
 <investor_profile>
-- 신규 시드머니: {capital:,}원 ({capital_str})
+{capital_breakdown}
 - 리스크 성향: {risk_level}/5 ({risk_label})
 
 {loan_section}
@@ -208,9 +221,12 @@ def stream_investment_advice(body: dict):
             yield {"type": "log", "msg": "Claude CLI 시작..."}
             yield from stream_via_cli(user_msg, system=_SYSTEM_PROMPT)
     except Exception as e:
-        print(f"[advisor] 스트리밍 실패: {e}")
-        if "인증 만료" in str(e):
+        err_str = str(e)
+        print(f"[advisor] 스트리밍 실패: {type(e).__name__}: {err_str[:200]}")
+        if "인증 만료" in err_str:
             msg = "Claude 인증이 만료되었습니다. 호스트에서 claude 재로그인 후 다시 시도해주세요."
+        elif "timed out" in err_str.lower() or "timeout" in err_str.lower():
+            msg = "AI 응답 시간 초과 (너무 긴 응답 요청). 잠시 후 다시 시도해주세요."
         else:
-            msg = "AI 분석 일시 불가. 잠시 후 다시 시도해주세요."
+            msg = f"AI 분석 일시 불가: {type(e).__name__}"
         yield {"type": "error", "msg": msg}

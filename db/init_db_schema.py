@@ -361,6 +361,8 @@ MIGRATION_COLUMNS = [
     # 어드바이저 저장 전략 — 대출 상세 및 월 추가 투자금
     ("advisor_strategies", "loans_json", "TEXT NOT NULL DEFAULT '[]'"),
     ("advisor_strategies", "monthly_savings", "INTEGER NOT NULL DEFAULT 0"),
+    # 투자 자산 — 현실 비용 (진입/보유/출구/숨은비용)
+    ("investment_assets", "real_costs", "TEXT"),
 ]
 
 # ── 파이프라인 이력 테이블 (regime / sector / correction / performance) ──

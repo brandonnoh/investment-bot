@@ -35,13 +35,13 @@ def seed():
             expected_return_min, expected_return_max, risk_level, liquidity,
             leverage_available, leverage_ratio, leverage_type,
             tax_benefit, regulation_note, status, upcoming_date,
-            beginner_friendly, description, caution, updated_at
+            beginner_friendly, description, caution, real_costs, updated_at
         ) VALUES (
             :id, :name, :category, :min_capital, :min_capital_leveraged,
             :expected_return_min, :expected_return_max, :risk_level, :liquidity,
             :leverage_available, :leverage_ratio, :leverage_type,
             :tax_benefit, :regulation_note, :status, :upcoming_date,
-            :beginner_friendly, :description, :caution, :updated_at
+            :beginner_friendly, :description, :caution, :real_costs, :updated_at
         )
         ON CONFLICT(id) DO UPDATE SET
             name                  = excluded.name,
@@ -62,6 +62,7 @@ def seed():
             beginner_friendly     = excluded.beginner_friendly,
             description           = excluded.description,
             caution               = excluded.caution,
+            real_costs            = excluded.real_costs,
             updated_at            = excluded.updated_at
     """
 
@@ -86,6 +87,7 @@ def seed():
             "beginner_friendly": 1 if a.get("beginner_friendly") else 0,
             "description": a.get("description"),
             "caution": a.get("caution"),
+            "real_costs": a.get("real_costs"),
             "updated_at": now,
         }
         for a in assets

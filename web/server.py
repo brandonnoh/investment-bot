@@ -35,11 +35,6 @@ init_db()
 PORT = 8421
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 
-# AI 스트림 rate limit: 클라이언트 IP → 마지막 요청 시각
-_stream_last: dict[str, float] = {}
-_stream_lock = threading.Lock()
-_STREAM_MIN_INTERVAL = 15.0  # 초
-
 # 허용된 로그 이름 (경로 순회 방지)
 _ALLOWED_LOG_NAMES = {"marcus", "pipeline", "jarvis", "alerts_watch", "refresh_prices"}
 
@@ -291,19 +286,12 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.send_json(result)
 
         elif path == "/api/investment-advice-stream":
-            client_ip = self.client_address[0]
-            now = time.time()
-            with _stream_lock:
-                last = _stream_last.get(client_ip, 0.0)
-                if now - last < _STREAM_MIN_INTERVAL:
-                    self.send_json({"error": "요청 빈도 초과. 잠시 후 다시 시도하세요."}, 429)
-                    return
-                _stream_last[client_ip] = now
             body = self._read_json_body()
+            self.close_connection = True  # 스트리밍 완료 후 반드시 연결 종료 (keep-alive 금지)
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
-            self.send_header("Connection", "keep-alive")
+            self.send_header("Connection", "close")
             self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
             self.end_headers()
             try:
