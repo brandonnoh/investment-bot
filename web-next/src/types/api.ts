@@ -187,6 +187,40 @@ export interface LogResponse {
   lines: string[]
 }
 
+export interface CompanyNewsItem {
+  title: string
+  summary?: string
+  source?: string
+  url?: string
+  published_at?: string
+  sentiment?: number
+}
+
+export interface CompanyProfile {
+  ticker: string
+  name?: string
+  sector?: string
+  industry?: string
+  country?: string
+  description?: string
+  website?: string
+  employees?: number
+  market_cap?: number
+  current_price?: number
+  price_52w_high?: number
+  price_52w_low?: number
+  per?: number
+  pbr?: number
+  roe?: number
+  debt_ratio?: number
+  revenue_growth?: number
+  operating_margin?: number
+  dividend_yield?: number
+  screen_strategies?: string[]
+  recent_news?: CompanyNewsItem[]
+  updated_at?: string
+}
+
 export interface SolarListing {
   id: number
   source: string          // 'allthatsolar' | 'solarmarket' | 'onbid' | ...

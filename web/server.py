@@ -233,6 +233,9 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         elif path == "/api/performance-report-history":
             days = self._parse_int_param(params, "days", 90, 1, 365)
             self.send_json(api_history.load_performance_report_history(days))
+        elif path.startswith("/api/company/"):
+            ticker = path[len("/api/company/") :]
+            self.send_json(api_company.load_company_profile(ticker))
         else:
             self._serve_static(path)
 

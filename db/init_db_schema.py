@@ -340,6 +340,28 @@ CREATE_INDEX_PORTFOLIO_HISTORY_DATE = (
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_portfolio_history_date ON portfolio_history (date)"
 )
 
+# ── 기업 프로필 (스크리너 추천 종목 상세 정보) ──
+
+CREATE_TABLE_COMPANY_PROFILES = """
+    CREATE TABLE IF NOT EXISTS company_profiles (
+        ticker          TEXT PRIMARY KEY,
+        name            TEXT,
+        sector          TEXT,
+        industry        TEXT,
+        exchange        TEXT,
+        country         TEXT,
+        description     TEXT,
+        website         TEXT,
+        employees       INTEGER,
+        market_cap      INTEGER,
+        current_price   REAL,
+        price_52w_high  REAL,
+        price_52w_low   REAL,
+        screen_strategies TEXT,
+        updated_at      TEXT
+    )
+"""
+
 # ── 마이그레이션: 기존 테이블에 추가된 컬럼 목록 ──
 # (table_name, column_name, column_def) 튜플 리스트
 MIGRATION_COLUMNS = [

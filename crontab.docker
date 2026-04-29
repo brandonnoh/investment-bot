@@ -28,6 +28,9 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # 뉴스 수집: 평일(월~금) 08:00 KST
 0 8 * * 1-5 root cd /app && python3 scripts/refresh_news.py >> /app/logs/news.log 2>&1
 
+# 기업 프로필 사전 수집: 평일(월~금) 08:10 KST (파이프라인 07:40 완료 후)
+10 8 * * 1-5 root cd /app && python3 data/fetch_company_profiles.py >> /app/logs/company_profiles.log 2>&1
+
 # 월별 입금 기록: 매월 1일 00:00 KST
 0 0 1 * * root cd /app && python3 scripts/monthly_deposit_cron.py >> /app/logs/deposit.log 2>&1
 

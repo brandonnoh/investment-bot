@@ -1,5 +1,6 @@
 import type {
   AnalysisHistory,
+  CompanyProfile,
   IntelData,
   LogResponse,
   ProcessStatus,
@@ -39,6 +40,10 @@ export async function fetchLogs(
 
 export async function fetchSolarListings(): Promise<SolarResponse> {
   return apiFetch<SolarResponse>('/api/solar')
+}
+
+export async function fetchCompanyProfile(ticker: string): Promise<CompanyProfile> {
+  return apiFetch<CompanyProfile>(`/api/company/${encodeURIComponent(ticker)}`)
 }
 
 export async function fetchOpportunities(strategy: string): Promise<{

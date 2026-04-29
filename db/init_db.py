@@ -43,6 +43,7 @@ from db.init_db_schema import (
     CREATE_TABLE_AGENT_KEYWORDS,
     CREATE_TABLE_ALERTS,
     CREATE_TABLE_ANALYSIS_HISTORY,
+    CREATE_TABLE_COMPANY_PROFILES,
     CREATE_TABLE_CORRECTION_NOTES_HISTORY,
     CREATE_TABLE_EXTRA_ASSETS,
     CREATE_TABLE_FUNDAMENTALS,
@@ -150,6 +151,9 @@ def init_schema(conn):
     # ── 어드바이저 저장 전략 이력 ──
     cursor.execute(CREATE_TABLE_ADVISOR_STRATEGIES)
     cursor.execute(CREATE_INDEX_ADVISOR_STRATEGIES_DATE)
+
+    # ── 기업 프로필 (스크리너 추천 종목 상세) ──
+    cursor.execute(CREATE_TABLE_COMPANY_PROFILES)
 
     # ── 파이프라인 분석 이력 (JSON 덮어쓰기 보완) ──
     cursor.execute(CREATE_TABLE_REGIME_HISTORY)

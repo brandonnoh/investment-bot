@@ -6,6 +6,7 @@ import { useIntelData } from '@/hooks/useIntelData'
 import { useOpportunities, STRATEGIES, type StrategyId } from '@/hooks/useOpportunities'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useMCStore } from '@/store/useMCStore'
+import { CompanyDrawer } from '@/components/discovery/CompanyDrawer'
 import type { Opportunity } from '@/types/api'
 
 const HOW_IT_WORKS = [
@@ -72,7 +73,7 @@ function SkeletonCard() {
   )
 }
 
-function OpportunityCard({ o, highlighted, id }: { o: Opportunity; highlighted: boolean; id?: string }) {
+function OpportunityCard({ o, highlighted, id, onClick }: { o: Opportunity; highlighted: boolean; id?: string; onClick?: () => void }) {
   const score = Math.round((o.composite_score ?? 0) * 100)
   const factors = o.factors ?? {}
   const factorOrder = ['quality', 'value', 'flow', 'momentum', 'growth'] as const
@@ -80,7 +81,11 @@ function OpportunityCard({ o, highlighted, id }: { o: Opportunity; highlighted: 
   return (
     <div
       id={id}
-      className="rounded-md border border-mc-border bg-mc-card p-3 space-y-2 transition-all"
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.() }}
+      className="rounded-md border border-mc-border bg-mc-card p-3 space-y-2 transition-all cursor-pointer hover:border-[#4dca7e]/40"
       style={highlighted ? { borderColor: '#4dca7e', boxShadow: '0 0 0 1px #4dca7e' } : undefined}
     >
       <div className="flex items-start justify-between gap-2">
@@ -123,8 +128,8 @@ function OpportunityCard({ o, highlighted, id }: { o: Opportunity; highlighted: 
   )
 }
 
-function MarketList({ opportunities, isLoading, emptyLabel, marcusPickedTicker }: {
-  opportunities: Opportunity[]; isLoading: boolean; emptyLabel: string; marcusPickedTicker: string | null
+function MarketList({ opportunities, isLoading, emptyLabel, marcusPickedTicker, onSelect }: {
+  opportunities: Opportunity[]; isLoading: boolean; emptyLabel: string; marcusPickedTicker: string | null; onSelect: (o: Opportunity) => void
 }) {
   if (isLoading) {
     return <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">{[1,2,3].map(i => <SkeletonCard key={i} />)}</div>
@@ -137,13 +142,13 @@ function MarketList({ opportunities, isLoading, emptyLabel, marcusPickedTicker }
       {opportunities.map((o) => {
         const highlighted = !!marcusPickedTicker &&
           (o.ticker === marcusPickedTicker || o.ticker.startsWith(marcusPickedTicker))
-        return <OpportunityCard key={o.ticker} o={o} highlighted={highlighted} id={`opp-${o.ticker}`} />
+        return <OpportunityCard key={o.ticker} o={o} highlighted={highlighted} id={`opp-${o.ticker}`} onClick={() => onSelect(o)} />
       })}
     </div>
   )
 }
 
-type DiscoveryProps = { market: 'kr' | 'us'; search: string; marcusPickedTicker: string | null }
+type DiscoveryProps = { market: 'kr' | 'us'; search: string; marcusPickedTicker: string | null; onSelect: (o: Opportunity) => void }
 
 function applyFilter(list: Opportunity[], market: 'kr' | 'us', search: string) {
   const byMarket = list.filter(o => market === 'kr' ? isKrTicker(o.ticker) : !isKrTicker(o.ticker))
@@ -153,7 +158,7 @@ function applyFilter(list: Opportunity[], market: 'kr' | 'us', search: string) {
 }
 
 // composite 전략은 기존 useIntelData에서 가져오는 래퍼
-function CompositeDiscovery({ market, search, marcusPickedTicker }: DiscoveryProps) {
+function CompositeDiscovery({ market, search, marcusPickedTicker, onSelect }: DiscoveryProps) {
   const { data, isLoading } = useIntelData()
   const all: Opportunity[] = data?.opportunities?.opportunities ?? []
   return (
@@ -162,11 +167,12 @@ function CompositeDiscovery({ market, search, marcusPickedTicker }: DiscoveryPro
       isLoading={isLoading}
       emptyLabel={`발굴된 ${market === 'kr' ? '국내' : '미국'} 종목 없음`}
       marcusPickedTicker={marcusPickedTicker}
+      onSelect={onSelect}
     />
   )
 }
 
-function StrategyDiscovery({ strategy, market, search, marcusPickedTicker }: DiscoveryProps & { strategy: StrategyId }) {
+function StrategyDiscovery({ strategy, market, search, marcusPickedTicker, onSelect }: DiscoveryProps & { strategy: StrategyId }) {
   const { opportunities, isLoading } = useOpportunities(strategy)
   return (
     <MarketList
@@ -174,6 +180,7 @@ function StrategyDiscovery({ strategy, market, search, marcusPickedTicker }: Dis
       isLoading={isLoading}
       emptyLabel={`이 렌즈로 발굴된 ${market === 'kr' ? '국내' : '미국'} 종목 없음`}
       marcusPickedTicker={marcusPickedTicker}
+      onSelect={onSelect}
     />
   )
 }
@@ -182,6 +189,7 @@ export function DiscoveryTab() {
   const [strategy, setStrategy] = useState<StrategyId>('composite')
   const [market, setMarket] = useState<'kr' | 'us'>('kr')
   const [search, setSearch] = useState<string>('')
+  const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null)
 
   const { marcusPickedTicker, setMarcusPickedTicker } = useMCStore()
 
@@ -317,11 +325,17 @@ export function DiscoveryTab() {
         </CardHeader>
         <CardContent className="px-4 pb-4 pt-3">
           {strategy === 'composite'
-            ? <CompositeDiscovery market={market} search={search} marcusPickedTicker={marcusPickedTicker} />
-            : <StrategyDiscovery strategy={strategy} market={market} search={search} marcusPickedTicker={marcusPickedTicker} />
+            ? <CompositeDiscovery market={market} search={search} marcusPickedTicker={marcusPickedTicker} onSelect={setSelectedOpp} />
+            : <StrategyDiscovery strategy={strategy} market={market} search={search} marcusPickedTicker={marcusPickedTicker} onSelect={setSelectedOpp} />
           }
         </CardContent>
       </Card>
+
+      <CompanyDrawer
+        ticker={selectedOpp?.ticker ?? null}
+        opportunity={selectedOpp}
+        onClose={() => setSelectedOpp(null)}
+      />
     </div>
   )
 }
