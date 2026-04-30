@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""스크리너 추천 종목 기업 프로필 사전 수집 — yfinance .info → company_profiles DB"""
+"""스크리너 추천 종목 기업 프로필 사전 수집 — yfinance + DART + 네이버 → company_profiles DB"""
 
 import json
 import sys
@@ -13,6 +13,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from analysis.value_screener_strategies import (  # noqa: E402
     STRATEGY_META,
     get_opportunities_cached,
+)
+from data.fetch_fundamentals_sources import (  # noqa: E402
+    fetch_dart_company_info,
+    fetch_naver_analyst_reports,
 )
 from db.connection import get_db_conn  # noqa: E402
 
@@ -38,69 +42,152 @@ def _collect_target_tickers() -> dict[str, list[str]]:
     return ticker_strategies
 
 
-def _fetch_profile(ticker: str) -> dict | None:
-    """yfinance에서 기업 프로필 조회. 유효하지 않으면 None 반환."""
+def _is_kr_ticker(ticker: str) -> bool:
+    """한국 주식 티커인지 판별 (.KS 또는 .KQ 접미사)."""
+    return ticker.endswith(".KS") or ticker.endswith(".KQ")
+
+
+def _extract_stock_code(ticker: str) -> str:
+    """'005930.KS' → '005930' 종목코드 추출."""
+    return ticker.split(".")[0]
+
+
+def _fetch_yfinance_info(ticker: str) -> dict:
+    """yfinance에서 기업 정보 조회. 실패 시 빈 dict 반환."""
     try:
         import yfinance as yf
 
         info = yf.Ticker(ticker).info
+        return info if info else {}
     except Exception as e:
-        print(f"  [skip] {ticker}: yfinance 오류 — {e}")
+        print(f"  [warn] {ticker}: yfinance 오류 — {e}")
+        return {}
+
+
+def _fetch_profile_kr(ticker: str) -> dict | None:
+    """한국 주식 프로필: DART + 네이버 + yfinance 병합."""
+    stock_code = _extract_stock_code(ticker)
+
+    # DART 기업개황
+    dart_info = fetch_dart_company_info(stock_code) or {}
+
+    # 네이버 애널리스트 리포트 + 외국인 비율
+    reports, foreign_rate = fetch_naver_analyst_reports(stock_code)
+
+    # yfinance 보조 데이터 (실패해도 계속)
+    yf_info = _fetch_yfinance_info(ticker)
+
+    exchange = "KS" if ticker.endswith(".KS") else "KQ"
+    name = yf_info.get("longName") or yf_info.get("shortName") or dart_info.get("name_kr")
+
+    # 유효성 판단: 이름이나 리포트 중 하나라도 있으면 유효
+    if not name and not dart_info.get("name_kr") and not reports:
+        print(f"  [skip] {ticker}: 유효한 데이터 없음 (KR)")
         return None
 
-    if not info or (not info.get("currentPrice") and not info.get("marketCap")):
+    return {
+        "name": name,
+        "name_kr": dart_info.get("name_kr"),
+        "sector": yf_info.get("sector"),
+        "industry": yf_info.get("industry"),
+        "exchange": exchange,
+        "country": "South Korea",
+        "description": yf_info.get("longBusinessSummary"),
+        "website": dart_info.get("website") or yf_info.get("website"),
+        "employees": dart_info.get("employees") or yf_info.get("fullTimeEmployees"),
+        "market_cap": yf_info.get("marketCap"),
+        "current_price": yf_info.get("currentPrice"),
+        "price_52w_high": yf_info.get("fiftyTwoWeekHigh"),
+        "price_52w_low": yf_info.get("fiftyTwoWeekLow"),
+        "ceo": dart_info.get("ceo"),
+        "address": dart_info.get("address"),
+        "founded": dart_info.get("founded"),
+        "analyst_reports": json.dumps(reports, ensure_ascii=False) if reports else None,
+        "foreign_rate": foreign_rate,
+    }
+
+
+def _fetch_profile_us(ticker: str) -> dict | None:
+    """미국/해외 주식 프로필: yfinance 단독."""
+    yf_info = _fetch_yfinance_info(ticker)
+    if not yf_info or (not yf_info.get("currentPrice") and not yf_info.get("marketCap")):
         print(f"  [skip] {ticker}: 유효한 데이터 없음")
         return None
 
     return {
-        "name": info.get("longName") or info.get("shortName"),
-        "sector": info.get("sector"),
-        "industry": info.get("industry"),
-        "exchange": info.get("exchange"),
-        "country": info.get("country"),
-        "description": info.get("longBusinessSummary"),
-        "website": info.get("website"),
-        "employees": info.get("fullTimeEmployees"),
-        "market_cap": info.get("marketCap"),
-        "current_price": info.get("currentPrice"),
-        "price_52w_high": info.get("fiftyTwoWeekHigh"),
-        "price_52w_low": info.get("fiftyTwoWeekLow"),
+        "name": yf_info.get("longName") or yf_info.get("shortName"),
+        "name_kr": None,
+        "sector": yf_info.get("sector"),
+        "industry": yf_info.get("industry"),
+        "exchange": yf_info.get("exchange"),
+        "country": yf_info.get("country"),
+        "description": yf_info.get("longBusinessSummary"),
+        "website": yf_info.get("website"),
+        "employees": yf_info.get("fullTimeEmployees"),
+        "market_cap": yf_info.get("marketCap"),
+        "current_price": yf_info.get("currentPrice"),
+        "price_52w_high": yf_info.get("fiftyTwoWeekHigh"),
+        "price_52w_low": yf_info.get("fiftyTwoWeekLow"),
+        "ceo": None,
+        "address": None,
+        "founded": None,
+        "analyst_reports": None,
+        "foreign_rate": None,
     }
 
 
+def _fetch_profile(ticker: str) -> dict | None:
+    """기업 프로필 조회. KR/US 분기 처리."""
+    if _is_kr_ticker(ticker):
+        return _fetch_profile_kr(ticker)
+    return _fetch_profile_us(ticker)
+
+
 def _upsert_profile(conn, ticker: str, profile: dict, strategies: list[str]):
-    """company_profiles 테이블에 UPSERT."""
+    """company_profiles 테이블에 UPSERT (DART/네이버 강화 컬럼 포함)."""
     now = datetime.now(KST).isoformat()
     conn.execute(
         """INSERT INTO company_profiles
-           (ticker, name, sector, industry, exchange, country, description,
-            website, employees, market_cap, current_price,
-            price_52w_high, price_52w_low, screen_strategies, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (ticker, name, name_kr, sector, industry, exchange, country,
+            description, website, employees, market_cap, current_price,
+            price_52w_high, price_52w_low, ceo, address, founded,
+            analyst_reports, foreign_rate, screen_strategies, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(ticker) DO UPDATE SET
-             name=excluded.name, sector=excluded.sector,
-             industry=excluded.industry, exchange=excluded.exchange,
-             country=excluded.country, description=excluded.description,
-             website=excluded.website, employees=excluded.employees,
-             market_cap=excluded.market_cap, current_price=excluded.current_price,
+             name=excluded.name, name_kr=excluded.name_kr,
+             sector=excluded.sector, industry=excluded.industry,
+             exchange=excluded.exchange, country=excluded.country,
+             description=excluded.description, website=excluded.website,
+             employees=excluded.employees, market_cap=excluded.market_cap,
+             current_price=excluded.current_price,
              price_52w_high=excluded.price_52w_high,
              price_52w_low=excluded.price_52w_low,
+             ceo=excluded.ceo, address=excluded.address,
+             founded=excluded.founded,
+             analyst_reports=excluded.analyst_reports,
+             foreign_rate=excluded.foreign_rate,
              screen_strategies=excluded.screen_strategies,
              updated_at=excluded.updated_at""",
         (
             ticker,
-            profile["name"],
-            profile["sector"],
-            profile["industry"],
-            profile["exchange"],
-            profile["country"],
-            profile["description"],
-            profile["website"],
-            profile["employees"],
-            profile["market_cap"],
-            profile["current_price"],
-            profile["price_52w_high"],
-            profile["price_52w_low"],
+            profile.get("name"),
+            profile.get("name_kr"),
+            profile.get("sector"),
+            profile.get("industry"),
+            profile.get("exchange"),
+            profile.get("country"),
+            profile.get("description"),
+            profile.get("website"),
+            profile.get("employees"),
+            profile.get("market_cap"),
+            profile.get("current_price"),
+            profile.get("price_52w_high"),
+            profile.get("price_52w_low"),
+            profile.get("ceo"),
+            profile.get("address"),
+            profile.get("founded"),
+            profile.get("analyst_reports"),
+            profile.get("foreign_rate"),
             json.dumps(strategies, ensure_ascii=False),
             now,
         ),

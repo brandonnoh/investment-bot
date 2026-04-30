@@ -45,6 +45,7 @@ from db.init_db_schema import (
     CREATE_TABLE_ANALYSIS_HISTORY,
     CREATE_TABLE_COMPANY_PROFILES,
     CREATE_TABLE_CORRECTION_NOTES_HISTORY,
+    CREATE_TABLE_DART_CORP_CODES,
     CREATE_TABLE_EXTRA_ASSETS,
     CREATE_TABLE_FUNDAMENTALS,
     CREATE_TABLE_HOLDINGS,
@@ -151,6 +152,9 @@ def init_schema(conn):
     # ── 어드바이저 저장 전략 이력 ──
     cursor.execute(CREATE_TABLE_ADVISOR_STRATEGIES)
     cursor.execute(CREATE_INDEX_ADVISOR_STRATEGIES_DATE)
+
+    # ── DART 법인코드 매핑 ──
+    cursor.execute(CREATE_TABLE_DART_CORP_CODES)
 
     # ── 기업 프로필 (스크리너 추천 종목 상세) ──
     cursor.execute(CREATE_TABLE_COMPANY_PROFILES)

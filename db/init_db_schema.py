@@ -340,6 +340,17 @@ CREATE_INDEX_PORTFOLIO_HISTORY_DATE = (
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_portfolio_history_date ON portfolio_history (date)"
 )
 
+# ── DART 법인코드 매핑 (종목코드 → DART 고유번호) ──
+
+CREATE_TABLE_DART_CORP_CODES = """
+    CREATE TABLE IF NOT EXISTS dart_corp_codes (
+        stock_code  TEXT PRIMARY KEY,
+        corp_code   TEXT NOT NULL,
+        corp_name   TEXT,
+        market      TEXT
+    )
+"""
+
 # ── 기업 프로필 (스크리너 추천 종목 상세 정보) ──
 
 CREATE_TABLE_COMPANY_PROFILES = """
@@ -385,6 +396,13 @@ MIGRATION_COLUMNS = [
     ("advisor_strategies", "monthly_savings", "INTEGER NOT NULL DEFAULT 0"),
     # 투자 자산 — 현실 비용 (진입/보유/출구/숨은비용)
     ("investment_assets", "real_costs", "TEXT"),
+    # 기업 프로필 — DART/네이버 강화 컬럼
+    ("company_profiles", "name_kr", "TEXT"),
+    ("company_profiles", "ceo", "TEXT"),
+    ("company_profiles", "address", "TEXT"),
+    ("company_profiles", "founded", "TEXT"),
+    ("company_profiles", "analyst_reports", "TEXT"),
+    ("company_profiles", "foreign_rate", "TEXT"),
 ]
 
 # ── 파이프라인 이력 테이블 (regime / sector / correction / performance) ──

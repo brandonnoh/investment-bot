@@ -4,15 +4,14 @@ import { useEffect, useCallback } from 'react'
 import useSWR from 'swr'
 import { fetchCompanyProfile } from '@/lib/api'
 import type { CompanyProfile, Opportunity } from '@/types/api'
+import { DrawerHeader, DrawerSkeleton, EmptyProfileMessage } from './DrawerHeader'
 import {
-  DrawerHeader,
-  DrawerSkeleton,
   PriceSection,
   DescriptionSection,
   MetricsGrid,
   FactorsSection,
+  AnalystReportsSection,
   NewsSection,
-  EmptyProfileMessage,
 } from './DrawerSections'
 
 // -- 프로필이 비어있는지 확인 --
@@ -91,6 +90,7 @@ export function CompanyDrawer({ ticker, opportunity, onClose }: CompanyDrawerPro
             {Object.keys(factors).length > 0 && (
               <FactorsSection factors={factors} />
             )}
+            <AnalystReportsSection reports={profile.analyst_reports} />
             {profile.recent_news && profile.recent_news.length > 0 && (
               <NewsSection news={profile.recent_news} />
             )}

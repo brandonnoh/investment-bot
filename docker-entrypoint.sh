@@ -3,7 +3,7 @@ set -e
 
 # Docker env_file로 주입된 변수를 /etc/environment에 등록 (cron 데몬이 읽음)
 # .env는 .dockerignore에서 제외되므로 현재 프로세스 환경에서 직접 추출
-for var in DISCORD_WEBHOOK_URL BRAVE_API_KEY KIWOOM_APPKEY KIWOOM_SECRETKEY; do
+for var in DISCORD_WEBHOOK_URL BRAVE_API_KEY KIWOOM_APPKEY KIWOOM_SECRETKEY DART_API_KEY; do
     val=$(printenv "$var" 2>/dev/null || true)
     if [ -n "$val" ]; then
         echo "$var=$val" >> /etc/environment

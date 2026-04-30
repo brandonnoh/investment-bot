@@ -104,7 +104,11 @@ import ${module}
 }
 
 check_import "web.api"
+check_import "web.api_company"
+check_import "web.api_advisor"
+check_import "web.api_history"
 check_import "web.server"
+check_import "web.investment_advisor"
 check_import "db.connection"
 check_import "analysis.solar_alerts"
 check_import "db.ssot"

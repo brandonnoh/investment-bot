@@ -25,7 +25,8 @@
       { "matcher": "Edit", "hooks": [{ "type": "command", "command": "/Users/jarvis/Projects/investment-bot/.claude/hooks/protect-files.sh" }] }
     ],
     "PostToolUse": [
-      { "matcher": "Edit", "hooks": [{ "type": "command", "command": "/Users/jarvis/Projects/investment-bot/.claude/hooks/auto-format.sh" }] }
+      { "matcher": "Edit", "hooks": [{ "type": "command", "command": "/Users/jarvis/Projects/investment-bot/.claude/hooks/auto-format.sh" }] },
+      { "matcher": "Edit", "hooks": [{ "type": "command", "command": "/Users/jarvis/Projects/investment-bot/.claude/hooks/check-python-imports.sh" }] }
     ]
   }
 }

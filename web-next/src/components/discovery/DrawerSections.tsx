@@ -1,19 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { X, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
 import { fmtKrw } from '@/lib/format'
-import type { CompanyProfile, CompanyNewsItem, Opportunity } from '@/types/api'
-
-// -- 전략 이름 매핑 --
-const STRATEGY_LABELS: Record<string, string> = {
-  graham: '그레이엄',
-  buffett: '버핏',
-  lynch: '린치',
-  momentum: '모멘텀',
-  quality: '퀄리티',
-  composite: '종합',
-}
+import type { CompanyProfile, CompanyNewsItem, AnalystReport } from '@/types/api'
 
 // -- 팩터 바 라벨 --
 const FACTOR_LABELS: Record<string, string> = {
@@ -25,24 +15,6 @@ const FACTOR_LABELS: Record<string, string> = {
 }
 
 // -- 색상 유틸 --
-function gradeColor(grade: string | undefined): string {
-  if (!grade) return '#9a8e84'
-  if (grade === 'A+') return '#4dca7e'
-  if (grade === 'A') return '#6dd49a'
-  if (grade === 'B+') return '#c9a93a'
-  if (grade === 'B') return '#e09b3d'
-  return '#9a8e84'
-}
-
-function gradeBg(grade: string | undefined): string {
-  if (!grade) return 'rgba(154,142,132,0.15)'
-  if (grade === 'A+') return 'rgba(77,202,126,0.15)'
-  if (grade === 'A') return 'rgba(109,212,154,0.12)'
-  if (grade === 'B+') return 'rgba(201,169,58,0.15)'
-  if (grade === 'B') return 'rgba(224,155,61,0.12)'
-  return 'rgba(154,142,132,0.10)'
-}
-
 function sentimentColor(v: number | undefined): string {
   if (v === undefined) return '#9a8e84'
   if (v > 0.3) return '#4dca7e'
@@ -70,21 +42,18 @@ function fmtMarketCap(v: number | undefined): string {
   return fmtKrw(v)
 }
 
-// -- 스켈레톤 --
-export function DrawerSkeleton() {
-  return (
-    <div className="space-y-4 p-5 animate-pulse">
-      <div className="h-5 w-32 bg-mc-border rounded" />
-      <div className="h-3 w-20 bg-mc-border rounded" />
-      <div className="h-8 w-24 bg-mc-border rounded mt-4" />
-      <div className="h-2 w-full bg-mc-border rounded mt-2" />
-      <div className="grid grid-cols-2 gap-3 mt-4">
-        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-          <div key={i} className="h-10 bg-mc-border rounded" />
-        ))}
-      </div>
-    </div>
-  )
+// -- 설립일 포맷 변환 ("YYYYMMDD" → "YYYY년 M월") --
+function fmtFounded(raw: string): string {
+  if (raw.length < 6) return raw
+  const year = raw.slice(0, 4)
+  const month = parseInt(raw.slice(4, 6), 10)
+  return `${year}년 ${month}월`
+}
+
+// -- 애널리스트 리포트 날짜 포맷 ("YYYYMMDD" → "YY.MM.DD") --
+function fmtReportDate(raw: string): string {
+  if (raw.length < 8) return raw
+  return `${raw.slice(2, 4)}.${raw.slice(4, 6)}.${raw.slice(6, 8)}`
 }
 
 // -- 가격 섹션 --
@@ -126,24 +95,32 @@ export function PriceSection({ profile }: { profile: CompanyProfile }) {
 export function DescriptionSection({ profile }: { profile: CompanyProfile }) {
   const [expanded, setExpanded] = useState(false)
 
-  if (!profile.description) return null
+  const hasDartInfo = profile.name_kr || profile.ceo || profile.founded || profile.address || profile.foreign_rate
+  if (!profile.description && !hasDartInfo) return null
 
   return (
     <div className="px-5 py-3 border-t border-mc-border space-y-2">
       <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
         기업 개요
       </div>
-      <p className={`text-xs leading-relaxed text-muted-foreground ${expanded ? '' : 'line-clamp-6'}`}>
-        {profile.description}
-      </p>
-      {profile.description.length > 200 && (
-        <button
-          onClick={() => setExpanded(prev => !prev)}
-          className="flex items-center gap-0.5 text-[10px] transition-colors"
-          style={{ color: '#4dca7e' }}
-        >
-          {expanded ? <><ChevronUp size={10} /> 접기</> : <><ChevronDown size={10} /> 더 보기</>}
-        </button>
+      {profile.name_kr && (
+        <div className="text-xs text-muted-foreground">{profile.name_kr}</div>
+      )}
+      {profile.description && (
+        <>
+          <p className={`text-xs leading-relaxed text-muted-foreground ${expanded ? '' : 'line-clamp-6'}`}>
+            {profile.description}
+          </p>
+          {profile.description.length > 200 && (
+            <button
+              onClick={() => setExpanded(prev => !prev)}
+              className="flex items-center gap-0.5 text-[10px] transition-colors"
+              style={{ color: '#4dca7e' }}
+            >
+              {expanded ? <><ChevronUp size={10} /> 접기</> : <><ChevronDown size={10} /> 더 보기</>}
+            </button>
+          )}
+        </>
       )}
       <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
         {profile.website && (
@@ -160,7 +137,13 @@ export function DescriptionSection({ profile }: { profile: CompanyProfile }) {
           <span>직원 {profile.employees.toLocaleString()}명</span>
         )}
         {profile.country && <span>{profile.country}</span>}
+        {profile.ceo && <span>대표이사 {profile.ceo}</span>}
+        {profile.founded && <span>설립일 {fmtFounded(profile.founded)}</span>}
+        {profile.foreign_rate && <span>외국인 보유 {profile.foreign_rate}</span>}
       </div>
+      {profile.address && (
+        <div className="text-[10px] text-muted-foreground/70">{profile.address}</div>
+      )}
     </div>
   )
 }
@@ -230,6 +213,42 @@ export function FactorsSection({ factors }: { factors: Record<string, number> })
   )
 }
 
+// -- 애널리스트 리포트 섹션 --
+export function AnalystReportsSection({ reports }: { reports?: AnalystReport[] }) {
+  if (!reports || reports.length === 0) return null
+
+  return (
+    <div className="px-5 py-3 border-t border-mc-border space-y-2">
+      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+        최근 증권사 리포트
+      </div>
+      <div className="space-y-0">
+        {reports.map((r, i) => (
+          <div
+            key={i}
+            className={`flex items-baseline justify-between gap-2 py-1.5 ${
+              i < reports.length - 1 ? 'border-b border-mc-border/50' : ''
+            }`}
+          >
+            <div className="min-w-0 flex items-baseline gap-1.5">
+              <span
+                className="font-mono text-[10px] shrink-0"
+                style={{ color: 'rgba(77,202,126,0.7)' }}
+              >
+                [{r.broker}]
+              </span>
+              <span className="text-xs truncate">{r.title}</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+              {fmtReportDate(r.date)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // -- 뉴스 아이템 --
 function NewsItem({ item }: { item: CompanyNewsItem }) {
   const Wrapper = item.url ? 'a' : 'div'
@@ -275,81 +294,4 @@ export function NewsSection({ news }: { news: CompanyNewsItem[] }) {
   )
 }
 
-// -- 프로필 없음 상태 --
-export function EmptyProfileMessage() {
-  return (
-    <div className="px-5 py-12 text-center space-y-2">
-      <div className="text-sm text-muted-foreground">프로필 준비 중</div>
-      <div className="text-[10px] text-muted-foreground/70">
-        다음 파이프라인 실행 후 자동 업데이트됩니다
-      </div>
-    </div>
-  )
-}
 
-// -- 헤더 --
-interface DrawerHeaderProps {
-  opportunity: Opportunity | null
-  profile: CompanyProfile | undefined
-  onClose: () => void
-}
-
-export function DrawerHeader({ opportunity, profile, onClose }: DrawerHeaderProps) {
-  const name = profile?.name ?? opportunity?.name ?? opportunity?.ticker ?? ''
-  const ticker = profile?.ticker ?? opportunity?.ticker ?? ''
-  const sector = profile?.sector ?? opportunity?.sector
-  const grade = opportunity?.grade
-  const strategies = profile?.screen_strategies ?? []
-
-  return (
-    <div className="sticky top-0 bg-mc-bg border-b border-mc-border px-5 py-4 z-10">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 space-y-1.5">
-          <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="text-base font-bold leading-tight">{name}</span>
-            <span className="text-[10px] text-muted-foreground font-mono">{ticker}</span>
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {sector && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded border border-mc-border text-muted-foreground">
-                {sector}
-              </span>
-            )}
-            {grade && (
-              <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                style={{ color: gradeColor(grade), background: gradeBg(grade) }}
-              >
-                {grade}
-              </span>
-            )}
-          </div>
-          {strategies.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {strategies.map(s => (
-                <span
-                  key={s}
-                  className="text-[9px] font-mono px-1.5 py-0.5 rounded"
-                  style={{
-                    background: 'rgba(77,202,126,0.08)',
-                    color: '#7ddfaa',
-                    border: '1px solid rgba(77,202,126,0.2)',
-                  }}
-                >
-                  {STRATEGY_LABELS[s] ?? s}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <button
-          onClick={onClose}
-          className="p-1 rounded hover:bg-mc-border transition-colors shrink-0"
-          aria-label="닫기"
-        >
-          <X size={16} />
-        </button>
-      </div>
-    </div>
-  )
-}

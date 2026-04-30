@@ -362,3 +362,112 @@ def fetch_yahoo_financials(ticker: str) -> dict | None:
     except Exception as e:
         logger.error(f"yfinance 호출 실패 ({ticker}): {e}")
         return None
+
+
+# ── DART 기업 개황 / 네이버 애널리스트 리포트 ──
+
+
+def _parse_emp_no(s: str | None) -> int | None:
+    """직원수 문자열 → int 변환. 숫자가 아니면 None."""
+    if not s:
+        return None
+    cleaned = s.replace(",", "").replace(" ", "").strip()
+    try:
+        return int(cleaned)
+    except ValueError:
+        return None
+
+
+def _lookup_corp_code(stock_code: str) -> str | None:
+    """dart_corp_codes DB에서 종목코드로 corp_code 조회."""
+    from db.connection import get_db_conn
+
+    try:
+        with get_db_conn() as conn:
+            row = conn.execute(
+                "SELECT corp_code FROM dart_corp_codes WHERE stock_code = ?",
+                (stock_code,),
+            ).fetchone()
+            return row["corp_code"] if row else None
+    except Exception as e:
+        logger.debug(f"dart_corp_codes 조회 실패 ({stock_code}): {e}")
+        return None
+
+
+def fetch_dart_company_info(stock_code: str) -> dict | None:
+    """DART 기업개황 API로 기업 기본정보 수집.
+
+    Args:
+        stock_code: 종목코드 6자리 (예: '005930')
+
+    Returns:
+        기업 기본정보 딕셔너리 또는 None
+    """
+    api_key = os.environ.get("DART_API_KEY", "")
+    if not api_key:
+        return None
+
+    # 정적 매핑 우선, DB 폴백
+    corp_code = DART_CORP_CODES.get(stock_code) or _lookup_corp_code(stock_code)
+    if not corp_code:
+        return None
+
+    url = f"https://opendart.fss.or.kr/api/company.json?corp_code={corp_code}&crtfc_key={api_key}"
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read())
+    except Exception as e:
+        logger.debug(f"DART 기업개황 호출 실패 ({stock_code}): {e}")
+        return None
+
+    if data.get("status") != "000":
+        return None
+
+    return {
+        "name_kr": data.get("corp_name"),
+        "ceo": data.get("ceo_nm"),
+        "address": data.get("adres"),
+        "website": data.get("hm_url") or data.get("ir_url"),
+        "founded": data.get("est_dt"),
+        "employees": _parse_emp_no(data.get("emp_no")),
+    }
+
+
+def fetch_naver_analyst_reports(stock_code: str) -> tuple[list[dict], str | None]:
+    """네이버 금융 API에서 애널리스트 리포트 + 외국인 비율 수집.
+
+    Args:
+        stock_code: 종목코드 6자리
+
+    Returns:
+        (리포트 리스트 최대 5건, 외국인 비율 문자열) — 실패 시 ([], None)
+    """
+    url = f"https://m.stock.naver.com/api/stock/{stock_code}/integration"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+
+        # 애널리스트 리포트 (최대 5건)
+        reports = []
+        for r in data.get("researches", [])[:5]:
+            reports.append(
+                {
+                    "broker": r.get("bnm", ""),
+                    "title": r.get("tit", ""),
+                    "date": r.get("wdt", ""),
+                }
+            )
+
+        # 외국인 비율
+        foreign_rate = None
+        for item in data.get("totalInfos", []):
+            if item.get("code") == "foreignRate":
+                foreign_rate = item.get("value")
+                break
+
+        return reports, foreign_rate
+    except Exception as e:
+        logger.debug(f"네이버 애널리스트 리포트 수집 실패 ({stock_code}): {e}")
+        return [], None

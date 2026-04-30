@@ -25,6 +25,7 @@ import analysis.value_screener_strategies as screener  # noqa: E402
 import db.ssot_wealth as ssot  # noqa: E402
 import web.api as api  # noqa: E402
 import web.api_advisor as api_advisor  # noqa: E402
+import web.api_company as api_company  # noqa: E402
 import web.api_history as api_history  # noqa: E402
 import web.investment_advisor as investment_advisor  # noqa: E402
 from db.init_db import init_db  # noqa: E402

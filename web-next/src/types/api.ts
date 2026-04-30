@@ -196,15 +196,25 @@ export interface CompanyNewsItem {
   sentiment?: number
 }
 
+export interface AnalystReport {
+  broker: string
+  title: string
+  date: string
+}
+
 export interface CompanyProfile {
   ticker: string
   name?: string
+  name_kr?: string
   sector?: string
   industry?: string
   country?: string
   description?: string
   website?: string
   employees?: number
+  ceo?: string
+  address?: string
+  founded?: string
   market_cap?: number
   current_price?: number
   price_52w_high?: number
@@ -218,6 +228,8 @@ export interface CompanyProfile {
   dividend_yield?: number
   screen_strategies?: string[]
   recent_news?: CompanyNewsItem[]
+  analyst_reports?: AnalystReport[]
+  foreign_rate?: string
   updated_at?: string
 }
 
