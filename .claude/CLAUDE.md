@@ -357,13 +357,15 @@ docker exec investment-bot python3 -c \
 docker inspect investment-bot --format='{{.State.Health.Status}}'
 ```
 
-**Next.js 배포 (반드시 /. 형태):**
+**Next.js 배포 (반드시 이 순서, 절대 변경 금지):**
 ```bash
 cd web-next && npm run build && cd ..
+docker exec mc-web rm -rf /app/.next/static/
 docker cp web-next/.next/standalone/. mc-web:/app/
 docker cp web-next/.next/static/. mc-web:/app/.next/static/
 docker restart mc-web
 ```
+⚠️ `rm -rf /app/.next/static/` 생략 금지 — docker cp는 덮어쓰지 않고 추가만 함. 구버전 JS chunk가 남으면 브라우저가 구버전 코드를 로드한다. 반드시 삭제 후 복사.
 
 **Dockerfile 빌드 시 Keychain 잠겨 있으면 실패한다.**
 이 경우 사용자가 직접 `! security -v unlock-keychain ~/Library/Keychains/login.keychain-db` 실행 후 진행.

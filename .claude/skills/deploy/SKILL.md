@@ -61,12 +61,17 @@ Next.js는 볼륨 마운트 없음 — 빌드 후 직접 복사해야 한다.
 
 ```bash
 cd web-next && npm run build && cd ..
+docker exec mc-web rm -rf /app/.next/static/
 docker cp web-next/.next/standalone/. mc-web:/app/
 docker cp web-next/.next/static/. mc-web:/app/.next/static/
 docker restart mc-web
 ```
 
-반드시 `/. ` 형태로 복사 — 슬래시만 쓰면 `static/static/` 중첩 버그.
+**⚠️ 절대 규칙 — 어기면 구버전 JS가 신버전과 혼재해 브라우저가 구버전 로드:**
+- `docker cp`는 기존 파일을 삭제하지 않고 추가만 한다
+- static 폴더에 구버전 chunk가 남으면 브라우저가 구버전 JS를 캐시해서 로드
+- **반드시 `rm -rf /app/.next/static/` 먼저 실행 후 복사**
+- 반드시 `/. ` 형태로 복사 — 슬래시만 쓰면 `static/static/` 중첩 버그
 
 ---
 
@@ -100,6 +105,7 @@ Python + Next.js 동시 수정:
 ```bash
 docker restart investment-bot
 cd web-next && npm run build && cd ..
+docker exec mc-web rm -rf /app/.next/static/
 docker cp web-next/.next/standalone/. mc-web:/app/
 docker cp web-next/.next/static/. mc-web:/app/.next/static/
 docker restart mc-web
