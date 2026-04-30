@@ -62,7 +62,7 @@ export function PriceSection({ profile }: { profile: CompanyProfile }) {
   const high = profile.price_52w_high
   const low = profile.price_52w_low
 
-  if (price === undefined) return null
+  if (price == null) return null
 
   const range = (high ?? 0) - (low ?? 0)
   const position = range > 0 ? ((price - (low ?? 0)) / range) * 100 : 50
@@ -70,7 +70,7 @@ export function PriceSection({ profile }: { profile: CompanyProfile }) {
   return (
     <div className="px-5 py-4 space-y-2">
       <div className="text-2xl font-bold font-mono">{fmtKrw(price)}</div>
-      {high !== undefined && low !== undefined && (
+      {high != null && low != null && (
         <div className="space-y-1">
           <div className="flex justify-between text-[9px] text-muted-foreground font-mono">
             <span>52W Low {fmtKrw(low)}</span>
@@ -133,8 +133,8 @@ export function DescriptionSection({ profile }: { profile: CompanyProfile }) {
             <ExternalLink size={9} /> 웹사이트
           </a>
         )}
-        {profile.employees !== undefined && (
-          <span>직원 {profile.employees.toLocaleString()}명</span>
+        {profile.employees != null && (
+          <span>직원 {Number(profile.employees).toLocaleString()}명</span>
         )}
         {profile.country && <span>{profile.country}</span>}
         {profile.ceo && <span>대표이사 {profile.ceo}</span>}
@@ -153,11 +153,11 @@ export function MetricsGrid({ profile }: { profile: CompanyProfile }) {
   const metrics = [
     { label: 'PER', value: profile.per?.toFixed(1) },
     { label: 'PBR', value: profile.pbr?.toFixed(2) },
-    { label: 'ROE', value: profile.roe !== undefined ? `${profile.roe.toFixed(1)}%` : undefined },
-    { label: '부채비율', value: profile.debt_ratio !== undefined ? `${profile.debt_ratio.toFixed(0)}%` : undefined },
-    { label: '매출성장', value: profile.revenue_growth !== undefined ? `${profile.revenue_growth.toFixed(1)}%` : undefined },
-    { label: '영업이익률', value: profile.operating_margin !== undefined ? `${profile.operating_margin.toFixed(1)}%` : undefined },
-    { label: '배당', value: profile.dividend_yield !== undefined ? `${profile.dividend_yield.toFixed(2)}%` : undefined },
+    { label: 'ROE', value: profile.roe != null ? `${profile.roe.toFixed(1)}%` : undefined },
+    { label: '부채비율', value: profile.debt_ratio != null ? `${profile.debt_ratio.toFixed(0)}%` : undefined },
+    { label: '매출성장', value: profile.revenue_growth != null ? `${profile.revenue_growth.toFixed(1)}%` : undefined },
+    { label: '영업이익률', value: profile.operating_margin != null ? `${profile.operating_margin.toFixed(1)}%` : undefined },
+    { label: '배당', value: profile.dividend_yield != null ? `${profile.dividend_yield.toFixed(2)}%` : undefined },
     { label: '시가총액', value: fmtMarketCap(profile.market_cap) },
   ]
 

@@ -6,8 +6,8 @@ export function fmtAmt(v: number): string {
 }
 
 /** 금액을 천단위 콤마 형식으로 포맷 (예: 47,312,450) */
-export function fmtKrw(v?: number): string {
-  if (v === undefined || v === null) return '—'
+export function fmtKrw(v?: number | null): string {
+  if (v == null) return '—'
   return Math.round(v).toLocaleString('ko-KR')
 }
 
