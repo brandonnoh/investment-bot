@@ -25,6 +25,12 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # 전체 파이프라인: 평일(월~금) 07:40 KST
 40 7 * * 1-5 root cd /app && python3 run_pipeline.py >> /app/logs/pipeline.log 2>&1
 
+# R2 동기화: 평일(월~금) 07:50 KST (파이프라인 07:40 완료 후)
+50 7 * * 1-5 root cd /app && python3 scripts/sync_to_r2.py >> /app/logs/sync_r2.log 2>&1
+
+# 블로그 발행: 평일(월~금) 07:55 KST
+55 7 * * 1-5 root cd /app && python3 scripts/publish_blog.py >> /app/logs/publish_blog.log 2>&1
+
 # 뉴스 수집: 평일(월~금) 08:00 KST
 0 8 * * 1-5 root cd /app && python3 scripts/refresh_news.py >> /app/logs/news.log 2>&1
 
