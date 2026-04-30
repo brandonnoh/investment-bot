@@ -19,12 +19,28 @@ from data.fetch_fundamentals_sources import (  # noqa: E402
     fetch_naver_analyst_reports,
 )
 from db.connection import get_db_conn  # noqa: E402
+from web.claude_caller import call_claude  # noqa: E402
 
 KST = timezone(timedelta(hours=9))
 # 전략별 상위 N개만 수집
 _TOP_N = 25
 # yfinance rate limit 방지 (초)
 _RATE_LIMIT = 0.3
+
+
+def _translate_to_korean(text: str) -> str:
+    """영문 기업 설명을 Claude로 한국어 번역. 실패 시 원문 반환."""
+    if not text or not text.strip():
+        return text
+    try:
+        result = call_claude(
+            f"다음 영문 기업 설명을 자연스러운 한국어로 번역해줘. 번역문만 출력해:\n\n{text[:1500]}",
+            system="기업 설명 번역 전문가. 번역문만 출력하고 다른 말은 하지 마.",
+        )
+        return result.strip() if result else text
+    except Exception as e:
+        print(f"  [warn] 번역 실패: {e}")
+        return text
 
 
 def _collect_target_tickers() -> dict[str, list[str]]:
@@ -92,7 +108,7 @@ def _fetch_profile_kr(ticker: str) -> dict | None:
         "industry": yf_info.get("industry"),
         "exchange": exchange,
         "country": "South Korea",
-        "description": yf_info.get("longBusinessSummary"),
+        "description": _translate_to_korean(yf_info.get("longBusinessSummary", "") or ""),
         "website": dart_info.get("website") or yf_info.get("website"),
         "employees": dart_info.get("employees") or yf_info.get("fullTimeEmployees"),
         "market_cap": yf_info.get("marketCap"),
@@ -121,7 +137,7 @@ def _fetch_profile_us(ticker: str) -> dict | None:
         "industry": yf_info.get("industry"),
         "exchange": yf_info.get("exchange"),
         "country": yf_info.get("country"),
-        "description": yf_info.get("longBusinessSummary"),
+        "description": _translate_to_korean(yf_info.get("longBusinessSummary", "") or ""),
         "website": yf_info.get("website"),
         "employees": yf_info.get("fullTimeEmployees"),
         "market_cap": yf_info.get("marketCap"),

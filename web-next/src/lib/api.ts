@@ -43,7 +43,7 @@ export async function fetchSolarListings(): Promise<SolarResponse> {
 }
 
 export async function fetchCompanyProfile(ticker: string): Promise<CompanyProfile> {
-  return apiFetch<CompanyProfile>(`/api/company/${encodeURIComponent(ticker)}`)
+  return apiFetch<CompanyProfile>(`/api/company?ticker=${encodeURIComponent(ticker)}`)
 }
 
 export async function fetchOpportunities(strategy: string): Promise<{
