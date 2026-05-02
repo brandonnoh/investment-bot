@@ -16,9 +16,6 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # 마커스 AI 분석: 평일(월~금) 05:30 KST
 30 5 * * 1-5 root cd /app && python3 scripts/run_marcus.py >> /app/logs/marcus.log 2>&1
 
-# 유니버스 일봉 사전 수집: 평일(월~금) 07:00 KST (파이프라인 07:40 실행 전 DB 준비)
-0 7 * * 1-5 root cd /app && python3 data/fetch_universe_daily.py >> /app/logs/universe_daily.log 2>&1
-
 # 자비스 분석: 평일(월~금) 07:30 KST
 30 7 * * 1-5 root cd /app && python3 scripts/run_jarvis.py >> /app/logs/jarvis.log 2>&1
 
@@ -43,6 +40,15 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # 태양광 매물 수집: 매일 08:30, 19:00 KST
 30 8 * * * root cd /app && python3 scripts/refresh_solar.py >> /app/logs/refresh_solar.log 2>&1
 0 19 * * * root cd /app && python3 scripts/refresh_solar.py >> /app/logs/refresh_solar.log 2>&1
+
+# 유니버스 캐시 갱신: 매주 일요일 04:00 KST (value_screener PER/PBR/ROE 소스)
+0 4 * * 0 root cd /app && python3 analysis/universe_cache.py >> /app/logs/universe_cache.log 2>&1
+
+# DART 법인코드 갱신: 매월 1일 05:00 KST
+0 5 1 * * root cd /app && python3 data/fetch_dart_corp_codes.py >> /app/logs/dart_corp_codes.log 2>&1
+
+# 장마감 리포트: 평일(월~금) 16:00 KST
+0 16 * * 1-5 root cd /app && python3 reports/closing.py >> /app/logs/closing.log 2>&1
 
 # DB 유지보수 (purge + vacuum): 매주 일요일 03:00 KST
 0 3 * * 0 root cd /app && python3 db/maintenance.py >> /app/logs/maintenance.log 2>&1

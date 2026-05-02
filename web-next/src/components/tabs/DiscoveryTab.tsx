@@ -16,11 +16,25 @@ const HOW_IT_WORKS = [
 ]
 
 const FACTOR_LABELS: Record<string, string> = {
-  quality: '수익성',
+  quality: '수익',
   value: '가치',
   flow: '수급',
   momentum: '기술',
   growth: '성장',
+}
+
+const SECTOR_LABELS: Record<string, string> = {
+  'Basic Materials': '소재',
+  'Communication Services': '통신서비스',
+  'Consumer Cyclical': '경기소비재',
+  'Consumer Defensive': '필수소비재',
+  'Energy': '에너지',
+  'Financial Services': '금융',
+  'Healthcare': '헬스케어',
+  'Industrials': '산업재',
+  'Real Estate': '부동산',
+  'Technology': '기술',
+  'Utilities': '유틸리티',
 }
 
 function isKrTicker(ticker: string) {
@@ -50,11 +64,11 @@ function FactorBar({ label, value }: { label: string; value: number }) {
   const color = pct >= 70 ? '#4dca7e' : pct >= 55 ? '#c9a93a' : '#9a8e84'
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-[9px] text-muted-foreground w-7 shrink-0">{label}</span>
+      <span className="text-[14px] text-muted-foreground w-8 shrink-0">{label}</span>
       <div className="flex-1 h-1 rounded-full bg-mc-border overflow-hidden">
         <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
       </div>
-      <span className="text-[9px] font-mono w-5 text-right" style={{ color }}>{pct}</span>
+      <span className="text-[14px] font-mono w-5 text-right" style={{ color }}>{pct}</span>
     </div>
   )
 }
@@ -92,9 +106,9 @@ function OpportunityCard({ o, highlighted, id, onClick }: { o: Opportunity; high
         <div className="min-w-0">
           <div className="flex items-baseline gap-1.5 flex-wrap">
             <span className="text-sm font-semibold leading-tight">{o.name ?? o.ticker}</span>
-            <span className="text-[10px] text-muted-foreground font-mono">{o.ticker}</span>
+            <span className="text-[14px] text-muted-foreground font-mono">{o.ticker}</span>
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">{o.sector ?? '—'}</div>
+          <div className="text-[14px] text-muted-foreground mt-0.5">{o.sector ? (SECTOR_LABELS[o.sector] ?? o.sector) : '—'}</div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {o.grade && (
@@ -110,7 +124,7 @@ function OpportunityCard({ o, highlighted, id, onClick }: { o: Opportunity; high
       </div>
 
       {o.screen_reason && (
-        <div className="text-[10px] text-muted-foreground leading-relaxed border-l-2 border-mc-border pl-2">
+        <div className="text-[14px] text-muted-foreground leading-relaxed border-l-2 border-mc-border pl-2">
           {o.screen_reason}
         </div>
       )}
@@ -192,6 +206,7 @@ export function DiscoveryTab() {
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null)
 
   const { marcusPickedTicker, setMarcusPickedTicker } = useMCStore()
+  const { data: intelData } = useIntelData()
 
   // Marcus에서 진입 시 search 자동 반영 + 카드 스크롤
   useEffect(() => {
@@ -206,6 +221,14 @@ export function DiscoveryTab() {
 
   const currentMeta = STRATEGIES.find(s => s.id === strategy)
 
+  const opportunitiesUpdatedAt = (() => {
+    const ts = intelData?.opportunities?.updated_at
+    if (!ts) return null
+    try {
+      return new Date(ts).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    } catch { return null }
+  })()
+
   function handleStrategyChange(id: StrategyId) {
     setStrategy(id)
     setMarcusPickedTicker(null)
@@ -218,9 +241,9 @@ export function DiscoveryTab() {
       <div className="flex gap-2">
         {HOW_IT_WORKS.map(({ step, label, sub }) => (
           <div key={step} className="flex-1 rounded-md border border-mc-border bg-mc-card px-3 py-2">
-            <div className="text-[10px] text-muted-foreground mb-0.5">STEP {step}</div>
+            <div className="text-[14px] text-muted-foreground mb-0.5">STEP {step}</div>
             <div className="text-xs font-medium leading-snug">{label}</div>
-            <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>
+            <div className="text-[14px] text-muted-foreground mt-0.5">{sub}</div>
           </div>
         ))}
       </div>
@@ -234,7 +257,7 @@ export function DiscoveryTab() {
               <button
                 key={s.id}
                 onClick={() => handleStrategyChange(s.id)}
-                className="shrink-0 text-[11px] font-medium px-3 py-1 rounded-full border transition-colors"
+                className="shrink-0 text-[14px] font-medium px-3 py-1 rounded-full border transition-colors"
                 style={{
                   borderColor: active ? '#4dca7e' : '#2a2420',
                   background: active ? 'rgba(77,202,126,0.15)' : 'transparent',
@@ -249,7 +272,7 @@ export function DiscoveryTab() {
         {/* 현재 렌즈 설명 + 조건 배지 */}
         {currentMeta && (
           <div className="space-y-1.5 px-0.5">
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-[14px] text-muted-foreground">
               <span className="font-medium" style={{ color: '#4dca7e' }}>{currentMeta.name} 렌즈</span>
               {' — '}{currentMeta.description}
             </div>
@@ -257,7 +280,7 @@ export function DiscoveryTab() {
               {'criteria' in currentMeta && (currentMeta.criteria as readonly string[]).map((c) => (
                 <span
                   key={c}
-                  className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                  className="text-[14px] font-mono px-1.5 py-0.5 rounded"
                   style={{ background: 'rgba(77,202,126,0.08)', color: '#7ddfaa', border: '1px solid rgba(77,202,126,0.2)' }}
                 >
                   {c}
@@ -293,7 +316,7 @@ export function DiscoveryTab() {
           </button>
         )}
         {marcusPickedTicker && search === marcusPickedTicker && (
-          <span className="absolute right-7 top-1/2 -translate-y-1/2 text-[9px] font-medium px-1.5 py-0.5 rounded"
+          <span className="absolute right-7 top-1/2 -translate-y-1/2 text-[14px] font-medium px-1.5 py-0.5 rounded"
             style={{ background: 'rgba(77,202,126,0.12)', color: '#4dca7e' }}>
             마커스
           </span>
@@ -304,8 +327,13 @@ export function DiscoveryTab() {
       <Card className="bg-mc-card border-mc-border">
         <CardHeader className="py-3 px-4 pb-0">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-xs font-mono">발굴 종목</CardTitle>
-            <div className="flex rounded-md border border-mc-border overflow-hidden text-[11px] font-medium">
+            <div className="flex items-baseline gap-2">
+              <CardTitle className="text-xs font-mono">발굴 종목</CardTitle>
+              {opportunitiesUpdatedAt && (
+                <span className="text-[14px] text-muted-foreground">{opportunitiesUpdatedAt} 기준</span>
+              )}
+            </div>
+            <div className="flex rounded-md border border-mc-border overflow-hidden text-[14px] font-medium">
               {(['kr', 'us'] as const).map((m) => (
                 <button
                   key={m}

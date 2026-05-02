@@ -47,10 +47,10 @@ export function MobileHero({ excludeGold, onToggle }: { excludeGold: boolean; on
   return (
     <div className="border border-mc-border bg-mc-card rounded-lg px-5 py-5">
       <div className="flex items-center gap-2 mb-3">
-        <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">Portfolio P&amp;L</div>
+        <div className="text-[14px] text-muted-foreground font-mono tracking-widest uppercase">Portfolio P&amp;L</div>
         <button
           onClick={onToggle}
-          className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+          className={`text-[14px] font-mono px-2 py-0.5 rounded border transition-colors cursor-pointer ${
             excludeGold
               ? 'bg-gold/10 text-gold border-gold/30'
               : 'text-muted-foreground border-mc-border hover:border-gold/30 hover:text-gold'
@@ -117,7 +117,7 @@ export function MobileHoldingsList() {
   return (
     <div className="border border-mc-border bg-mc-card rounded-lg overflow-hidden">
       <div className="px-4 py-3 border-b border-mc-border">
-        <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">Holdings</span>
+        <span className="text-[14px] font-mono text-muted-foreground tracking-widest uppercase">Holdings</span>
       </div>
       {holdings.length === 0 ? (
         <div className="text-center text-muted-foreground text-xs py-8 font-mono">보유 종목 없음</div>
@@ -127,13 +127,13 @@ export function MobileHoldingsList() {
             <div key={h.ticker} className="flex items-center justify-between px-4 py-3.5">
               <div>
                 <div className="text-sm font-medium">{h.name}</div>
-                <div className="text-[10px] text-muted-foreground font-mono">{h.ticker}</div>
+                <div className="text-[14px] text-muted-foreground font-mono">{h.ticker}</div>
               </div>
               <div className="text-right">
                 <div className={`text-sm font-mono font-bold tabular-nums ${pctColor(h.pnl_pct)}`}>
                   {fmtPct(h.pnl_pct)}
                 </div>
-                <div className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                <div className="text-[14px] text-muted-foreground font-mono tabular-nums">
                   {h.price?.toLocaleString()}
                 </div>
               </div>

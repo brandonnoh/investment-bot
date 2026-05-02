@@ -87,10 +87,10 @@ export function ServiceMapTab() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-gold">{item.name}</span>
                     {item.output && (
-                      <span className="text-[10px] text-muted-foreground">{'\u2192'} {item.output}</span>
+                      <span className="text-[14px] text-muted-foreground">{'\u2192'} {item.output}</span>
                     )}
                   </div>
-                  <span className="text-[11px] text-muted-foreground">{item.desc}</span>
+                  <span className="text-[14px] text-muted-foreground">{item.desc}</span>
                 </div>
               ))}
             </div>

@@ -37,7 +37,7 @@ function ContextChip({ children, color = 'gold' }: { children: React.ReactNode; 
     muted: 'bg-mc-border/20 text-muted-foreground border-mc-border',
   }[color]
   return (
-    <span className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border font-mono ${cls}`}>
+    <span className={`inline-flex items-center text-[14px] px-1.5 py-0.5 rounded border font-mono ${cls}`}>
       {children}
     </span>
   )
@@ -75,10 +75,10 @@ function StrategyCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground font-mono">
+              <span className="text-[14px] text-muted-foreground font-mono">
                 {formatDate(strategy.saved_at)}
               </span>
-              <span className="text-muted-foreground/40 text-[10px]">·</span>
+              <span className="text-muted-foreground/40 text-[14px]">·</span>
               <ContextChip>자본 {fmtAmt(strategy.capital)}</ContextChip>
               <LoanChips loansJson={strategy.loans_json} />
               {(!strategy.loans_json || strategy.loans_json === '[]') && strategy.leverage_amt > 0 && (
@@ -125,7 +125,7 @@ function StrategyCard({
           <div className="flex justify-end px-4 pb-3">
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(strategy.id) }}
-              className="flex items-center gap-1.5 text-[11px] text-mc-red/60 hover:text-mc-red transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mc-red rounded px-2 py-1"
+              className="flex items-center gap-1.5 text-[14px] text-mc-red/60 hover:text-mc-red transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mc-red rounded px-2 py-1"
             >
               <Trash2 size={12} />
               삭제
@@ -158,7 +158,7 @@ export function SavedStrategiesTab() {
             저장된 전략
           </h2>
           {strategies.length > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold/10 text-gold border border-gold/20 font-mono">
+            <span className="text-[14px] px-1.5 py-0.5 rounded-full bg-gold/10 text-gold border border-gold/20 font-mono">
               {strategies.length}
             </span>
           )}

@@ -7,11 +7,54 @@ import type { CompanyProfile, CompanyNewsItem, AnalystReport } from '@/types/api
 
 // -- 팩터 바 라벨 --
 const FACTOR_LABELS: Record<string, string> = {
-  quality: '수익성',
+  quality: '수익',
   value: '가치',
   flow: '수급',
   momentum: '기술',
   growth: '성장',
+}
+
+// -- 국가 한국어 매핑 --
+const COUNTRY_LABELS: Record<string, string> = {
+  'South Korea': '한국',
+  'United States': '미국',
+  'Japan': '일본',
+  'China': '중국',
+  'Germany': '독일',
+  'United Kingdom': '영국',
+  'France': '프랑스',
+  'Canada': '캐나다',
+  'Australia': '호주',
+  'Taiwan': '대만',
+  'Hong Kong': '홍콩',
+  'Singapore': '싱가포르',
+}
+
+// -- 산업 한국어 매핑 --
+const INDUSTRY_LABELS: Record<string, string> = {
+  'Aerospace & Defense': '항공우주·방산',
+  'Agricultural Inputs': '농업 자재',
+  'Aluminum': '알루미늄',
+  'Building Materials': '건축자재',
+  'Chemicals': '화학',
+  'Consumer Electronics': '가전',
+  'Copper': '구리',
+  'Gold': '금',
+  'Oil & Gas E&P': '석유·가스 탐사',
+  'Oil & Gas Midstream': '석유·가스 중류',
+  'Oil & Gas Refining & Marketing': '석유·가스 정제',
+  'Other Industrial Metals & Mining': '기타 금속·광업',
+  'Semiconductor Equipment & Materials': '반도체 장비·소재',
+  'Semiconductors': '반도체',
+  'Specialty Chemicals': '특수화학',
+  'Steel': '철강',
+  'Utilities - Regulated Electric': '전력 (규제)',
+  'Utilities - Regulated Gas': '가스 (규제)',
+  'Software - Application': '응용 소프트웨어',
+  'Software - Infrastructure': '인프라 소프트웨어',
+  'Information Technology Services': 'IT 서비스',
+  'Electronic Components': '전자부품',
+  'Scientific & Technical Instruments': '계측기기',
 }
 
 // -- 색상 유틸 --
@@ -72,7 +115,7 @@ export function PriceSection({ profile }: { profile: CompanyProfile }) {
       <div className="text-2xl font-bold font-mono">{fmtKrw(price)}</div>
       {high != null && low != null && (
         <div className="space-y-1">
-          <div className="flex justify-between text-[9px] text-muted-foreground font-mono">
+          <div className="flex justify-between text-[14px] text-muted-foreground font-mono">
             <span>52W Low {fmtKrw(low)}</span>
             <span>52W High {fmtKrw(high)}</span>
           </div>
@@ -100,7 +143,7 @@ export function DescriptionSection({ profile }: { profile: CompanyProfile }) {
 
   return (
     <div className="px-5 py-3 border-t border-mc-border space-y-2">
-      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+      <div className="text-[14px] font-mono text-muted-foreground uppercase tracking-wider">
         기업 개요
       </div>
       {profile.name_kr && (
@@ -114,7 +157,7 @@ export function DescriptionSection({ profile }: { profile: CompanyProfile }) {
           {profile.description.length > 200 && (
             <button
               onClick={() => setExpanded(prev => !prev)}
-              className="flex items-center gap-0.5 text-[10px] transition-colors"
+              className="flex items-center gap-0.5 text-[14px] transition-colors"
               style={{ color: '#4dca7e' }}
             >
               {expanded ? <><ChevronUp size={10} /> 접기</> : <><ChevronDown size={10} /> 더 보기</>}
@@ -122,7 +165,7 @@ export function DescriptionSection({ profile }: { profile: CompanyProfile }) {
           )}
         </>
       )}
-      <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+      <div className="flex flex-wrap gap-3 text-[14px] text-muted-foreground">
         {profile.website && (
           <a
             href={profile.website}
@@ -136,16 +179,28 @@ export function DescriptionSection({ profile }: { profile: CompanyProfile }) {
         {profile.employees != null && (
           <span>직원 {Number(profile.employees).toLocaleString()}명</span>
         )}
-        {profile.country && <span>{profile.country}</span>}
+        {profile.country && <span>{COUNTRY_LABELS[profile.country] ?? profile.country}</span>}
+        {profile.industry && <span>{INDUSTRY_LABELS[profile.industry] ?? profile.industry}</span>}
         {profile.ceo && <span>대표이사 {profile.ceo}</span>}
         {profile.founded && <span>설립일 {fmtFounded(profile.founded)}</span>}
         {profile.foreign_rate && <span>외국인 보유 {profile.foreign_rate}</span>}
       </div>
       {profile.address && (
-        <div className="text-[10px] text-muted-foreground/70">{profile.address}</div>
+        <div className="text-[14px] text-muted-foreground/70">{profile.address}</div>
       )}
     </div>
   )
+}
+
+const METRIC_TIPS: Record<string, string> = {
+  PER: '주가 ÷ 주당순이익. 낮을수록 저평가. 10 이하 저평가, 30 이상 고평가 경향. 업종 평균과 비교하는 게 핵심.',
+  PBR: '주가 ÷ 주당순자산. 1 미만이면 청산가치 이하로 거래 중. 낮을수록 자산 대비 저평가.',
+  ROE: '자기자본으로 얼마나 이익을 버는지. 15% 이상이면 우량. 높을수록 돈을 효율적으로 굴린다는 뜻.',
+  부채비율: '부채 ÷ 자기자본. 낮을수록 재무 안정. 100% 이하 안정, 200% 이상이면 부채 과다 주의.',
+  매출성장: '전년 대비 매출 증가율. 높을수록 사업이 빠르게 커지고 있다는 뜻.',
+  영업이익률: '매출 대비 영업이익 비율. 높을수록 본업에서 돈을 잘 번다는 뜻. 10% 이상이면 양호.',
+  배당: '주가 대비 1년 배당금 비율. 2~4%가 일반적. 너무 높으면 지속 가능성 확인 필요.',
+  시가총액: '회사 전체 가치 = 주가 × 총 주식 수. 대형주(10조+), 중형주(1~10조), 소형주(1조 미만).',
 }
 
 // -- 지표 그리드 --
@@ -163,14 +218,23 @@ export function MetricsGrid({ profile }: { profile: CompanyProfile }) {
 
   return (
     <div className="px-5 py-3 border-t border-mc-border space-y-2">
-      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+      <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
         핵심 지표
       </div>
       <div className="grid grid-cols-2 gap-2">
         {metrics.map(m => (
           <div key={m.label} className="rounded-md bg-mc-card border border-mc-border px-3 py-2">
-            <div className="text-[9px] text-muted-foreground">{m.label}</div>
+            <div className="text-xs text-muted-foreground">{m.label}</div>
             <div className="text-sm font-mono font-semibold mt-0.5">{m.value ?? '--'}</div>
+          </div>
+        ))}
+      </div>
+      {/* 지표 설명 영역 */}
+      <div className="rounded-md bg-muted/40 border border-mc-border px-3 py-2.5 space-y-1.5">
+        {metrics.filter(m => METRIC_TIPS[m.label]).map(m => (
+          <div key={m.label} className="flex gap-2 text-xs leading-snug">
+            <span className="text-foreground font-medium w-12 shrink-0">{m.label}</span>
+            <span className="text-muted-foreground">{METRIC_TIPS[m.label]}</span>
           </div>
         ))}
       </div>
@@ -178,17 +242,25 @@ export function MetricsGrid({ profile }: { profile: CompanyProfile }) {
   )
 }
 
+const FACTOR_DESCS: Record<string, string> = {
+  quality: 'ROE·부채비율·이익안정성 종합. 회사가 얼마나 탄탄한지.',
+  value: 'PER·PBR·EV/EBITDA 종합. 현재 주가가 싼지 비싼지.',
+  flow: '외국인·기관 순매수 흐름. 큰손들이 사고 있는지 팔고 있는지.',
+  momentum: 'RSI·이동평균 등 기술적 추세. 지금 오르는 힘이 있는지.',
+  growth: '매출·이익 성장률 종합. 사업이 얼마나 빠르게 커지고 있는지.',
+}
+
 // -- 팩터 바 --
 function FactorBar({ label, value }: { label: string; value: number }) {
   const pct = Math.round(value * 100)
   const color = pct >= 70 ? '#4dca7e' : pct >= 55 ? '#c9a93a' : '#9a8e84'
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-[9px] text-muted-foreground w-7 shrink-0">{label}</span>
-      <div className="flex-1 h-1 rounded-full bg-mc-border overflow-hidden">
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground w-8 shrink-0">{label}</span>
+      <div className="flex-1 h-1.5 rounded-full bg-mc-border overflow-hidden">
         <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
       </div>
-      <span className="text-[9px] font-mono w-5 text-right" style={{ color }}>{pct}</span>
+      <span className="text-xs font-mono w-6 text-right" style={{ color }}>{pct}</span>
     </div>
   )
 }
@@ -200,14 +272,29 @@ export function FactorsSection({ factors }: { factors: Record<string, number> })
   if (entries.length === 0) return null
 
   return (
-    <div className="px-5 py-3 border-t border-mc-border space-y-2">
-      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+    <div className="px-5 py-3 border-t border-mc-border space-y-3">
+      <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
         팩터 점수
       </div>
-      <div className="space-y-1">
+
+      {/* 팩터 바 */}
+      <div className="space-y-2">
         {entries.map(key => (
           <FactorBar key={key} label={FACTOR_LABELS[key]} value={factors[key]} />
         ))}
+      </div>
+
+      {/* 팩터 설명 영역 */}
+      <div className="rounded-md bg-muted/40 border border-mc-border px-3 py-2.5 space-y-1.5">
+        {entries.map(key => (
+          <div key={key} className="flex gap-2 text-xs leading-snug">
+            <span className="text-foreground font-medium w-8 shrink-0">{FACTOR_LABELS[key]}</span>
+            <span className="text-muted-foreground">{FACTOR_DESCS[key]}</span>
+          </div>
+        ))}
+        <p className="text-xs text-muted-foreground/60 pt-1 border-t border-mc-border mt-1">
+          점수 0–100 · 70↑ <span className="text-mc-green">초록</span> · 55↑ <span className="text-amber">노랑</span> · 미만 <span className="text-muted-foreground">회색</span>
+        </p>
       </div>
     </div>
   )
@@ -219,7 +306,7 @@ export function AnalystReportsSection({ reports }: { reports?: AnalystReport[] }
 
   return (
     <div className="px-5 py-3 border-t border-mc-border space-y-2">
-      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+      <div className="text-[14px] font-mono text-muted-foreground uppercase tracking-wider">
         최근 증권사 리포트
       </div>
       <div className="space-y-0">
@@ -232,14 +319,14 @@ export function AnalystReportsSection({ reports }: { reports?: AnalystReport[] }
           >
             <div className="min-w-0 flex items-baseline gap-1.5">
               <span
-                className="font-mono text-[10px] shrink-0"
+                className="font-mono text-[14px] shrink-0"
                 style={{ color: 'rgba(77,202,126,0.7)' }}
               >
                 [{r.broker}]
               </span>
               <span className="text-xs truncate">{r.title}</span>
             </div>
-            <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+            <span className="text-[14px] text-muted-foreground font-mono shrink-0">
               {fmtReportDate(r.date)}
             </span>
           </div>
@@ -268,7 +355,7 @@ function NewsItem({ item }: { item: CompanyNewsItem }) {
         />
         <span className="text-xs leading-snug line-clamp-2">{item.title}</span>
       </div>
-      <div className="flex items-center gap-2 text-[9px] text-muted-foreground pl-3">
+      <div className="flex items-center gap-2 text-[14px] text-muted-foreground pl-3">
         {item.source && <span>{item.source}</span>}
         {item.published_at && <span>{relativeTime(item.published_at)}</span>}
       </div>
@@ -282,7 +369,7 @@ export function NewsSection({ news }: { news: CompanyNewsItem[] }) {
 
   return (
     <div className="px-5 py-3 border-t border-mc-border space-y-2">
-      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+      <div className="text-[14px] font-mono text-muted-foreground uppercase tracking-wider">
         관련 뉴스
       </div>
       <div className="space-y-1.5">

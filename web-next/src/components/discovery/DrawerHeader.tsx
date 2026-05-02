@@ -13,6 +13,21 @@ const STRATEGY_LABELS: Record<string, string> = {
   composite: '종합',
 }
 
+// -- 섹터 한국어 매핑 --
+const SECTOR_LABELS: Record<string, string> = {
+  'Basic Materials': '소재',
+  'Communication Services': '통신서비스',
+  'Consumer Cyclical': '경기소비재',
+  'Consumer Defensive': '필수소비재',
+  'Energy': '에너지',
+  'Financial Services': '금융',
+  'Healthcare': '헬스케어',
+  'Industrials': '산업재',
+  'Real Estate': '부동산',
+  'Technology': '기술',
+  'Utilities': '유틸리티',
+}
+
 // -- 색상 유틸 --
 function gradeColor(grade: string | undefined): string {
   if (!grade) return '#9a8e84'
@@ -52,17 +67,17 @@ export function DrawerHeader({ opportunity, profile, onClose }: DrawerHeaderProp
         <div className="min-w-0 space-y-1.5">
           <div className="flex items-baseline gap-1.5 flex-wrap">
             <span className="text-base font-bold leading-tight">{name}</span>
-            <span className="text-[10px] text-muted-foreground font-mono">{ticker}</span>
+            <span className="text-[14px] text-muted-foreground font-mono">{ticker}</span>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {sector && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded border border-mc-border text-muted-foreground">
-                {sector}
+              <span className="text-[14px] px-1.5 py-0.5 rounded border border-mc-border text-muted-foreground">
+                {SECTOR_LABELS[sector] ?? sector}
               </span>
             )}
             {grade && (
               <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                className="text-[14px] font-bold px-1.5 py-0.5 rounded"
                 style={{ color: gradeColor(grade), background: gradeBg(grade) }}
               >
                 {grade}
@@ -74,7 +89,7 @@ export function DrawerHeader({ opportunity, profile, onClose }: DrawerHeaderProp
               {strategies.map(s => (
                 <span
                   key={s}
-                  className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                  className="text-[14px] font-mono px-1.5 py-0.5 rounded"
                   style={{
                     background: 'rgba(77,202,126,0.08)',
                     color: '#7ddfaa',
@@ -121,7 +136,7 @@ export function EmptyProfileMessage() {
   return (
     <div className="px-5 py-12 text-center space-y-2">
       <div className="text-sm text-muted-foreground">프로필 준비 중</div>
-      <div className="text-[10px] text-muted-foreground/70">
+      <div className="text-[14px] text-muted-foreground/70">
         다음 파이프라인 실행 후 자동 업데이트됩니다
       </div>
     </div>

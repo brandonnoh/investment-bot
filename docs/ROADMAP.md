@@ -1,227 +1,160 @@
 # Investment Bot 개발 로드맵
 
-> 작성: 자비스 + 마커스 / 2026-04-01
-> 목적: Claude Code에서 이 파일을 읽고 순서대로 개발
+> 최종 업데이트: 2026-05-01  
+> 기준: 실제 구현 코드 기반
 
 ---
 
-## 프로젝트 구조 참고
+## 완료된 기능 (구현 완료)
 
-```
-~/Projects/investment-bot/
-├── config.py                  # 설정 (ALERT_THRESHOLDS, DB_PATH 등)
-├── run_pipeline.py            # 일일 파이프라인 진입점
-├── data/
-│   ├── fetch_prices.py        # 주가 수집 (네이버/Yahoo)
-│   ├── fetch_macro.py         # 매크로 수집 (VIX, 환율, 유가)
-│   ├── fetch_news.py          # 뉴스 수집 → DB 저장
-│   ├── fetch_opportunities.py # 키워드 기반 종목 발굴
-│   ├── realtime.py            # 실시간 시세 출력
-│   └── ticker_master.py       # 종목 사전 (KRX + 미국)
-├── analysis/
-│   ├── alerts.py              # 알림 감지 로직
-│   ├── alerts_watch.py        # 실시간 알림 감시 → Discord 전송
-│   ├── composite_score.py     # 종목 복합 점수 계산
-│   ├── price_analysis.py      # 기술적 분석 (MA, RSI 등)
-│   ├── screener.py            # 종목 스크리너
-│   └── sentiment.py           # 뉴스 감성 분석
-├── db/
-│   ├── history.db             # 메인 SQLite DB
-│   └── init_db.py             # DB 스키마 초기화
-├── reports/
-│   ├── closing.py             # 장 마감 리포트 생성
-│   ├── daily.py               # 일일 리포트
-│   └── weekly.py              # 주간 리포트
-└── output/intel/              # AI가 읽는 JSON 스냅샷
-    ├── prices.json
-    ├── macro.json
-    ├── portfolio_summary.json
-    ├── portfolio_extra.json   # 비투자 자산 (전세, 청약 등)
-    ├── marcus-analysis.md
-    ├── opportunities.json
-    └── agent_commands/
-        └── discovery_keywords.json
-```
+### 핵심 인프라
 
----
+- [x] **3계층 아키텍처** — `data/` 수집 · `analysis/` 분석 · `web/` 서비스
+- [x] **파이프라인 실행 순서** (`run_pipeline.py`) — init_db → 수집 → 집계 → 분석 → 후처리 → 리포트
+- [x] **23개 DB 테이블** (`db/history.db`) — 원시/집계/SSoT/분석/이력 테이블
+- [x] **DB 연결 팩토리** (`db/connection.py`) — WAL 모드 + busy_timeout=30초 통일
+- [x] **Atomic JSON 쓰기** (`utils/json_io.py`) — 쓰기 중 truncated JSON 방지
+- [x] **Docker Compose 아키텍처** — investment-bot:8421 + mc-web:3000, 헬스체크 포함
+- [x] **Docker 내부 cron 스케줄러** — 17개 크론잡 (launchd 전면 제거)
 
-## P1 — 이번 주 (즉시 효과 높음)
+### 데이터 수집 계층 (`data/`)
 
-### T1: 유니버스 확장
+- [x] `fetch_prices.py` — 주가 수집 (네이버/Yahoo, 폴백 포함)
+- [x] `fetch_macro.py` — VIX · 환율 · 유가 · 금리
+- [x] `fetch_news.py` — RSS + Brave Search 뉴스 (DB SSoT 기반 종목 필터)
+- [x] `fetch_fundamentals.py` — yfinance + DART + 네이버금융 PER/PBR
+- [x] `fetch_supply.py` — Fear & Greed Index (Alternative.me) + KRX 수급
+- [x] `fetch_opportunities.py` — value_screener 위임 (섹터 기반 스크리닝)
+- [x] `fetch_universe_daily.py` — 일봉 사전 수집 (value_screener DB 스크리닝용)
+- [x] `fetch_company_profiles.py` — 기업 설명 수집 (영문→한국어 자동 번역)
+- [x] `fetch_dart_corp_codes.py` — DART 법인코드 월간 갱신
+- [x] **태양광 매물 수집** — 9개 사이트 크롤러 (`fetch_solar_*.py`)
 
-**파일:** `analysis/screener.py`
-**현재 문제:** 보유 8종목만 분석. 새 종목 발굴 불가.
-**목표:** 코스피 200 + 미국 S&P 100 종목으로 유니버스 확장
+### 분석 계층 (`analysis/`) — 40개 모듈
 
-**구현 내용:**
-```python
-# screener.py 상단에 유니버스 추가
-UNIVERSE_KOSPI200 = [
-    # 코스피 200 티커 리스트 (005930.KS, 000660.KS, 035420.KS ...)
-    # ticker_master.py의 KRX_TICKERS 활용
-]
+- [x] `regime_classifier.py` — VIX·환율·유가 기반 시장 레짐 분류 + DB 이력 저장
+- [x] `sector_intel.py` — 섹터 점수 계산 + DB 이력 저장
+- [x] `composite_score.py` — 5팩터 복합 점수 (기술·펀더멘탈·수급·뉴스·12-1 모멘텀)
+- [x] `value_screener.py` — 5개 전략 렌즈 (버핏·그레이엄·린치·그린블랫·퀀트)
+- [x] `marcus_screener.py` — B+ 이상 통과 종목 30~70개 압축 (390KB→15KB)
+- [x] `screener.py` + `screener_universe.py` — 코스피200 + S&P100 유니버스 스크리닝
+- [x] `price_analysis.py` — MA·RSI·볼린저밴드 기술적 분석
+- [x] `alerts.py` — 알림 감지 (알림 없으면 파일 삭제)
+- [x] `alerts_watch.py` — 5분 주기 실시간 감시 → Discord 전송 (DB SSoT 기반)
+- [x] `portfolio.py` — 포트폴리오 요약 + FX 손익
+- [x] `performance_report.py` — 성과 추적 + 팩터 가중치 제안 + DB 이력 저장
+- [x] `self_correction.py` — 자기 교정 + DB 이력 저장
+- [x] `proactive_alerts.py` — 능동적 알림 생성
+- [x] `dynamic_holdings.py` — 동적 보유 제안
+- [x] `simulation.py` — 매매 시뮬레이션
+- [x] `solar_alerts.py` — 신규 태양광 매물 Discord 알림
+- [x] `universe_cache.py` — 유니버스 캐시 주간 갱신
 
-UNIVERSE_SP100 = [
-    # S&P 100 티커 (AAPL, MSFT, GOOGL, AMZN, META, NVDA ...)
-]
+### 서비스 계층 (`web/`)
 
-def screen_universe(universe: list[str]) -> list[dict]:
-    """유니버스 전체 종목 스크리닝 — composite_score 기준 상위 10개 반환"""
-    pass
-```
+- [x] **Flask API** — 18개 GET + 7개 POST + 3개 PUT/DELETE
+- [x] **SSE 실시간 스트림** — `intel/` 변경 감지 → 클라이언트 push (큐 maxsize=100)
+- [x] **보안 강화** — CORS ALLOWED_ORIGIN 환경변수, 보안 헤더, 로그 경로 순회 방지, 파라미터 검증
+- [x] `api_history.py` — 4개 이력 조회 API (regime/sector/correction/performance)
+- [x] `api_company.py` — 기업 상세 드로어 API
+- [x] `api_advisor.py` — 어드바이저 전략 저장/조회 (DB)
+- [x] `investment_advisor.py` — Anthropic API + Claude CLI 듀얼 모드 스트리밍
+- [x] `portfolio_refresh.py` — 실시간 가격 반영 포트폴리오 갱신
 
-**요구사항:**
-- `ticker_master.py`의 기존 KRX 사전 활용
-- Yahoo Finance로 미국 주식 가격 수집 (fetch_prices.py 패턴 참고)
-- `output/intel/screener_results.json`에 저장
-- 기존 `screener.md` 파일도 업데이트
+### Next.js 프론트엔드 (`web-next/`)
 
----
+- [x] **11개 탭** — overview · portfolio · marcus · discovery · wealth · solar · advisor · saved-strategies · alerts · system · service-map
+- [x] **SSE 실시간 연결** — `useSSE.ts` → `intel-data` mutate 자동 갱신
+- [x] **CompanyDrawer** — 기업 상세 드로어 (DART·네이버 데이터, 한국어 번역 설명)
+- [x] **Marcus → 발굴 연동** — "발굴에서 보기 →" 버튼 + 종목 하이라이트 + 스크롤
+- [x] **marcus_screener 통합** — B+ 풀 → 마커스 프롬프트 390KB→105KB 압축
+- [x] **AI 어드바이저** — 전략 저장/조회 (서버 DB), AbortController 언마운트 처리
+- [x] **태양광 탭** — 매물 카드 리스트 (즐겨찾기/읽음 처리)
+- [x] **WealthSummary 타입** + `fmtAmt` 중복 제거 (`lib/format.ts` 통합)
+- [x] `useWealthData.ts` 타입 강화
 
-### T2: 포트폴리오 히스토리 자동 저장
+### 자동화 스크립트
 
-**파일:** `reports/closing.py`
-**현재 문제:** `db/history.db`의 `portfolio_history` 테이블에 8행밖에 없음. 매일 자동 저장 안 됨.
-**목표:** 장 마감 시(15:40) 자동으로 당일 포트폴리오 스냅샷 저장
+- [x] `sync_to_r2.py` — Cloudflare R2 동기화 (평일 07:50)
+- [x] `publish_blog.py` — Sanity 블로그 자동 발행 (평일 07:55)
+- [x] `retranslate_descriptions.py` — 기업 설명 영문→한국어 재번역 (수동 실행)
+- [x] `monthly_deposit_cron.py` — 월별 입금 자동 기록 (매월 1일)
 
-**구현 내용:**
-```python
-# closing.py 마지막 단계에 추가
-def save_portfolio_snapshot(conn, portfolio_summary: dict):
-    """
-    portfolio_summary.json 데이터를 portfolio_history 테이블에 저장
-    
-    portfolio_history 스키마:
-    - date TEXT (YYYY-MM-DD)
-    - total_value_krw REAL
-    - total_invested_krw REAL  
-    - total_pnl_krw REAL
-    - total_pnl_pct REAL
-    - fx_rate REAL
-    - snapshot_json TEXT (전체 JSON 저장)
-    
-    중복 저장 방지: 같은 날짜면 UPDATE
-    """
-    pass
-```
+### 운영
 
-**요구사항:**
-- `output/intel/portfolio_summary.json` 읽어서 DB 저장
-- crontab `40 15 * * 1-5` 에서 closing.py 실행 중이므로 기존 플로우에 통합
-- 저장 후 콘솔 출력: `✅ 포트폴리오 스냅샷 저장: YYYY-MM-DD 총 X,XXX만원`
+- [x] **Discord 알림 6종** — 긴급 투자 알림 + 뉴스/일반 (채널 구분)
+- [x] **로그 로테이션** — 10MB 초과 자동 gzip + 7일 이상 삭제
+- [x] **DB 유지보수** — 매주 일요일 purge + VACUUM + WAL 재설정
+- [x] **파이프라인 에러 격리** — 단계별 독립 try/except, Graceful degradation
 
 ---
 
-### T3: 동적 알림 임계값 (VIX 기반)
+## 남은 태스크
 
-**파일:** `config.py`, `analysis/alerts.py`
-**현재 문제:** 알림 임계값이 고정값. VIX 31처럼 공포 장에서는 -5% 알림이 너무 많이 발동.
-**목표:** VIX 수준에 따라 임계값 자동 조정
+### P2 — 품질 향상 (중기)
 
-**구현 내용:**
-```python
-# config.py에 추가
-DYNAMIC_THRESHOLDS = {
-    "calm":   {"vix_max": 20, "stock_drop": -5.0, "stock_surge": 5.0, "kospi_drop": -3.0},
-    "normal": {"vix_max": 25, "stock_drop": -5.0, "stock_surge": 5.0, "kospi_drop": -3.0},
-    "fear":   {"vix_max": 30, "stock_drop": -7.0, "stock_surge": 7.0, "kospi_drop": -4.0},
-    "panic":  {"vix_max": 999,"stock_drop": -10.0,"stock_surge":10.0, "kospi_drop": -5.0},
-}
+#### T-A: Atomic JSON 쓰기 전면 적용
+**현황:** `utils/json_io.py` 생성 완료. `alerts_io.py`, `refresh_prices.py`에만 적용.  
+**남은 작업:** `analysis/` 파이프라인 핵심 모듈에 전면 적용
+- `analysis/regime_classifier.py` → `regime.json`
+- `analysis/screener.py` → `screener_results.json`
+- `analysis/price_analysis.py` → `price_analysis.json`
+- `analysis/self_correction.py`, `simulation.py`, `dynamic_holdings.py` 등
 
-def get_dynamic_thresholds(vix: float) -> dict:
-    """현재 VIX 값에 따라 적절한 임계값 반환"""
-    pass
-```
+#### T-B: CORS ALLOWED_ORIGIN 기본값 제한
+**현황:** `web/server.py` 코드는 ALLOWED_ORIGIN 환경변수 참조로 수정 완료. 단 기본값이 `"*"` 이고 `.env`에 `ALLOWED_ORIGIN`이 미설정 상태.  
+**남은 작업:** `.env`에 `ALLOWED_ORIGIN=http://100.90.201.87:3000` 추가
 
-**요구사항:**
-- `alerts.py`의 `check_stock_alerts()`, `check_macro_alerts()` 함수에 적용
-- `macro.json`에서 현재 VIX 읽어서 레짐 판단
-- 적용된 임계값을 로그에 출력: `📊 현재 레짐: fear (VIX 31.05) — 임계값 -7% 적용`
+#### T-C: Discord 웹훅 URL .env 이전
+**현황:** `.env`에 `DISCORD_WEBHOOK_URL`이 실제 URL로 설정돼 있어 동작 자체는 정상이나 URL이 .env 파일에 평문 저장됨 (git 제외 처리 확인 필요).  
+**남은 작업:** `config.py`의 기본값 하드코딩 여부 최종 점검
 
----
+#### T-D: 파이프라인 실패 Discord 알림
+**현황:** `run_pipeline.py`는 단계별 에러 격리 완료. 단 `_notify_pipeline_failure()` 함수 미구현 — 실패 시 Discord 알림 없음.  
+**남은 작업:** `_notify_pipeline_failure()` 함수 추가 + 핵심 단계에 적용
 
-## P2 — 다음 주
+#### T-E: 기업 설명 한국어 재번역 크론 등록
+**현황:** `scripts/retranslate_descriptions.py` 작성 완료. 현재 수동 실행만 가능.  
+**남은 작업:** `crontab.docker`에 주간 스케줄 추가 (예: 매주 일요일 05:30)
 
-### T4: 매크로 레짐 분류기
+### P3 — 장기 (1억+ 자산 규모 / 필요 시)
 
-**파일:** `analysis/regime_classifier.py` (신규 생성)
-**목표:** VIX + 환율 + 유가 + 금리를 조합해 현재 시장 국면 자동 분류
-
-**4가지 레짐:**
-```
-RISK_ON:      VIX < 20, 환율 안정, 유가 안정 → 적극 매수 가능
-RISK_OFF:     VIX > 25, 환율 급등 → 방어 모드
-INFLATIONARY: 유가 급등, 금리 상승 → 에너지/원자재 헤지
-STAGFLATION:  VIX 높음 + 유가 높음 → 금/방산만 보유
-```
-
-**구현:**
-```python
-class RegimeClassifier:
-    def classify(self, macro_data: dict) -> str:
-        """
-        입력: macro.json 데이터
-        출력: "RISK_ON" | "RISK_OFF" | "INFLATIONARY" | "STAGFLATION"
-        """
-        pass
-    
-    def get_strategy(self, regime: str) -> dict:
-        """
-        레짐별 권고 전략 반환
-        {
-            "stance": "방어적/중립/공격적",
-            "preferred_sectors": ["방산", "에너지"],
-            "avoid_sectors": ["성장주"],
-            "cash_ratio": 0.3
-        }
-        """
-        pass
-```
-
-**요구사항:**
-- `output/intel/regime.json` 저장 (마커스가 읽을 수 있도록)
-- `run_pipeline.py`에 통합 (매일 05:00 실행)
-- 레짐 변경 시 Discord 알림: `📊 레짐 변경: RISK_OFF → RISK_ON`
-
----
-
-### T5: 12-1 모멘텀 팩터
-
-**파일:** `analysis/composite_score.py`
-**현재 문제:** 모멘텀 계산이 단기(RSI + 당일 수익률)만 봄.
-**목표:** 12개월 수익률 - 1개월 수익률 = 중기 모멘텀 팩터 추가
-
-**구현:**
-```python
-def calculate_12_1_momentum(ticker: str, conn) -> float:
-    """
-    DB에서 12개월 전 / 1개월 전 가격 조회
-    → (현재가 / 12개월전가) - (현재가 / 1개월전가) 로 중기 모멘텀 산출
-    → 0~100 점수로 정규화
-    
-    데이터 없으면 None 반환 (점수 제외 처리)
-    """
-    pass
-```
-
-**요구사항:**
-- `history.db`의 `prices` 테이블에서 과거 가격 조회
-- `composite_score`에 새 팩터로 추가 (기존 4팩터 → 5팩터)
-- 데이터 부족 종목은 기존 4팩터만으로 계산
-
----
-
-## P3 — 나중에 (1억+ 자산 규모 도달 시)
-
-### T6: 백테스팅 엔진
-- 과거 DB 데이터 기반 전략 검증
-- Sharpe ratio, MDD 계산
+#### T-F: 백테스팅 엔진
+- 과거 DB 데이터 기반 전략 검증 (Sharpe ratio, MDD)
 - `backtest/` 폴더 신규 생성
+- 현재: 미착수
 
-### T7: 포트폴리오 최적화 (MVO)
-- 마코위츠 평균-분산 최적화
-- 리스크 패리티 배분
-- `scipy` 활용
+#### T-G: 포트폴리오 최적화 (MVO)
+- 마코위츠 평균-분산 최적화, 리스크 패리티
+- 현재: 미착수 (scipy 사용 시 외부 패키지 예외 승인 필요)
+
+#### T-H: Docker non-root 실행
+- cron이 root 필요한 구조라 큰 리팩터링 필요
+- 현재: 별도 계획 필요
+
+---
+
+## 현재 크론 스케줄 (17개)
+
+| 스케줄 | 스크립트 |
+|--------|---------|
+| 매 1분 | `scripts/refresh_prices.py` |
+| 매 1분 | Claude 크레덴셜 자동 동기화 |
+| 매 5분 | `analysis/alerts_watch.py` |
+| 평일 05:30 | `scripts/run_marcus.py` |
+| 평일 07:30 | `scripts/run_jarvis.py` |
+| 평일 07:40 | `run_pipeline.py` |
+| 평일 07:50 | `scripts/sync_to_r2.py` |
+| 평일 07:55 | `scripts/publish_blog.py` |
+| 평일 08:00 | `scripts/refresh_news.py` |
+| 평일 08:10 | `data/fetch_company_profiles.py` |
+| 평일 16:00 | `reports/closing.py` |
+| 매일 00:05 | 로그 로테이션 (gzip + 삭제) |
+| 매일 08:30, 19:00 | `scripts/refresh_solar.py` |
+| 매월 1일 00:00 | `scripts/monthly_deposit_cron.py` |
+| 매월 1일 05:00 | `data/fetch_dart_corp_codes.py` |
+| 매주 일요일 03:00 | `db/maintenance.py` |
+| 매주 일요일 04:00 | `analysis/universe_cache.py` |
 
 ---
 
@@ -229,7 +162,8 @@ def calculate_12_1_momentum(ticker: str, conn) -> float:
 
 1. **DB 경로:** `from config import DB_PATH` 로 통일 (`db/history.db`)
 2. **출력 경로:** `from config import OUTPUT_DIR` 로 통일 (`output/intel/`)
-3. **시간대:** 모든 datetime은 KST (`Asia/Seoul`) 기준
-4. **로깅:** `import logging` 사용, print() 남발 금지
-5. **테스트:** `tests/` 폴더에 단위 테스트 추가 (기존 패턴 참고)
-6. **오류 처리:** 데이터 없거나 API 실패해도 전체 파이프라인 중단 금지 — 해당 항목만 skip
+3. **시간대:** 모든 datetime은 KST (`timezone(timedelta(hours=9))`)
+4. **JSON 쓰기:** `utils/json_io.write_json_atomic()` 사용 (새 모듈은 반드시 적용)
+5. **DB 연결:** `db/connection.get_db_conn()` 사용 (raw `sqlite3.connect` 금지)
+6. **새 분석 모듈 추가:** `web/api.py`의 `INTEL_FILES` 목록에 동시 추가 필수
+7. **서버 임포트:** `web/server.py`에서 `import web.api as api` (선택 임포트 금지)

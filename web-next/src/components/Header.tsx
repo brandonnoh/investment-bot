@@ -116,24 +116,7 @@ export function Header() {
           <span className="text-xs text-muted-foreground">{lastUpdatedLabel}</span>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleRunPipeline}
-          disabled={isRunningPipeline}
-          className="text-sm px-2.5 py-1.5 min-h-[36px] rounded border border-mc-border bg-mc-bg hover:border-gold/50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
-        >
-          <SpinnerIcon spinning={isRunningPipeline} />
-          <span className="hidden sm:inline text-xs">{isRunningPipeline ? '수집 중...' : '파이프라인'}</span>
-        </button>
-        <button
-          onClick={handleRunMarcus}
-          disabled={isRunningMarcus}
-          className="text-sm px-2.5 py-1.5 min-h-[36px] rounded border border-gold/30 bg-gold/5 text-gold hover:bg-gold/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
-        >
-          <MarcusIcon spinning={isRunningMarcus} />
-          <span className="hidden sm:inline text-xs">{isRunningMarcus ? '분석 중...' : 'AI 분석'}</span>
-        </button>
-      </div>
+      <div />
     </header>
   )
 }

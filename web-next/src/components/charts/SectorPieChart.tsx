@@ -44,7 +44,7 @@ export function SectorPieChart({ holdings }: { holdings: PriceItem[] }) {
               style={{ backgroundColor: COLORS[i % COLORS.length] }}
               className="inline-block w-2 h-2 rounded-sm shrink-0"
             />
-            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+            <span className="text-[14px] text-muted-foreground whitespace-nowrap">
               {entry.name} <span className="text-foreground font-mono">{((entry.value / total) * 100).toFixed(0)}%</span>
             </span>
           </span>

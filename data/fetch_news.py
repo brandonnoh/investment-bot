@@ -25,6 +25,7 @@ from data.fetch_news_sources import (  # noqa: F401  re-export
     fetch_google_news_rss,
     search_brave_news,
 )
+from db import ssot
 from db.init_db import init_db
 
 KST = timezone(timedelta(hours=9))

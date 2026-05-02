@@ -32,19 +32,19 @@ export function AlertsTab() {
       {alerts.map((alert, i) => (
         <div key={i} className={`p-3 rounded border ${LEVEL_STYLES[alert.level] ?? LEVEL_STYLES.info}`}>
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="outline" className={`text-[10px] ${LEVEL_BADGE[alert.level] ?? ''}`}>
+            <Badge variant="outline" className={`text-[14px] ${LEVEL_BADGE[alert.level] ?? ''}`}>
               {alert.level}
             </Badge>
             {alert.ticker && (
               <span className="text-xs font-mono text-muted-foreground">{alert.ticker}</span>
             )}
             {alert.triggered_at && (
-              <span className="text-[10px] text-muted-foreground ml-auto">{alert.triggered_at.slice(0, 10)}</span>
+              <span className="text-[14px] text-muted-foreground ml-auto">{alert.triggered_at.slice(0, 10)}</span>
             )}
           </div>
           <p className="text-xs">{alert.message}</p>
           {(alert.value !== undefined || alert.threshold !== undefined) && (
-            <div className="text-[10px] text-muted-foreground mt-1 font-mono">
+            <div className="text-[14px] text-muted-foreground mt-1 font-mono">
               {alert.value !== undefined && `값: ${alert.value}`}
               {alert.threshold !== undefined && ` / 임계값: ${alert.threshold}`}
             </div>

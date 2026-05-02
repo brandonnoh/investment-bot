@@ -210,6 +210,45 @@ def _upsert_profile(conn, ticker: str, profile: dict, strategies: list[str]):
     )
 
 
+def _is_english(text: str) -> bool:
+    """한글 비율이 5% 미만이면 영문으로 판단."""
+    if not text:
+        return False
+    kr = sum(1 for c in text if "가" <= c <= "힣")
+    return kr / len(text) < 0.05
+
+
+def _retranslate_failed(tickers: list[str]) -> None:
+    """번역 실패(영문 그대로)인 종목 재번역 시도."""
+    placeholders = ",".join("?" * len(tickers))
+    with get_db_conn() as conn:
+        rows = conn.execute(
+            f"SELECT ticker, description FROM company_profiles WHERE ticker IN ({placeholders})",
+            tickers,
+        ).fetchall()
+        failed = [
+            (r["ticker"], r["description"]) for r in rows if _is_english(r["description"] or "")
+        ]
+
+    if not failed:
+        return
+
+    print(f"[company_profiles] 번역 실패 {len(failed)}개 재시도 중...")
+    with get_db_conn() as conn:
+        for ticker, desc in failed:
+            translated = _translate_to_korean(desc)
+            if translated and not _is_english(translated):
+                conn.execute(
+                    "UPDATE company_profiles SET description = ? WHERE ticker = ?",
+                    (translated, ticker),
+                )
+                print(f"  ✓ {ticker} 재번역 완료")
+            else:
+                print(f"  ✗ {ticker} 재번역 실패 — 영문 유지")
+            time.sleep(_RATE_LIMIT)
+        conn.commit()
+
+
 def run():
     """스크리너 추천 종목 기업 프로필 수집 메인."""
     print("[company_profiles] 추천 종목 프로필 수집 시작")
@@ -229,6 +268,7 @@ def run():
         conn.commit()
 
     print(f"[company_profiles] 완료: {success}/{total}개 저장")
+    _retranslate_failed(list(ticker_strategies.keys()))
 
 
 if __name__ == "__main__":

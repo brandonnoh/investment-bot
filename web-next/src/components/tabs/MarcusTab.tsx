@@ -20,7 +20,7 @@ const MD_COMPONENTS = {
     <h2 className="text-sm font-semibold text-gold font-mono mb-1 mt-3">{children}</h2>
   ),
   h3: ({ children }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h3 className="text-[10px] font-semibold text-gold/60 uppercase tracking-widest mb-2 mt-4">{children}</h3>
+    <h3 className="text-[14px] font-semibold text-gold/60 uppercase tracking-widest mb-2 mt-4">{children}</h3>
   ),
   p: ({ children }: React.HTMLAttributes<HTMLParagraphElement>) => (
     <p className="text-sm text-foreground mb-2 leading-relaxed">{children}</p>
@@ -100,7 +100,7 @@ function splitMarkdown(md: string): { before: string; items: Array<{ line: strin
 /** 눈여겨볼 종목 섹션 헤더 */
 function WatchlistHeader() {
   return (
-    <h3 className="text-[10px] font-semibold text-gold/60 uppercase tracking-widest mb-2 mt-4">
+    <h3 className="text-[14px] font-semibold text-gold/60 uppercase tracking-widest mb-2 mt-4">
       눈여겨볼 종목
     </h3>
   )
@@ -116,7 +116,7 @@ function WatchlistItem({ line, ticker, onJump }: { line: string; ticker: string 
       {ticker && (
         <button
           onClick={() => onJump(ticker)}
-          className="shrink-0 text-[10px] font-medium px-2 py-0.5 rounded border transition-colors"
+          className="shrink-0 text-[14px] font-medium px-2 py-0.5 rounded border transition-colors"
           style={{
             borderColor: '#4dca7e',
             color: '#4dca7e',
@@ -206,16 +206,16 @@ export function MarcusTab() {
                 <div className="font-mono text-xs font-semibold">{h.date}</div>
                 <div className="flex gap-2 items-center mt-1">
                   {h.confidence_level !== undefined && (
-                    <span className="text-[10px] text-gold">
+                    <span className="text-[14px] text-gold">
                       {'★'.repeat(h.confidence_level)}
                     </span>
                   )}
-                  <span className={`text-[10px] ${h.stance ? 'text-gold' : 'text-muted-foreground'}`}>
+                  <span className={`text-[14px] ${h.stance ? 'text-gold' : 'text-muted-foreground'}`}>
                     {h.stance ?? '—'}
                   </span>
                 </div>
                 {h.today_call && (
-                  <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2 hidden sm:block">
+                  <div className="text-[14px] text-muted-foreground mt-1 line-clamp-2 hidden sm:block">
                     {h.today_call}
                   </div>
                 )}

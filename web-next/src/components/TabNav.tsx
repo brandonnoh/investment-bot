@@ -59,7 +59,7 @@ export function TabNav() {
               }`}
             >
               <span className="text-xl leading-none">{tab.icon}</span>
-              <span className="text-[10px] mt-0.5">{tab.label}</span>
+              <span className="text-[14px] mt-0.5">{tab.label}</span>
             </button>
           ))}
           {/* 햄버거 버튼 */}
@@ -70,7 +70,7 @@ export function TabNav() {
             }`}
           >
             <span className="text-xl leading-none">{'\u2261'}</span>
-            <span className="text-[10px] mt-0.5">더보기</span>
+            <span className="text-[14px] mt-0.5">더보기</span>
           </button>
         </div>
       </nav>

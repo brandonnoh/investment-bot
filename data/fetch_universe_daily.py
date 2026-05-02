@@ -21,8 +21,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from analysis.screener_universe import UNIVERSE_KOSPI200, UNIVERSE_SP100  # noqa: E402
 from data.fetch_fundamentals_sources import (  # noqa: E402
+    fetch_naver_per_pbr,
     fetch_yahoo_financials,
 )
+from data.fetch_gold_krx import fetch_kiwoom_investor  # noqa: E402
 from data.fetch_prices import fetch_yahoo_quote  # noqa: E402
 
 KST = timezone(timedelta(hours=9))

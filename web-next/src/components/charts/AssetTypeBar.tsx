@@ -56,7 +56,7 @@ export function AssetTypeBar({ holdings }: { holdings: PriceItem[] }) {
               style={{ backgroundColor: ASSET_COLORS[entry.name] ?? '#9a8e84' }}
               className="inline-block w-2 h-2 rounded-sm shrink-0"
             />
-            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+            <span className="text-[14px] text-muted-foreground whitespace-nowrap">
               {entry.name} <span className="text-foreground font-mono">{((entry.value / total) * 100).toFixed(0)}%</span>
             </span>
           </span>

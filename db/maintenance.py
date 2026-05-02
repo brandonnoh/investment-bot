@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import RETENTION_POLICY
+from db.connection import get_db_conn
 
 KST = timezone(timedelta(hours=9))
 

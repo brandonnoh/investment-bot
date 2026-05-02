@@ -122,7 +122,7 @@ export function AssetGrid({ assets, capital, leverageOn }: AssetGridProps) {
             key={f.key}
             onClick={() => setCategory(f.key)}
             aria-pressed={category === f.key}
-            className={`px-2.5 py-2 text-[11px] rounded-full border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
+            className={`px-2.5 py-2 text-[14px] rounded-full border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
               category === f.key
                 ? 'bg-gold/20 border-gold/40 text-gold'
                 : 'bg-transparent border-mc-border text-muted-foreground hover:text-foreground'
@@ -135,7 +135,7 @@ export function AssetGrid({ assets, capital, leverageOn }: AssetGridProps) {
 
       {/* 정렬 */}
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-muted-foreground">정렬:</span>
+        <span className="text-[14px] text-muted-foreground">정렬:</span>
         {SORT_OPTIONS.map(s => {
           const active = sort === s.key
           const arrow = active ? (sortDir === 'desc' ? '↓' : '↑') : (DEFAULT_DIR[s.key] === 'desc' ? '↓' : '↑')
@@ -144,7 +144,7 @@ export function AssetGrid({ assets, capital, leverageOn }: AssetGridProps) {
               key={s.key}
               onClick={() => handleSort(s.key)}
               aria-pressed={active}
-              className={`text-[10px] px-2 py-1.5 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
+              className={`text-[14px] px-2 py-1.5 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-1 focus-visible:ring-offset-mc-bg ${
                 active
                   ? 'text-gold underline underline-offset-2'
                   : 'text-muted-foreground hover:text-foreground'
@@ -198,15 +198,15 @@ function AssetCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-sm font-semibold truncate">{asset.name}</div>
-          <div className="text-[10px] text-muted-foreground">{asset.description}</div>
+          <div className="text-[14px] text-muted-foreground">{asset.description}</div>
         </div>
-        <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border font-mono ${cfg.color} ${cfg.border} bg-transparent`}>
+        <span className={`shrink-0 inline-flex items-center gap-1 text-[14px] px-1.5 py-0.5 rounded border font-mono ${cfg.color} ${cfg.border} bg-transparent`}>
           {cfg.icon} {cfg.label}
         </span>
       </div>
 
       {/* 수치 정보 */}
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[14px]">
         <div>
           <span className="text-muted-foreground">최소자본 </span>
           <span className="font-mono">{fmtKrw(minCapitalDisplay)}원</span>
@@ -232,27 +232,27 @@ function AssetCard({
       {/* 뱃지 영역 */}
       <div className="flex flex-wrap gap-1">
         {asset.leverage_available && asset.leverage_type && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-gold/10 text-gold/80 border border-gold/20">
+          <span className="text-[14px] px-1.5 py-0.5 rounded bg-gold/10 text-gold/80 border border-gold/20">
             {asset.leverage_type}
           </span>
         )}
         {asset.tax_benefit && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-mc-green/10 text-mc-green/80 border border-mc-green/20">
+          <span className="text-[14px] px-1.5 py-0.5 rounded bg-mc-green/10 text-mc-green/80 border border-mc-green/20">
             {asset.tax_benefit}
           </span>
         )}
         {asset.regulation_note && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-mc-red/10 text-mc-red/80 border border-mc-red/20">
+          <span className="text-[14px] px-1.5 py-0.5 rounded bg-mc-red/10 text-mc-red/80 border border-mc-red/20">
             {asset.regulation_note}
           </span>
         )}
         {asset.beginner_friendly && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-gold/15 text-gold border border-gold/30">
+          <span className="text-[14px] px-1.5 py-0.5 rounded bg-gold/15 text-gold border border-gold/30">
             초보 OK
           </span>
         )}
         {asset.status === 'upcoming' && asset.upcoming_date && (
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-mc-border/20 text-muted-foreground border border-mc-border">
+          <span className="text-[14px] px-1.5 py-0.5 rounded bg-mc-border/20 text-muted-foreground border border-mc-border">
             {asset.upcoming_date} 예정
           </span>
         )}
@@ -260,7 +260,7 @@ function AssetCard({
 
       {/* 주의사항 */}
       {asset.caution && (
-        <div className="text-[10px] text-mc-red/80 bg-mc-red/5 rounded px-2 py-1">
+        <div className="text-[14px] text-mc-red/80 bg-mc-red/5 rounded px-2 py-1">
           {asset.caution}
         </div>
       )}

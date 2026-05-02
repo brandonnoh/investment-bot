@@ -1,9 +1,10 @@
 """
-cio-briefing.md, marcus-analysis.md → 영어 변환 → Sanity 발행
+cio-briefing.md, marcus-analysis.md → 영어 변환 → 썸네일 생성 → Sanity 발행
 파이프라인 완료 후 07:55에 실행
 """
 import os
 import re
+import base64
 import requests
 from pathlib import Path
 from datetime import datetime, timezone
@@ -18,6 +19,11 @@ SANITY_API = (
     f"https://{SANITY_PROJECT_ID}.api.sanity.io"
     f"/v2026-04-29/data/mutate/{SANITY_DATASET}"
 )
+SANITY_ASSET_API = (
+    f"https://{SANITY_PROJECT_ID}.api.sanity.io"
+    f"/v2021-06-07/assets/images/{SANITY_DATASET}"
+)
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 POSTS_TO_PUBLISH = [
     {
@@ -34,10 +40,7 @@ POSTS_TO_PUBLISH = [
 
 
 def translate_to_english(korean_text: str) -> str:
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta"
-        f"/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-    )
+    url = f"{GEMINI_BASE}/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
     prompt = (
         "Translate this Korean financial analysis to professional English.\n"
         "Keep all numbers, tickers, and percentages exactly as-is.\n"
@@ -55,13 +58,67 @@ def translate_to_english(korean_text: str) -> str:
     return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
+def generate_thumbnail(title: str, category: str) -> bytes | None:
+    url = f"{GEMINI_BASE}/models/imagen-4.0-generate-001:predict?key={GEMINI_API_KEY}"
+    style = "dark navy background, financial data visualization, professional"
+    if category == "stock-picks":
+        prompt = (
+            f"Financial thumbnail for: {title}. "
+            "Stock market chart with upward trend, green and gold accents, "
+            f"{style}, 1200x630 landscape"
+        )
+    else:
+        prompt = (
+            f"Financial news thumbnail for: {title}. "
+            "Abstract market data visualization, blue and emerald tones, "
+            f"{style}, 1200x630 landscape"
+        )
+    resp = requests.post(
+        url,
+        json={
+            "instances": [{"prompt": prompt}],
+            "parameters": {"sampleCount": 1, "aspectRatio": "16:9"},
+        },
+        timeout=60,
+    )
+    if not resp.ok:
+        print(f"[WARN] 이미지 생성 실패: {resp.status_code} {resp.text[:200]}")
+        return None
+    predictions = resp.json().get("predictions", [])
+    if not predictions:
+        return None
+    b64 = predictions[0].get("bytesBase64Encoded", "")
+    return base64.b64decode(b64) if b64 else None
+
+
+def upload_image_to_sanity(image_bytes: bytes, filename: str) -> str | None:
+    resp = requests.post(
+        SANITY_ASSET_API,
+        headers={
+            "Authorization": f"Bearer {SANITY_TOKEN}",
+            "Content-Type": "image/png",
+            "Content-Disposition": f'inline; filename="{filename}"',
+        },
+        data=image_bytes,
+        timeout=30,
+    )
+    if not resp.ok:
+        print(f"[WARN] Sanity 업로드 실패: {resp.status_code}")
+        return None
+    asset_id = resp.json().get("document", {}).get("_id")
+    print(f"[OK] 썸네일 업로드: {asset_id}")
+    return asset_id
+
+
 def slugify(text: str) -> str:
     clean = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     return clean[:100]
 
 
-def publish_to_sanity(title: str, slug: str, body: str, category: str):
-    doc = {
+def publish_to_sanity(
+    title: str, slug: str, body: str, category: str, thumbnail_asset_id: str | None
+):
+    doc: dict = {
         "_type": "post",
         "_id": f"auto-{slug}",
         "title": title,
@@ -72,6 +129,11 @@ def publish_to_sanity(title: str, slug: str, body: str, category: str):
         "body": [{"_type": "block", "children": [{"_type": "span", "text": body}]}],
         "excerpt": body[:160],
     }
+    if thumbnail_asset_id:
+        doc["thumbnail"] = {
+            "_type": "image",
+            "asset": {"_type": "reference", "_ref": thumbnail_asset_id},
+        }
     resp = requests.post(
         SANITY_API,
         headers={
@@ -96,7 +158,14 @@ def main():
         english_text = translate_to_english(korean_text)
         title = f"{config['title_prefix']} — {today}"
         slug = slugify(f"{config['title_prefix']}-{today}")
-        publish_to_sanity(title, slug, english_text, config["category"])
+
+        print(f"[INFO] 썸네일 생성 중: {title}")
+        image_bytes = generate_thumbnail(title, config["category"])
+        asset_id = None
+        if image_bytes:
+            asset_id = upload_image_to_sanity(image_bytes, f"{slug}.png")
+
+        publish_to_sanity(title, slug, english_text, config["category"], asset_id)
 
 
 if __name__ == "__main__":

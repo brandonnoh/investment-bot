@@ -59,12 +59,12 @@ function PortfolioPanel({ excludeGold, onToggleGold }: { excludeGold: boolean; o
   return (
     <div className="flex flex-col justify-center py-8 px-8 border-r border-mc-border">
       <div className="flex items-center gap-2 mb-4">
-        <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">
+        <div className="text-[14px] text-muted-foreground font-mono tracking-widest uppercase">
           Portfolio P&amp;L
         </div>
         <button
           onClick={onToggleGold}
-          className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+          className={`text-[14px] font-mono px-2 py-0.5 rounded border transition-colors cursor-pointer ${
             excludeGold
               ? 'bg-gold/10 text-gold border-gold/30'
               : 'text-muted-foreground border-mc-border hover:border-gold/30 hover:text-gold'
@@ -109,7 +109,7 @@ function MarketPanel() {
 
   return (
     <div className="flex flex-col py-8 px-7">
-      <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase mb-3">Market Regime</div>
+      <div className="text-[14px] text-muted-foreground font-mono tracking-widest uppercase mb-3">Market Regime</div>
       <div className="text-gold font-mono font-bold text-2xl tracking-wide mb-2">{regime?.regime ?? '—'}</div>
       <div className="flex gap-5 mb-6">
         {[
@@ -127,7 +127,7 @@ function MarketPanel() {
 
       {fg !== undefined && (
         <div className="mb-6">
-          <div className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase mb-3">Fear &amp; Greed</div>
+          <div className="text-[14px] text-muted-foreground font-mono tracking-widest uppercase mb-3">Fear &amp; Greed</div>
           <div className="flex items-baseline gap-3 mb-2">
             <span className={`font-mono font-bold text-4xl tabular-nums ${fgColor} ${fgPulse ? 'animate-pulse' : ''}`}>
               {fg}
@@ -146,8 +146,8 @@ function MarketPanel() {
           <div className="space-y-2">
             {macro.slice(0, 4).map((m) => (
               <div key={m.indicator} className="flex justify-between items-baseline">
-                <span className="text-[11px] text-muted-foreground font-mono">{m.indicator}</span>
-                <span className={`text-[11px] font-mono tabular-nums ${pctColor(m.change_pct)}`}>
+                <span className="text-[14px] text-muted-foreground font-mono">{m.indicator}</span>
+                <span className={`text-[14px] font-mono tabular-nums ${pctColor(m.change_pct)}`}>
                   {m.value?.toFixed(2)}
                   {m.change_pct !== undefined && <span className="opacity-60 ml-1">{fmtPct(m.change_pct)}</span>}
                 </span>
@@ -176,7 +176,7 @@ function HoldingsTable() {
   return (
     <div className="border border-mc-border bg-mc-card rounded-lg overflow-hidden">
       <div className="px-5 py-3 border-b border-mc-border flex items-center gap-2">
-        <span className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">Holdings</span>
+        <span className="text-[14px] font-mono text-muted-foreground tracking-widest uppercase">Holdings</span>
         <SyncBadge timestamp={priceTs} />
       </div>
       <div className="overflow-x-auto">
@@ -185,7 +185,7 @@ function HoldingsTable() {
             <TableRow className="border-mc-border hover:bg-transparent">
               {['종목명', '현재가', '등락', '평균단가', '평가손익', '통화'].map((h, i) => (
                 <TableHead key={h}
-                  className={`text-[10px] text-muted-foreground font-mono tracking-wider uppercase py-2
+                  className={`text-[14px] text-muted-foreground font-mono tracking-wider uppercase py-2
                     ${i > 0 ? 'text-right' : ''}
                     ${i === 3 || i === 5 ? 'hidden sm:table-cell' : ''}`}
                 >
@@ -205,7 +205,7 @@ function HoldingsTable() {
               <TableRow key={h.ticker} className="border-mc-border">
                 <TableCell className="py-3.5">
                   <div className="text-sm font-medium">{h.name}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono">{h.ticker}</div>
+                  <div className="text-[14px] text-muted-foreground font-mono">{h.ticker}</div>
                 </TableCell>
                 <TableCell className="text-xs text-right font-mono tabular-nums">{h.price?.toLocaleString()}</TableCell>
                 <TableCell className={`text-xs text-right font-mono tabular-nums ${pctColor(h.change_pct)}`}>
@@ -217,7 +217,7 @@ function HoldingsTable() {
                 <TableCell className={`text-xs text-right font-mono tabular-nums ${pctColor(h.pnl_pct)}`}>
                   <div>{fmtPct(h.pnl_pct)}</div>
                   {h.pnl_krw !== undefined && (
-                    <div className="text-[10px] text-muted-foreground">{fmtKrw(h.pnl_krw)}원</div>
+                    <div className="text-[14px] text-muted-foreground">{fmtKrw(h.pnl_krw)}원</div>
                   )}
                 </TableCell>
                 <TableCell className="text-xs text-right text-muted-foreground font-mono hidden sm:table-cell">

@@ -5,13 +5,17 @@ JSON 파일 로드, 프로세스 실행 관리
 """
 
 import json
+import logging
 import os
 import subprocess
 import threading
 from pathlib import Path
 
 from db.connection import get_db_conn
+from utils.schema import validate_json
 from web.portfolio_refresh import refresh_portfolio_with_live_prices
+
+logger = logging.getLogger(__name__)
 
 # 프로젝트 루트
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -58,7 +62,11 @@ def load_intel_data() -> dict:
         try:
             if filepath.exists():
                 with filepath.open(encoding="utf-8") as f:
-                    result[key] = json.load(f)
+                    data = json.load(f)
+                warnings = validate_json(filename, data)
+                for w in warnings:
+                    logger.warning(w)
+                result[key] = data
             else:
                 result[key] = {}
         except Exception as e:

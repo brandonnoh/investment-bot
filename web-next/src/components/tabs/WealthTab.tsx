@@ -101,34 +101,34 @@ function AssetFormFields({ form, onChange }: { form: AssetForm; onChange: (p: Pa
   return (
     <div className="grid grid-cols-2 gap-2 pt-3 border-t border-mc-border">
       <div className="col-span-2">
-        <label className="text-[10px] text-muted-foreground">이름</label>
+        <label className="text-[14px] text-muted-foreground">이름</label>
         <input className="w-full bg-mc-bg border border-mc-border rounded px-2.5 py-1.5 text-sm text-foreground mt-0.5 outline-none focus:border-gold/60"
           value={form.name} onChange={e => onChange({ name: e.target.value })} placeholder="자산명" />
       </div>
       <div>
-        <label className="text-[10px] text-muted-foreground">유형</label>
+        <label className="text-[14px] text-muted-foreground">유형</label>
         <select className="w-full bg-mc-bg border border-mc-border rounded px-2.5 py-1.5 text-sm text-foreground mt-0.5 cursor-pointer outline-none focus:border-gold/60"
           value={form.type} onChange={e => onChange({ type: e.target.value as AssetType })}>
           {ASSET_TYPES.map(t => <option key={t}>{t}</option>)}
         </select>
       </div>
       <div>
-        <label className="text-[10px] text-muted-foreground">현재 가치 (원)</label>
+        <label className="text-[14px] text-muted-foreground">현재 가치 (원)</label>
         <input className="w-full bg-mc-bg border border-mc-border rounded px-2.5 py-1.5 text-sm text-foreground mt-0.5 outline-none focus:border-gold/60"
           type="number" value={form.current_value_krw} onChange={e => onChange({ current_value_krw: e.target.value })} placeholder="0" />
       </div>
       <div>
-        <label className="text-[10px] text-muted-foreground">월 적립 (원)</label>
+        <label className="text-[14px] text-muted-foreground">월 적립 (원)</label>
         <input className="w-full bg-mc-bg border border-mc-border rounded px-2.5 py-1.5 text-sm text-foreground mt-0.5 outline-none focus:border-gold/60"
           type="number" value={form.monthly_deposit_krw} onChange={e => onChange({ monthly_deposit_krw: e.target.value })} placeholder="0" />
       </div>
       <div>
-        <label className="text-[10px] text-muted-foreground">만기일</label>
+        <label className="text-[14px] text-muted-foreground">만기일</label>
         <input className="w-full bg-mc-bg border border-mc-border rounded px-2.5 py-1.5 text-sm text-foreground mt-0.5 outline-none focus:border-gold/60"
           type="date" value={form.maturity_date} onChange={e => onChange({ maturity_date: e.target.value })} />
       </div>
       <div className="col-span-2">
-        <label className="text-[10px] text-muted-foreground">메모</label>
+        <label className="text-[14px] text-muted-foreground">메모</label>
         <input className="w-full bg-mc-bg border border-mc-border rounded px-2.5 py-1.5 text-sm text-foreground mt-0.5 outline-none focus:border-gold/60"
           value={form.note} onChange={e => onChange({ note: e.target.value })} placeholder="메모 (선택)" />
       </div>
@@ -230,7 +230,7 @@ export function WealthTab() {
             <div style={{ width: `${investPct}%` }} className="bg-gold" />
             <div style={{ width: `${100 - investPct}%` }} className="bg-mc-border" />
           </div>
-          <div className="flex gap-3 mt-1.5 text-[10px] text-muted-foreground">
+          <div className="flex gap-3 mt-1.5 text-[14px] text-muted-foreground">
             <span><span className="inline-block w-2 h-2 rounded-sm bg-gold mr-1" />투자 {investPct.toFixed(0)}%</span>
             <span><span className="inline-block w-2 h-2 rounded-sm bg-mc-border mr-1" />비금융 {(100 - investPct).toFixed(0)}%</span>
           </div>
@@ -257,19 +257,19 @@ export function WealthTab() {
                   className="flex items-center justify-between w-full py-3 cursor-pointer hover:bg-mc-bg/40 -mx-1 px-1 rounded transition-colors text-left"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded border font-mono shrink-0 ${TYPE_COLOR[a.type] ?? 'bg-muted text-muted-foreground border-border'}`}>
+                    <span className={`text-[14px] px-1.5 py-0.5 rounded border font-mono shrink-0 ${TYPE_COLOR[a.type] ?? 'bg-muted text-muted-foreground border-border'}`}>
                       {a.type}
                     </span>
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate">{a.name}</div>
                       {a.monthly_deposit_krw > 0 && (
-                        <div className="text-[10px] text-muted-foreground">월 +{fmtKrw(a.monthly_deposit_krw)}원</div>
+                        <div className="text-[14px] text-muted-foreground">월 +{fmtKrw(a.monthly_deposit_krw)}원</div>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
                     <span className="text-sm font-mono font-semibold">{fmtKrw(a.current_value_krw)}원</span>
-                    <span className="text-muted-foreground text-[10px]">{editingId === a.id ? '▲' : '▷'}</span>
+                    <span className="text-muted-foreground text-[14px]">{editingId === a.id ? '▲' : '▷'}</span>
                   </div>
                 </button>
                 {editingId === a.id && (

@@ -32,15 +32,15 @@ export function SystemTab() {
       <div className="flex items-center gap-2">
         <span className="text-xs text-muted-foreground font-mono">파이프라인</span>
         {engine == null ? (
-          <Badge variant="outline" className="text-[10px] font-mono border-mc-border text-muted-foreground">
+          <Badge variant="outline" className="text-[14px] font-mono border-mc-border text-muted-foreground">
             정보 없음
           </Badge>
         ) : engine.pipeline_ok ? (
-          <Badge variant="outline" className="text-[10px] font-mono border-mc-green text-mc-green">
+          <Badge variant="outline" className="text-[14px] font-mono border-mc-green text-mc-green">
             정상
           </Badge>
         ) : (
-          <Badge variant="outline" className="text-[10px] font-mono border-mc-red text-mc-red">
+          <Badge variant="outline" className="text-[14px] font-mono border-mc-red text-mc-red">
             오류
           </Badge>
         )}
@@ -58,7 +58,7 @@ export function SystemTab() {
                 <Badge
                   key={mod}
                   variant="outline"
-                  className="text-[10px] font-mono justify-start border-mc-border"
+                  className="text-[14px] font-mono justify-start border-mc-border"
                 >
                   {mod}
                 </Badge>

@@ -26,21 +26,20 @@ def load_company_profile(ticker: str) -> dict:
     # 펀더멘탈 값이 프로필 값보다 우선 (더 최신)
     result = {**profile, **fundamentals}
     result["recent_news"] = news
-    # screen_strategies를 리스트로 변환
-    raw = result.get("screen_strategies")
-    if isinstance(raw, str):
-        try:
-            result["screen_strategies"] = json.loads(raw)
-        except Exception:
-            result["screen_strategies"] = []
+    # JSON 문자열 필드를 리스트로 변환
+    for field, fallback in (("screen_strategies", []), ("analyst_reports", [])):
+        raw = result.get(field)
+        if isinstance(raw, str):
+            try:
+                result[field] = json.loads(raw)
+            except Exception:
+                result[field] = fallback
     return result
 
 
 def _load_profile(conn, ticker: str) -> dict:
     """company_profiles 테이블에서 조회."""
-    row = conn.execute(
-        "SELECT * FROM company_profiles WHERE ticker = ?", (ticker,)
-    ).fetchone()
+    row = conn.execute("SELECT * FROM company_profiles WHERE ticker = ?", (ticker,)).fetchone()
     return dict(row) if row else {}
 
 

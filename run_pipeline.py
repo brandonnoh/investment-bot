@@ -22,6 +22,10 @@ if _env_path.exists():
                 _k, _v = _line.split("=", 1)
                 os.environ.setdefault(_k.strip(), _v.strip())
 
+import json  # noqa: E402
+import urllib.error  # noqa: E402
+import urllib.request  # noqa: E402
+
 from analysis.alerts import run as check_alerts  # noqa: E402
 from analysis.portfolio import run as analyze_portfolio  # noqa: E402
 from analysis.price_analysis import run as analyze_prices  # noqa: E402
@@ -42,6 +46,24 @@ from utils.engine_status import (  # noqa: E402
     run as save_engine_status,
 )
 from utils.schema import validate_all_outputs  # noqa: E402
+
+
+def _send_discord(message: str) -> None:
+    """파이프라인 실패 알림을 Discord Webhook으로 전송. 실패해도 무시."""
+    url = os.environ.get("DISCORD_WEBHOOK_URL", "")
+    if not url:
+        return
+    try:
+        payload = json.dumps({"content": message}).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={"Content-Type": "application/json", "User-Agent": "investment-bot/1.0"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except (urllib.error.URLError, OSError) as e:
+        print(f"  ⚠️ Discord 전송 실패: {e}")
 
 
 def _collect_data(engine: EngineStatus):

@@ -175,4 +175,95 @@ SCHEMAS = {
             "weight_suggestion": dict,
         },
     },
+    "regime.json": {
+        "top_level": {
+            "classified_at": str,
+            "regime": str,
+            "confidence": "number",
+            "panic_signal": bool,
+            "vix": "number",
+            "fx_change": "number",
+            "oil_change": "number",
+            "strategy": dict,
+        },
+    },
+    "sector_scores.json": {
+        "top_level": {
+            "updated_at": str,
+            "regime": str,
+            "sectors": list,
+        },
+        "items_key": "sectors",
+        "item_fields": {
+            "name": str,
+            "score": "number",
+            "signal": str,
+        },
+    },
+    "screener_results.json": {
+        "top_level": {
+            "generated_at": str,
+            "kospi200_top10": list,
+            "sp100_top10": list,
+        },
+        "items_key": "kospi200_top10",
+        "item_fields": {
+            "ticker": str,
+            "name": str,
+            "market": str,
+            "price": "number",
+        },
+    },
+    "supply_data.json": {
+        "top_level": {
+            "updated_at": str,
+            "fear_greed": dict,
+            "krx_supply": dict,
+        },
+    },
+    "holdings_proposal.json": {
+        "top_level": {
+            "generated_at": str,
+            "add_candidates": list,
+            "remove_candidates": list,
+            "summary": dict,
+        },
+        "items_key": "add_candidates",
+        "item_fields": {
+            "ticker": str,
+            "name": str,
+            "avg_score": "number",
+        },
+    },
+    "simulation_report.json": {
+        "top_level": {
+            "generated_at": str,
+            "simulations": list,
+            "summary": dict,
+        },
+    },
+    "proactive_alerts.json": {
+        "top_level": {
+            "generated_at": str,
+            "alerts": list,
+            "count": int,
+        },
+        "items_key": "alerts",
+        "item_fields": {
+            "ticker": str,
+            "name": str,
+            "action": str,
+            "urgency": str,
+        },
+    },
+    "correction_notes.json": {
+        "top_level": {
+            "generated_at": str,
+            "period": str,
+            "weak_factors": list,
+            "strong_factors": list,
+            "weight_adjustment": dict,
+            "summary": str,
+        },
+    },
 }

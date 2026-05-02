@@ -117,7 +117,7 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className="text-[10px] px-2 py-0.5 rounded border transition-colors cursor-pointer"
+      className="text-[14px] px-2 py-0.5 rounded border transition-colors cursor-pointer"
       style={
         active
           ? { color: '#5b9bf5', background: 'rgba(91,155,245,0.2)', borderColor: 'rgba(91,155,245,0.5)' }
@@ -162,7 +162,7 @@ function ListingCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span
-              className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
+              className="text-[14px] font-medium px-1.5 py-0.5 rounded shrink-0"
               style={{ color: style.color, background: style.bg, border: `1px solid ${style.border}` }}
             >
               {SOURCE_LABELS[listing.source] ?? listing.source}
@@ -171,7 +171,7 @@ function ListingCard({
               const ds = DEAL_TYPE_STYLES[listing.deal_type]
               return (
                 <span
-                  className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
+                  className="text-[14px] font-medium px-1.5 py-0.5 rounded shrink-0"
                   style={{ color: ds.color, background: ds.bg, border: `1px solid ${ds.border}` }}
                 >
                   {listing.deal_type}
@@ -180,7 +180,7 @@ function ListingCard({
             })()}
             {isNew && (
               <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                className="text-[14px] font-bold px-1.5 py-0.5 rounded shrink-0"
                 style={{ color: '#ff6b6b', background: 'rgba(255,107,107,0.15)', border: '1px solid rgba(255,107,107,0.3)' }}
               >
                 NEW
@@ -203,7 +203,7 @@ function ListingCard({
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[14px] text-muted-foreground">
         {listing.location && <span>{listing.location}</span>}
         {listing.capacity_kw != null && (
           <span>{listing.capacity_kw.toLocaleString('ko-KR')}kW</span>
@@ -213,7 +213,7 @@ function ListingCard({
         </span>
       </div>
 
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+      <div className="flex items-center justify-between text-[14px] text-muted-foreground">
         <span>발견 {formatDate(listing.first_seen_at)}</span>
         {isRead && <span style={{ color: '#9a8e84' }}>열람</span>}
       </div>
@@ -314,7 +314,7 @@ export function SolarTab() {
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-mono font-semibold">태양광 발전소 매물</h2>
         {data && (
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-[14px] text-muted-foreground">
             {hasFilter || viewMode !== 'all'
               ? `${filtered.length} / ${data.count}건`
               : `${data.count}건`}

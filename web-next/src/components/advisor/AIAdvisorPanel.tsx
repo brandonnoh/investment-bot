@@ -201,7 +201,7 @@ export function AIAdvisorPanel({
       </div>
 
       {!loading && recommendation && (
-        <p className="text-[10px] text-muted-foreground/50 font-mono text-right">
+        <p className="text-[14px] text-muted-foreground/50 font-mono text-right">
           ✓ 저장된 전략 탭에 자동 저장됨
         </p>
       )}

@@ -45,7 +45,7 @@ interface ConditionPanelProps {
 }
 
 const INPUT_CLS = 'w-14 text-xs text-right font-mono bg-transparent border-b border-mc-border focus:border-gold focus:outline-none px-0.5 tabular-nums'
-const SELECT_CLS = 'text-[11px] bg-mc-bg border border-mc-border rounded px-1.5 py-0.5 text-foreground cursor-pointer focus:outline-none focus:border-gold'
+const SELECT_CLS = 'text-[14px] bg-mc-bg border border-mc-border rounded px-1.5 py-0.5 text-foreground cursor-pointer focus:outline-none focus:border-gold'
 const LOAN_TOGGLE_ON = 'bg-mc-red/10 text-mc-red border-mc-red/30 cursor-pointer'
 const LOAN_TOGGLE_OFF = 'border-mc-border text-muted-foreground hover:border-mc-red/30 cursor-pointer'
 
@@ -75,8 +75,8 @@ export function ConditionPanel({
 
       {/* 분석 모드 */}
       <div>
-        <div className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase mb-1.5">분석 모드</div>
-        <div className="grid grid-cols-2 rounded border border-mc-border overflow-hidden text-[10px] font-mono">
+        <div className="text-[14px] font-mono text-muted-foreground tracking-widest uppercase mb-1.5">분석 모드</div>
+        <div className="grid grid-cols-2 rounded border border-mc-border overflow-hidden text-[14px] font-mono">
           <button
             onClick={() => setPortfolioMode('include')}
             className={`py-1.5 px-2 transition-colors text-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold ${
@@ -98,7 +98,7 @@ export function ConditionPanel({
             신규 자본만
           </button>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1">
+        <p className="text-[14px] text-muted-foreground mt-1">
           {portfolioMode === 'include'
             ? '기존 종목 정리·전환 방안을 전략에 포함'
             : '입력한 자본금·대출·납입금만으로 전략 수립'}
@@ -116,7 +116,7 @@ export function ConditionPanel({
           onChange={e => setCapital(snap(Number(e.target.value) * STEP, STEP))}
           className="w-full accent-gold cursor-pointer"
         />
-        <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+        <div className="flex justify-between text-[14px] text-muted-foreground mt-0.5">
           <span>0</span><span>3억</span>
         </div>
       </div>
@@ -134,25 +134,25 @@ export function ConditionPanel({
           onChange={e => setMonthlySavings(Number(e.target.value) * SAVINGS_STEP)}
           className="w-full accent-mc-green cursor-pointer"
         />
-        <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+        <div className="flex justify-between text-[14px] text-muted-foreground mt-0.5">
           <span>없음</span><span>1,000만/월</span>
         </div>
       </div>
 
       {/* 대출 설정 */}
       <div className="space-y-2.5">
-        <div className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">대출 설정</div>
+        <div className="text-[14px] font-mono text-muted-foreground tracking-widest uppercase">대출 설정</div>
 
         {/* 마이너스통장 */}
         <div className="rounded border border-mc-border p-3 space-y-2.5">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xs font-medium">마이너스통장</div>
-              <div className="text-[10px] text-muted-foreground">이자만 납입 · 수시 상환</div>
+              <div className="text-[14px] text-muted-foreground">이자만 납입 · 수시 상환</div>
             </div>
             <button
               onClick={() => setMinusLoan(minusLoan ? null : { amount: 50_000_000, rate: 4.5 })}
-              className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${minusLoan ? LOAN_TOGGLE_ON : LOAN_TOGGLE_OFF}`}
+              className={`text-[14px] font-mono px-2 py-0.5 rounded border transition-colors ${minusLoan ? LOAN_TOGGLE_ON : LOAN_TOGGLE_OFF}`}
             >
               {minusLoan ? '사용 중' : '추가'}
             </button>
@@ -162,7 +162,7 @@ export function ConditionPanel({
             <div className="space-y-2">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-muted-foreground">금액</span>
+                  <span className="text-[14px] text-muted-foreground">금액</span>
                   <span className="text-xs font-mono text-mc-red">{fmtAmt(minusLoan.amount)}</span>
                 </div>
                 <input type="range" min={0} max={LOAN_MAX / STEP} step={1}
@@ -172,17 +172,17 @@ export function ConditionPanel({
                 />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">연이율</span>
+                <span className="text-[14px] text-muted-foreground">연이율</span>
                 <div className="flex items-center gap-1">
                   <input type="number" min={0} max={30} step={0.1}
                     value={minusLoan.rate}
                     onChange={e => setMinusLoan({ ...minusLoan, rate: Number(e.target.value) })}
                     className={INPUT_CLS}
                   />
-                  <span className="text-[10px] text-muted-foreground">%</span>
+                  <span className="text-[14px] text-muted-foreground">%</span>
                 </div>
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-[14px] text-muted-foreground">
                 월 이자 <span className="font-mono text-mc-red">{monthlyInterest(minusLoan.amount, minusLoan.rate).toLocaleString()}원</span>
               </div>
             </div>
@@ -194,11 +194,11 @@ export function ConditionPanel({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-xs font-medium">신용대출</div>
-              <div className="text-[10px] text-muted-foreground">원리금 납입 · 고정금리</div>
+              <div className="text-[14px] text-muted-foreground">원리금 납입 · 고정금리</div>
             </div>
             <button
               onClick={() => setCreditLoan(creditLoan ? null : { amount: 30_000_000, rate: 5.5, gracePeriod: 12, repayPeriod: 36 })}
-              className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${creditLoan ? LOAN_TOGGLE_ON : LOAN_TOGGLE_OFF}`}
+              className={`text-[14px] font-mono px-2 py-0.5 rounded border transition-colors ${creditLoan ? LOAN_TOGGLE_ON : LOAN_TOGGLE_OFF}`}
             >
               {creditLoan ? '사용 중' : '추가'}
             </button>
@@ -208,7 +208,7 @@ export function ConditionPanel({
             <div className="space-y-2">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-muted-foreground">금액</span>
+                  <span className="text-[14px] text-muted-foreground">금액</span>
                   <span className="text-xs font-mono text-mc-red">{fmtAmt(creditLoan.amount)}</span>
                 </div>
                 <input type="range" min={0} max={LOAN_MAX / STEP} step={1}
@@ -218,19 +218,19 @@ export function ConditionPanel({
                 />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">연이율</span>
+                <span className="text-[14px] text-muted-foreground">연이율</span>
                 <div className="flex items-center gap-1">
                   <input type="number" min={0} max={30} step={0.1}
                     value={creditLoan.rate}
                     onChange={e => setCreditLoan({ ...creditLoan, rate: Number(e.target.value) })}
                     className={INPUT_CLS}
                   />
-                  <span className="text-[10px] text-muted-foreground">%</span>
+                  <span className="text-[14px] text-muted-foreground">%</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <div className="text-[10px] text-muted-foreground mb-1">거치기간</div>
+                  <div className="text-[14px] text-muted-foreground mb-1">거치기간</div>
                   <select value={creditLoan.gracePeriod}
                     onChange={e => setCreditLoan({ ...creditLoan, gracePeriod: Number(e.target.value) })}
                     className={SELECT_CLS}
@@ -241,7 +241,7 @@ export function ConditionPanel({
                   </select>
                 </div>
                 <div>
-                  <div className="text-[10px] text-muted-foreground mb-1">상환기간</div>
+                  <div className="text-[14px] text-muted-foreground mb-1">상환기간</div>
                   <select value={creditLoan.repayPeriod}
                     onChange={e => setCreditLoan({ ...creditLoan, repayPeriod: Number(e.target.value) })}
                     className={SELECT_CLS}
@@ -252,7 +252,7 @@ export function ConditionPanel({
                   </select>
                 </div>
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-[14px] text-muted-foreground">
                 {creditLoan.gracePeriod > 0 && (
                   <span>거치 시 월 이자 <span className="font-mono">{monthlyInterest(creditLoan.amount, creditLoan.rate).toLocaleString()}원</span> → </span>
                 )}
@@ -264,7 +264,7 @@ export function ConditionPanel({
 
         {/* 대출 요약 */}
         {(minusLoan || creditLoan) && (
-          <div className="text-[11px] font-mono bg-mc-bg border border-mc-border rounded px-3 py-2 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
+          <div className="text-[14px] font-mono bg-mc-bg border border-mc-border rounded px-3 py-2 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
             <span>총 대출 <span className="text-mc-red">{fmtAmt(totalLoanAmt)}</span></span>
             <span>·</span>
             <span>월 부담 <span className="text-mc-red">{totalGrace.toLocaleString()}원</span>
@@ -289,7 +289,7 @@ export function ConditionPanel({
           onChange={e => setRiskLevel(Number(e.target.value) as RiskLevel)}
           className="w-full accent-gold cursor-pointer"
         />
-        <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+        <div className="flex justify-between text-[14px] text-muted-foreground mt-0.5">
           <span>보수</span><span>공격</span>
         </div>
       </div>
