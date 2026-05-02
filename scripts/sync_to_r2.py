@@ -1,5 +1,5 @@
 """
-output/intel/ JSON 파일들을 Cloudflare R2에 업로드
+output/intel/ 파일들을 Cloudflare R2에 업로드
 파이프라인 완료 후 07:50에 실행
 """
 import boto3
@@ -11,11 +11,18 @@ INTEL_DIR = Path("/app/output/intel")
 BUCKET = os.environ["R2_BUCKET_NAME"]
 ACCOUNT_ID = os.environ["CLOUDFLARE_ACCOUNT_ID"]
 
-FILES_TO_SYNC = {
+JSON_FILES = {
     "regime.json":        "latest/regime.json",
     "sector_scores.json": "latest/sectors.json",
     "opportunities.json": "latest/screener.json",
     "price_analysis.json":"latest/prices_analysis.json",
+    "macro.json":         "latest/macro.json",
+    "news.json":          "latest/news.json",
+}
+
+TEXT_FILES = {
+    "marcus-analysis.md": "latest/advisor.md",
+    "cio-briefing.md":    "latest/daily-brief.md",
 }
 
 
@@ -29,7 +36,7 @@ def get_r2_client():
     )
 
 
-def sync_file(client, local_path: Path, r2_key: str) -> bool:
+def sync_file(client, local_path: Path, r2_key: str, content_type: str) -> bool:
     if not local_path.exists():
         print(f"[SKIP] {local_path} not found")
         return False
@@ -38,7 +45,7 @@ def sync_file(client, local_path: Path, r2_key: str) -> bool:
             Bucket=BUCKET,
             Key=r2_key,
             Body=f,
-            ContentType="application/json",
+            ContentType=content_type,
             CacheControl="public, max-age=3600",
         )
     print(f"[OK] {local_path.name} → r2://{r2_key}")
@@ -47,7 +54,8 @@ def sync_file(client, local_path: Path, r2_key: str) -> bool:
 
 def archive_today(client):
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    for _, r2_key in FILES_TO_SYNC.items():
+    all_keys = {**JSON_FILES, **TEXT_FILES}
+    for _, r2_key in all_keys.items():
         archive_key = r2_key.replace("latest/", f"history/{today}/")
         try:
             client.copy_object(
@@ -61,12 +69,14 @@ def archive_today(client):
 
 def main():
     client = get_r2_client()
-    success = sum(
-        sync_file(client, INTEL_DIR / local_name, r2_key)
-        for local_name, r2_key in FILES_TO_SYNC.items()
-    )
+    success = 0
+    for local_name, r2_key in JSON_FILES.items():
+        success += sync_file(client, INTEL_DIR / local_name, r2_key, "application/json")
+    for local_name, r2_key in TEXT_FILES.items():
+        success += sync_file(client, INTEL_DIR / local_name, r2_key, "text/plain; charset=utf-8")
     archive_today(client)
-    print(f"[DONE] {success}/{len(FILES_TO_SYNC)} files synced")
+    total = len(JSON_FILES) + len(TEXT_FILES)
+    print(f"[DONE] {success}/{total} files synced")
 
 
 if __name__ == "__main__":
