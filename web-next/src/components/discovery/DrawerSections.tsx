@@ -154,15 +154,13 @@ export function DescriptionSection({ profile }: { profile: CompanyProfile }) {
           <p className={`text-xs leading-relaxed text-muted-foreground ${expanded ? '' : 'line-clamp-6'}`}>
             {profile.description}
           </p>
-          {profile.description.length > 200 && (
-            <button
-              onClick={() => setExpanded(prev => !prev)}
-              className="flex items-center gap-0.5 text-[14px] transition-colors"
-              style={{ color: '#4dca7e' }}
-            >
-              {expanded ? <><ChevronUp size={10} /> 접기</> : <><ChevronDown size={10} /> 더 보기</>}
-            </button>
-          )}
+          <button
+            onClick={() => setExpanded(prev => !prev)}
+            className="flex items-center gap-0.5 text-[14px] transition-colors"
+            style={{ color: '#4dca7e' }}
+          >
+            {expanded ? <><ChevronUp size={10} /> 접기</> : <><ChevronDown size={10} /> 더 보기</>}
+          </button>
         </>
       )}
       <div className="flex flex-wrap gap-3 text-[14px] text-muted-foreground">

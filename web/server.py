@@ -16,11 +16,8 @@ from pathlib import Path
 from socketserver import ThreadingMixIn
 from urllib.parse import parse_qs, urlparse
 
-# 프로젝트 루트를 모듈 경로에 추가
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
-
-# 모듈 전체 임포트 — 함수를 추가해도 이 파일은 수정 불필요
 import analysis.value_screener_strategies as screener  # noqa: E402
 import db.ssot_wealth as ssot  # noqa: E402
 import web.api as api  # noqa: E402
@@ -30,16 +27,13 @@ import web.api_history as api_history  # noqa: E402
 import web.investment_advisor as investment_advisor  # noqa: E402
 from db.init_db import init_db  # noqa: E402
 
-# 서버 시작 시 DB 스키마 보장 (테이블 신규 생성 + 마이그레이션)
 init_db()
 
 PORT = 8421
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
+_API_KEY = os.environ.get("INTERNAL_API_KEY", "")
 
-# 허용된 로그 이름 (경로 순회 방지)
 _ALLOWED_LOG_NAMES = {"marcus", "pipeline", "jarvis", "alerts_watch", "refresh_prices"}
-
-# 확장자별 Content-Type 매핑
 _CONTENT_TYPES: dict[str, str] = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
@@ -58,7 +52,6 @@ _CONTENT_TYPES: dict[str, str] = {
 _NEXT_OUT = Path(__file__).parent.parent / "web-next" / "out"
 WEB_DIR = _NEXT_OUT
 
-# SSE 클라이언트 큐 관리
 _sse_clients: list[queue.Queue] = []
 _sse_lock = threading.Lock()
 
@@ -72,12 +65,19 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
 class MissionControlHandler(BaseHTTPRequestHandler):
     """미션컨트롤 요청 핸들러."""
 
-    def log_message(self, format, *args):
-        """기본 로그는 억제 (오류만 출력)."""
-        pass
+    def _check_auth(self) -> bool:
+        """X-API-Key 헤더 검증. INTERNAL_API_KEY 미설정 시 항상 True."""
+        if not _API_KEY:
+            return True
+        return self.headers.get("X-API-Key", "") == _API_KEY
 
-    def log_error(self, format, *args):
-        print(f"[server] 오류: {format % args}")
+    def log_message(self, format, *args):
+        """보안 관련 요청(비정상 상태코드, 변경 메서드)만 기록."""
+        if args and len(args) >= 2:
+            status = str(args[1]) if len(args) > 1 else ""
+            method = str(args[0]).split()[0] if args[0] else ""
+            if status.startswith(("4", "5")) or method in ("POST", "PUT", "DELETE"):
+                print(f"[server] {self.address_string()} {format % args}")
 
     def send_json(self, data: dict, status: int = 200):
         """JSON 응답 전송."""
@@ -99,10 +99,14 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(content)))
             self.send_header("Cache-Control", "no-store")
+            self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
             self.end_headers()
             self.wfile.write(content)
         except FileNotFoundError:
             self.send_response(404)
+            self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
             self.end_headers()
 
     def do_OPTIONS(self):
@@ -110,7 +114,7 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
         self.end_headers()
 
     def _handle_api_data(self):
@@ -125,6 +129,9 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.send_json({"error": "잘못된 파일명"}, 400)
             return
         if name.endswith(".md"):
+            if name not in api.MD_FILES:
+                self.send_json({"error": "허용되지 않은 파일"}, 403)
+                return
             content = api.load_md_file(name)
             body = content.encode("utf-8")
             self.send_response(200)
@@ -133,6 +140,9 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif name.endswith(".json"):
+            if name not in api.INTEL_FILES:
+                self.send_json({"error": "허용되지 않은 파일"}, 403)
+                return
             self.send_file(api.INTEL_DIR / name, "application/json; charset=utf-8")
         else:
             self.send_json({"error": "지원하지 않는 파일 형식"}, 400)
@@ -169,6 +179,11 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
         params = parse_qs(parsed.query)
+
+        # 헬스체크 경로는 인증 불필요
+        if path != "/api/status" and not self._check_auth():
+            self.send_json({"error": "인증 실패"}, 401)
+            return
 
         # API 라우트 우선 처리
         if path == "/api/data":
@@ -244,6 +259,9 @@ class MissionControlHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """POST 요청 라우팅."""
+        if not self._check_auth():
+            self.send_json({"error": "인증 실패"}, 401)
+            return
         path = urlparse(self.path).path
 
         if path == "/api/run-pipeline":
@@ -346,6 +364,9 @@ class MissionControlHandler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         """PUT 요청 라우팅 (자산 수정)."""
+        if not self._check_auth():
+            self.send_json({"error": "인증 실패"}, 401)
+            return
         path = urlparse(self.path).path
         if path.startswith("/api/wealth/assets/"):
             try:
@@ -370,6 +391,9 @@ class MissionControlHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         """DELETE 요청 라우팅."""
+        if not self._check_auth():
+            self.send_json({"error": "인증 실패"}, 401)
+            return
         path = urlparse(self.path).path
         if path.startswith("/api/wealth/assets/"):
             try:
@@ -398,33 +422,25 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.end_headers()
 
-        # 클라이언트 큐 등록 (maxsize=100: 초과 시 put_nowait → Full → dead client 감지)
         client_queue: queue.Queue = queue.Queue(maxsize=100)
         with _sse_lock:
             _sse_clients.append(client_queue)
-
         try:
-            # 초기 연결 확인 메시지
             self.wfile.write(b"data: connected\n\n")
             self.wfile.flush()
-
             last_ping = time.time()
             while True:
                 try:
-                    # 큐에서 이벤트 대기 (1초 타임아웃)
                     event = client_queue.get(timeout=1.0)
-                    msg = f"data: {event}\n\n".encode()
-                    self.wfile.write(msg)
+                    self.wfile.write(f"data: {event}\n\n".encode())
                     self.wfile.flush()
                 except queue.Empty:
-                    # 30초마다 ping 전송
                     now = time.time()
                     if now - last_ping >= 30:
                         self.wfile.write(b"data: ping\n\n")
                         self.wfile.flush()
                         last_ping = now
         except (BrokenPipeError, ConnectionResetError):
-            # 클라이언트 연결 끊김
             pass
         finally:
             with _sse_lock, contextlib.suppress(ValueError):
@@ -450,7 +466,6 @@ def _watch_intel_dir():
     while True:
         try:
             if api.INTEL_DIR.exists():
-                # 디렉토리 내 모든 파일의 최신 mtime 계산
                 mtimes = [f.stat().st_mtime for f in api.INTEL_DIR.iterdir() if f.is_file()]
                 if mtimes:
                     current_mtime = max(mtimes)
@@ -465,7 +480,6 @@ def _watch_intel_dir():
 
 def main():
     """서버 시작."""
-    # 파일 감시 데몬 스레드 시작
     watcher = threading.Thread(target=_watch_intel_dir, daemon=True, name="intel-watcher")
     watcher.start()
     print("[watcher] output/intel/ 감시 시작 (5초 간격)")

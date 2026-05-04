@@ -195,7 +195,10 @@ def run():
 
     # ── STEP 3.5: 응답 유효성 검증 ──
     MIN_VALID_RESPONSE = 200
-    is_error_response = any(kw in claude_output for kw in ("authentication_error", "Not logged in", "Failed to authenticate", "API Error:"))
+    is_error_response = any(
+        kw in claude_output
+        for kw in ("authentication_error", "Not logged in", "Failed to authenticate", "API Error:")
+    )
     if len(claude_output) < MIN_VALID_RESPONSE or is_error_response:
         print(f"  ❌ Claude 응답 불량 ({len(claude_output)}자) — 저장 차단: {claude_output[:100]}")
         return
@@ -205,6 +208,7 @@ def run():
     try:
         INTEL_DIR.mkdir(parents=True, exist_ok=True)
         OUTPUT_FILE.write_text(claude_output, encoding="utf-8")
+        os.chmod(OUTPUT_FILE, 0o600)
         print(f"  ✅ 저장 완료: {OUTPUT_FILE}")
     except Exception as e:
         print(f"  ❌ 파일 저장 실패: {e}")

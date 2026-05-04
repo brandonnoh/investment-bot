@@ -3,8 +3,30 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   output: 'standalone',
   images: { unoptimized: true },
+  poweredByHeader: false,
   async headers() {
     return [
+      {
+        // 모든 경로에 보안 헤더 적용
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob:",
+              "connect-src 'self'",
+              "font-src 'self' data:",
+            ].join('; '),
+          },
+        ],
+      },
       {
         // HTML 페이지는 캐시 안 함 → 항상 최신 청크 URL 사용
         source: '/',

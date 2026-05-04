@@ -38,6 +38,8 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       - PYTHON_API_URL=http://investment-bot:8421
       - HOSTNAME=0.0.0.0

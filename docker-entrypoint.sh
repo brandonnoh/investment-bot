@@ -3,12 +3,16 @@ set -e
 
 # Docker env_file로 주입된 변수를 /etc/environment에 등록 (cron 데몬이 읽음)
 # .env는 .dockerignore에서 제외되므로 현재 프로세스 환경에서 직접 추출
-for var in DISCORD_WEBHOOK_URL BRAVE_API_KEY KIWOOM_APPKEY KIWOOM_SECRETKEY DART_API_KEY; do
+for var in DISCORD_WEBHOOK_URL BRAVE_API_KEY KIWOOM_APPKEY KIWOOM_SECRETKEY DART_API_KEY \
+           R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET_NAME R2_ENDPOINT_URL \
+           GOOGLE_GEMINI_API_KEY SANITY_API_WRITE_TOKEN SANITY_PROJECT_ID \
+           INTERNAL_API_KEY ALLOWED_ORIGIN; do
     val=$(printenv "$var" 2>/dev/null || true)
     if [ -n "$val" ]; then
         echo "$var=$val" >> /etc/environment
     fi
 done
+chmod 600 /etc/environment
 
 # Claude 인증 파일 — 호스트 마운트를 writable 위치에 복사 (ro 마운트라 symlink 불가)
 if [ -f /root/.claude-host.json ]; then

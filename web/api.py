@@ -143,9 +143,10 @@ def run_background(name: str, cmd: list) -> dict:
         }
 
     try:
-        # 로그 파일 경로
+        # 로그 파일 경로 (소유자만 읽기/쓰기)
         log_path = PID_DIR / f"{name}.log"
         with log_path.open("a", encoding="utf-8") as log_f:
+            os.chmod(log_path, 0o600)
             proc = subprocess.Popen(
                 cmd,
                 cwd=str(PROJECT_ROOT),

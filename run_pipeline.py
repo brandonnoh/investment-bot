@@ -66,6 +66,26 @@ def _send_discord(message: str) -> None:
         print(f"  ⚠️ Discord 전송 실패: {e}")
 
 
+def _step_item_count(step_name: str, result) -> int:
+    """분석 단계 반환값에서 처리 건수 추출"""
+    if result is None:
+        return 0
+    if step_name == "analyze_prices":
+        return len(result.get("analysis", {})) if isinstance(result, dict) else 0
+    if step_name == "check_alerts":
+        return len(result) if isinstance(result, list) else 0
+    if step_name == "run_screener":
+        try:
+            path = Path(__file__).resolve().parent / "output" / "intel" / "screener_results.json"
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return len(data.get("kospi200_top10", [])) + len(data.get("sp100_top10", []))
+        except Exception:
+            return 0
+    if step_name == "analyze_portfolio":
+        return len(result.get("holdings", [])) if isinstance(result, dict) else 0
+    return 0
+
+
 def _collect_data(engine: EngineStatus):
     """데이터 수집 단계 실행 (가격/매크로/뉴스/레짐/섹터/펀더멘탈/수급/발굴)"""
     price_records = fetch_prices()
@@ -85,7 +105,7 @@ def _collect_data(engine: EngineStatus):
         from analysis.regime_classifier import run as classify_regime
 
         classify_regime()
-        engine.record("classify_regime", success=True)
+        engine.record("classify_regime", success=True, item_count=1)
     except Exception as e:
         engine.record("classify_regime", success=False, error_msg=str(e))
         print(f"  ⚠️ 레짐 분류 실패: {e}")
@@ -120,7 +140,11 @@ def _collect_supply(engine: EngineStatus):
             print(
                 f"  수급: KRX {len(supply_results.get('krx_supply', {}))}개, F&G={supply_results.get('fear_greed', {})}"
             )
-        engine.record("fetch_supply", success=bool(supply_results))
+        krx_count = (
+            len(supply_results.get("krx_supply", {})) if isinstance(supply_results, dict) else 0
+        )
+        fg_count = 1 if isinstance(supply_results, dict) and supply_results.get("fear_greed") else 0
+        engine.record("fetch_supply", success=bool(supply_results), item_count=krx_count + fg_count)
     except Exception as e:
         engine.record("fetch_supply", success=False, error_msg=str(e))
         print(f"  ⚠️ fetch_supply 실패: {e}")
@@ -288,8 +312,8 @@ def main():
         ("analyze_portfolio", analyze_portfolio),
     ]:
         try:
-            step_fn()
-            engine.record(step_name, success=True)
+            result = step_fn()
+            engine.record(step_name, success=True, item_count=_step_item_count(step_name, result))
         except Exception as e:
             print(f"  ⚠️ {step_name} 실패: {e}")
             engine.record(step_name, success=False, error_msg=str(e))

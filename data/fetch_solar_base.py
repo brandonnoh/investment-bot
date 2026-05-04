@@ -9,10 +9,13 @@
 
 import hashlib
 import json
+import logging
 import re
 import ssl
 import urllib.request
 from typing import TypedDict
+
+logger = logging.getLogger(__name__)
 
 _PROVINCE_RE = re.compile(
     r"((?:서울|경기|인천|충[남북]|전[남북]|경[남북]|강원|제주|세종|대전|대구|부산|광주|울산|"
@@ -33,7 +36,10 @@ class SolarListing(TypedDict, total=False):
     url: str  # 매물 상세 URL
 
 
-# SSL 검증 비활성화 컨텍스트 (인증서 만료 사이트 대응)
+# 기본 SSL 컨텍스트 (인증서 검증 활성화)
+_SSL_DEFAULT = ssl.create_default_context()
+
+# 인증서 문제 사이트용 폴백 (경고 로그 전제)
 _SSL_UNVERIFIED = ssl.create_default_context()
 _SSL_UNVERIFIED.check_hostname = False
 _SSL_UNVERIFIED.verify_mode = ssl.CERT_NONE
@@ -49,25 +55,44 @@ _TIMEOUT = 15
 
 
 def fetch_json(url: str, headers: dict | None = None) -> dict | None:
-    """URL에서 JSON 응답을 가져온다. 실패 시 None 반환."""
+    """URL에서 JSON 응답을 가져온다. SSL 검증 실패 시 경고 후 재시도. 실패 시 None 반환."""
+    hdrs = {**_HEADERS, **(headers or {})}
     try:
-        hdrs = {**_HEADERS, **(headers or {})}
         req = urllib.request.Request(url, headers=hdrs)
-        with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_UNVERIFIED) as resp:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_DEFAULT) as resp:
             return json.loads(resp.read().decode("utf-8"))
+    except ssl.SSLError:
+        logger.warning("SSL 인증서 검증 실패, 비검증 모드로 재시도: %s", url[:80])
+        try:
+            req = urllib.request.Request(url, headers=hdrs)
+            with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_UNVERIFIED) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            logger.error("JSON 요청 실패 (비검증 재시도): %s — %s", url[:60], e)
+            return None
     except Exception as e:
         print(f"  [solar] JSON 요청 실패 ({url[:60]}): {e}")
         return None
 
 
 def fetch_html(url: str, headers: dict | None = None) -> str | None:
-    """URL에서 HTML 텍스트를 가져온다. 실패 시 None 반환."""
+    """URL에서 HTML 텍스트를 가져온다. SSL 검증 실패 시 경고 후 재시도. 실패 시 None 반환."""
+    hdrs = {**_HEADERS, **(headers or {})}
     try:
-        hdrs = {**_HEADERS, **(headers or {})}
         req = urllib.request.Request(url, headers=hdrs)
-        with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_UNVERIFIED) as resp:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_DEFAULT) as resp:
             charset = resp.headers.get_content_charset() or "utf-8"
             return resp.read().decode(charset, errors="replace")
+    except ssl.SSLError:
+        logger.warning("SSL 인증서 검증 실패, 비검증 모드로 재시도: %s", url[:80])
+        try:
+            req = urllib.request.Request(url, headers=hdrs)
+            with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_UNVERIFIED) as resp:
+                charset = resp.headers.get_content_charset() or "utf-8"
+                return resp.read().decode(charset, errors="replace")
+        except Exception as e:
+            logger.error("HTML 요청 실패 (비검증 재시도): %s — %s", url[:60], e)
+            return None
     except Exception as e:
         print(f"  [solar] HTML 요청 실패 ({url[:60]}): {e}")
         return None

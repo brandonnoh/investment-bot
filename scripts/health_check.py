@@ -63,14 +63,15 @@ _MD_MIN_CHARS: dict[str, int] = {
     "daily_report.md": _MIN_MD_CHARS,
 }
 
-# 크론 잡별 로그 파일 (평일 기준)
-_DAILY_LOGS: list[tuple[str, str]] = [
-    ("marcus", "marcus.log"),
-    ("jarvis", "jarvis.log"),
-    ("pipeline", "pipeline.log"),
-    ("news", "news.log"),
-    ("company_profiles", "company_profiles.log"),
-    ("sync_r2", "sync_r2.log"),
+# 크론 잡별 로그 파일 + 출력 파일 fallback (평일 기준)
+# (job_name, log_fname, output_fname_in_intel_dir | None)
+_DAILY_LOGS: list[tuple[str, str, str | None]] = [
+    ("marcus", "marcus.log", "marcus-analysis.md"),
+    ("jarvis", "jarvis.log", "cio-briefing.md"),
+    ("pipeline", "pipeline.log", None),
+    ("news", "news.log", None),
+    ("company_profiles", "company_profiles.log", None),
+    ("sync_r2", "sync_r2.log", None),
 ]
 
 # 매일 갱신되어야 하는 DB 테이블
@@ -234,12 +235,20 @@ def check_db_today(db_path: Path, table: str, date_col: str) -> CheckResult:
         return CheckResult(name, "fail", str(e))
 
 
-def check_log_today(log_path: Path, job_name: str) -> CheckResult:
-    """로그 파일이 오늘 수정됐는지 확인 (크론 잡 실행 여부 간접 확인)."""
+def check_log_today(log_path: Path, job_name: str, output_path: Path | None = None) -> CheckResult:
+    """로그 파일 또는 출력 파일이 최근 수정됐는지 확인.
+
+    크론 리다이렉션이 누락돼도 실제 출력물 mtime으로 정상 판별 가능.
+    """
     name = f"cron:{job_name}"
-    if not log_path.exists():
+    mtimes: list[float] = []
+    if log_path.exists():
+        mtimes.append(log_path.stat().st_mtime)
+    if output_path and output_path.exists():
+        mtimes.append(output_path.stat().st_mtime)
+    if not mtimes:
         return CheckResult(name, "warn", "로그 파일 없음")
-    age_hours = (time.time() - log_path.stat().st_mtime) / 3600
+    age_hours = (time.time() - max(mtimes)) / 3600
     if age_hours > 25:
         return CheckResult(name, "warn", f"마지막 실행 {age_hours:.1f}시간 전")
     return CheckResult(name, "ok", f"{age_hours:.1f}시간 전 실행")
@@ -299,8 +308,9 @@ def run_all_checks(
         results.append(check_db_today(db_path, table, date_col))
 
     # 크론 잡 로그
-    for job_name, log_fname in _DAILY_LOGS:
-        results.append(check_log_today(log_dir / log_fname, job_name))
+    for job_name, log_fname, output_fname in _DAILY_LOGS:
+        output_path = intel_dir / output_fname if output_fname else None
+        results.append(check_log_today(log_dir / log_fname, job_name, output_path))
 
     # Flask API
     results.append(check_api(api_url))

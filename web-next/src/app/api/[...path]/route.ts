@@ -3,12 +3,14 @@ import { NextRequest, NextResponse } from 'next/server'
 export const maxDuration = 120
 
 const API_BASE = process.env.PYTHON_API_URL ?? 'http://localhost:8421'
+const API_KEY = process.env.INTERNAL_API_KEY ?? ''
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'http://100.90.201.87:3000'
 
 const SSE_HEADERS = {
   'Content-Type': 'text/event-stream',
   'Cache-Control': 'no-cache',
   Connection: 'keep-alive',
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
 }
 
 async function proxy(req: NextRequest, path: string[]) {
@@ -18,7 +20,9 @@ async function proxy(req: NextRequest, path: string[]) {
   // SSE 이벤트 스트림 프록시
   if (pathStr === 'events') {
     try {
-      const upstream = await fetch(url, { headers: { Accept: 'text/event-stream' } })
+      const upstream = await fetch(url, {
+        headers: { Accept: 'text/event-stream', 'X-API-Key': API_KEY },
+      })
       if (!upstream.ok) {
         const errMsg = `data: {"error":"upstream ${upstream.status}"}\n\n`
         return new NextResponse(errMsg, { status: 200, headers: SSE_HEADERS })
@@ -36,7 +40,7 @@ async function proxy(req: NextRequest, path: string[]) {
       const bodyText = await req.text()
       const upstream = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: bodyText,
       })
       if (!upstream.ok) {
@@ -57,7 +61,7 @@ async function proxy(req: NextRequest, path: string[]) {
     const bodyText = hasBody ? await req.text() : undefined
     const res = await fetch(url, {
       method: req.method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: bodyText,
     })
     const data = await res.arrayBuffer()

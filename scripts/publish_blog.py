@@ -2,12 +2,14 @@
 cio-briefing.md, marcus-analysis.md → 영어 변환 → 썸네일 생성 → Sanity 발행
 파이프라인 완료 후 07:55에 실행
 """
+
+import base64
 import os
 import re
-import base64
-import requests
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
+
+import requests
 
 INTEL_DIR = Path("/app/output/intel")
 SANITY_PROJECT_ID = os.environ["SANITY_PROJECT_ID"]
@@ -15,13 +17,9 @@ SANITY_DATASET = os.environ.get("SANITY_DATASET", "production")
 SANITY_TOKEN = os.environ["SANITY_API_WRITE_TOKEN"]
 GEMINI_API_KEY = os.environ["GOOGLE_GEMINI_API_KEY"]
 
-SANITY_API = (
-    f"https://{SANITY_PROJECT_ID}.api.sanity.io"
-    f"/v2026-04-29/data/mutate/{SANITY_DATASET}"
-)
+SANITY_API = f"https://{SANITY_PROJECT_ID}.api.sanity.io/v2026-04-29/data/mutate/{SANITY_DATASET}"
 SANITY_ASSET_API = (
-    f"https://{SANITY_PROJECT_ID}.api.sanity.io"
-    f"/v2021-06-07/assets/images/{SANITY_DATASET}"
+    f"https://{SANITY_PROJECT_ID}.api.sanity.io/v2021-06-07/assets/images/{SANITY_DATASET}"
 )
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -40,7 +38,7 @@ POSTS_TO_PUBLISH = [
 
 
 def translate_to_english(korean_text: str) -> str:
-    url = f"{GEMINI_BASE}/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+    url = f"{GEMINI_BASE}/models/gemini-2.5-flash:generateContent"
     prompt = (
         "Translate this Korean financial analysis to professional English.\n"
         "Keep all numbers, tickers, and percentages exactly as-is.\n"
@@ -51,6 +49,7 @@ def translate_to_english(korean_text: str) -> str:
     )
     resp = requests.post(
         url,
+        headers={"x-goog-api-key": GEMINI_API_KEY},
         json={"contents": [{"parts": [{"text": prompt}]}]},
         timeout=30,
     )
@@ -59,7 +58,7 @@ def translate_to_english(korean_text: str) -> str:
 
 
 def generate_thumbnail(title: str, category: str) -> bytes | None:
-    url = f"{GEMINI_BASE}/models/imagen-4.0-generate-001:predict?key={GEMINI_API_KEY}"
+    url = f"{GEMINI_BASE}/models/imagen-4.0-generate-001:predict"
     style = "dark navy background, financial data visualization, professional"
     if category == "stock-picks":
         prompt = (
@@ -75,6 +74,7 @@ def generate_thumbnail(title: str, category: str) -> bytes | None:
         )
     resp = requests.post(
         url,
+        headers={"x-goog-api-key": GEMINI_API_KEY},
         json={
             "instances": [{"prompt": prompt}],
             "parameters": {"sampleCount": 1, "aspectRatio": "16:9"},
@@ -123,7 +123,7 @@ def publish_to_sanity(
         "_id": f"auto-{slug}",
         "title": title,
         "slug": {"_type": "slug", "current": slug},
-        "publishedAt": datetime.now(timezone.utc).isoformat(),
+        "publishedAt": datetime.now(UTC).isoformat(),
         "category": category,
         "categories": [category],
         "body": [{"_type": "block", "children": [{"_type": "span", "text": body}]}],
@@ -148,7 +148,7 @@ def publish_to_sanity(
 
 
 def main():
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
     for config in POSTS_TO_PUBLISH:
         path = INTEL_DIR / config["source"]
         if not path.exists():
