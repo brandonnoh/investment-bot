@@ -237,6 +237,8 @@ class MissionControlHandler(BaseHTTPRequestHandler):
         elif path == "/api/company":
             ticker = params.get("ticker", [""])[0]
             self.send_json(api_company.load_company_profile(ticker))
+        elif path == "/api/health":
+            self.send_json(api.load_health_status())
         else:
             self._serve_static(path)
 
@@ -266,6 +268,11 @@ class MissionControlHandler(BaseHTTPRequestHandler):
                     str(PROJECT_ROOT / "scripts" / "refresh_prices.py"),
                 ],
             )
+            self.send_json(result)
+
+        elif path == "/api/health/run":
+            # health_check.py 동기 실행 — 완료 후 최신 결과 반환
+            result = api.run_health_check_sync()
             self.send_json(result)
 
         elif path == "/api/wealth/assets":

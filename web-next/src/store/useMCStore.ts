@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 
-export type TabId = 'overview' | 'portfolio' | 'marcus' | 'discovery' | 'wealth' | 'solar' | 'alerts' | 'system' | 'service-map' | 'advisor' | 'saved-strategies'
+export type TabId = 'overview' | 'portfolio' | 'marcus' | 'discovery' | 'wealth' | 'solar' | 'alerts' | 'system' | 'service-map' | 'advisor' | 'saved-strategies' | 'health'
 
 const VALID_TABS: TabId[] = [
   'overview', 'portfolio', 'marcus', 'discovery', 'wealth',
-  'solar', 'alerts', 'system', 'service-map', 'advisor', 'saved-strategies',
+  'solar', 'alerts', 'system', 'service-map', 'advisor', 'saved-strategies', 'health',
 ]
 
 interface MCStore {

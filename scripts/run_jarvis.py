@@ -193,6 +193,13 @@ def run():
         print(f"  ❌ Claude 실행 실패: {e}")
         return
 
+    # ── STEP 3.5: 응답 유효성 검증 ──
+    MIN_VALID_RESPONSE = 200
+    is_error_response = any(kw in claude_output for kw in ("authentication_error", "Not logged in", "Failed to authenticate", "API Error:"))
+    if len(claude_output) < MIN_VALID_RESPONSE or is_error_response:
+        print(f"  ❌ Claude 응답 불량 ({len(claude_output)}자) — 저장 차단: {claude_output[:100]}")
+        return
+
     # ── STEP 4: 결과 저장 (stdout을 직접 파일에 저장) ──
     print("[4/6] CIO 브리핑 저장...")
     try:

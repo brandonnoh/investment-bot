@@ -389,10 +389,44 @@ def _load_yesterday_analysis() -> str:
         return ""
 
 
+_PID_FILE = PROJECT_ROOT / "logs" / "marcus.pid"
+
+
+def _acquire_lock() -> bool:
+    """PID 파일로 중복 실행 방지. 이미 실행 중이면 False."""
+    if _PID_FILE.exists():
+        try:
+            pid = int(_PID_FILE.read_text().strip())
+            os.kill(pid, 0)  # 프로세스 생존 확인
+            print(f"  ⚠️  이미 실행 중 (PID {pid}) — 종료")
+            return False
+        except (ValueError, ProcessLookupError, OSError):
+            _PID_FILE.unlink(missing_ok=True)
+    _PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _PID_FILE.write_text(str(os.getpid()))
+    return True
+
+
+def _release_lock() -> None:
+    """PID 파일 삭제."""
+    _PID_FILE.unlink(missing_ok=True)
+
+
 def run():
     """마커스 분석 실행 메인 함수"""
     print("=== 마커스 분석 실행기 시작 ===")
 
+    if not _acquire_lock():
+        return
+
+    try:
+        _run_analysis()
+    finally:
+        _release_lock()
+
+
+def _run_analysis():
+    """마커스 분석 실제 실행 — run()에서 lock 보호 하에 호출."""
     # ── STEP 1: JSON 데이터 로드 ──
     print("[1/9] JSON 데이터 로드...")
     yesterday_analysis = _load_yesterday_analysis()

@@ -85,12 +85,14 @@ def _collect_data(engine: EngineStatus):
         from analysis.regime_classifier import run as classify_regime
 
         classify_regime()
+        engine.record("classify_regime", success=True)
     except Exception as e:
+        engine.record("classify_regime", success=False, error_msg=str(e))
         print(f"  ⚠️ 레짐 분류 실패: {e}")
 
     _collect_fundamentals(engine)
-    _collect_supply()
-    _run_sector_intel()
+    _collect_supply(engine)
+    _run_sector_intel(engine)
     _fetch_universe_daily(engine)  # 유니버스 일봉 사전 수집 (value_screener DB 스크리닝용)
     _collect_opportunities(engine)
 
@@ -108,7 +110,7 @@ def _collect_fundamentals(engine: EngineStatus):
         print(f"  ⚠️ fetch_fundamentals 실패: {e}")
 
 
-def _collect_supply():
+def _collect_supply(engine: EngineStatus):
     """Phase 4.1: 수급 데이터 수집"""
     try:
         from data.fetch_supply import run as fetch_supply
@@ -118,11 +120,13 @@ def _collect_supply():
             print(
                 f"  수급: KRX {len(supply_results.get('krx_supply', {}))}개, F&G={supply_results.get('fear_greed', {})}"
             )
+        engine.record("fetch_supply", success=bool(supply_results))
     except Exception as e:
+        engine.record("fetch_supply", success=False, error_msg=str(e))
         print(f"  ⚠️ fetch_supply 실패: {e}")
 
 
-def _run_sector_intel():
+def _run_sector_intel(engine: EngineStatus):
     """섹터 인텔리전스: macro/news/regime → sector_scores.json"""
     try:
         from analysis.sector_intel import run as run_sector_intel
@@ -130,7 +134,9 @@ def _run_sector_intel():
         result = run_sector_intel()
         top = result.get("sectors", [{}])[0]
         print(f"  섹터 점수화: top={top.get('name')}({top.get('score')})")
+        engine.record("sector_intel", success=True, item_count=len(result.get("sectors", [])))
     except Exception as e:
+        engine.record("sector_intel", success=False, error_msg=str(e))
         print(f"  ⚠️ sector_intel 실패: {e}")
 
 
@@ -283,8 +289,10 @@ def main():
     ]:
         try:
             step_fn()
+            engine.record(step_name, success=True)
         except Exception as e:
             print(f"  ⚠️ {step_name} 실패: {e}")
+            engine.record(step_name, success=False, error_msg=str(e))
             _failed_steps.append(step_name)
 
     # 4.1 ~ 4.3. 후처리 분석

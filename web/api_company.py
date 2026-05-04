@@ -15,6 +15,9 @@ def load_company_profile(ticker: str) -> dict:
     try:
         with get_db_conn() as conn:
             profile = _load_profile(conn, ticker)
+            # company_profiles 없으면 ticker_master로 기본 프로필 생성
+            if not profile:
+                profile = _load_ticker_master(conn, ticker)
             if not profile:
                 return {}
             fundamentals = _load_fundamentals(conn, ticker)
@@ -35,6 +38,16 @@ def load_company_profile(ticker: str) -> dict:
             except Exception:
                 result[field] = fallback
     return result
+
+
+def _load_ticker_master(conn, ticker: str) -> dict:
+    """ticker_master에서 기본 정보 조회 — company_profiles 없을 때 fallback."""
+    row = conn.execute(
+        "SELECT ticker, name, sector, market FROM ticker_master WHERE ticker = ?", (ticker,)
+    ).fetchone()
+    if not row:
+        return {}
+    return {"ticker": row["ticker"], "name": row["name"], "sector": row["sector"]}
 
 
 def _load_profile(conn, ticker: str) -> dict:

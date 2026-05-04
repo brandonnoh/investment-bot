@@ -150,6 +150,7 @@ export interface IntelData {
   alerts?: {
     alerts?: Alert[]
     count?: number
+    triggered_at?: string
   }
   regime?: RegimeData                  // 실제 키: regime (market_regime 아님)
   supply_data?: SupplyData
@@ -251,4 +252,18 @@ export interface SolarListing {
 export interface SolarResponse {
   listings: SolarListing[]
   count: number
+}
+
+export interface HealthCheckItem {
+  name: string
+  status: 'ok' | 'warn' | 'fail'
+  detail: string
+  description: string
+  category: 'intel' | 'report' | 'database' | 'cron' | 'service' | 'pipeline' | 'other'
+}
+
+export interface HealthCheckData {
+  checked_at: string | null
+  summary: { ok: number; warn: number; fail: number; total: number }
+  results: HealthCheckItem[]
 }

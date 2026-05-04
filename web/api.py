@@ -303,3 +303,34 @@ def load_analysis_detail(date: str) -> dict | None:
     except Exception as e:
         print(f"[api] analysis_history 상세 조회 실패: {e}")
         return None
+
+
+def load_health_status() -> dict:
+    """health_check.json 로드 — 없으면 빈 결과 반환."""
+    path = INTEL_DIR / "health_check.json"
+    try:
+        if path.exists():
+            with path.open(encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"[api] health_check.json 로드 실패: {e}")
+    return {
+        "checked_at": None,
+        "summary": {"ok": 0, "warn": 0, "fail": 0, "total": 0},
+        "results": [],
+    }
+
+
+def run_health_check_sync() -> dict:
+    """health_check.py 동기 실행 후 최신 결과 반환 (새로고침 버튼용)."""
+    try:
+        subprocess.run(
+            ["python3", str(PROJECT_ROOT / "scripts" / "health_check.py")],
+            cwd=str(PROJECT_ROOT),
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        logger.warning("health_check.py 30초 초과 — 중간 결과 반환")
+    except Exception as e:
+        logger.error(f"health_check.py 실행 실패: {e}")
+    return load_health_status()
