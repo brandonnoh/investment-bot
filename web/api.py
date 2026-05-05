@@ -43,6 +43,7 @@ INTEL_FILES = [
     "sector_scores.json",
     "proactive_alerts.json",
     "correction_notes.json",
+    "fred_macro.json",
 ]
 
 # 읽을 마크다운 파일 목록
@@ -352,4 +353,22 @@ def load_price_history(ticker: str, days: int = 30) -> list[dict]:
         return [{"date": r["date"], "close": float(r["close"])} for r in reversed(rows)]
     except Exception as e:
         logger.error(f"[api] price_history 조회 실패 {ticker}: {e}")
+        return []
+
+
+def load_macro_history(series_id: str, days: int = 30) -> list[dict]:
+    """macro 테이블에서 특정 지표 최근 N일 이력 반환 (스파크라인용)."""
+    if not series_id:
+        return []
+    try:
+        with get_db_conn() as conn:
+            rows = conn.execute(
+                """SELECT timestamp, value FROM macro
+                   WHERE indicator = ?
+                   ORDER BY timestamp DESC LIMIT ?""",
+                (series_id, days),
+            ).fetchall()
+        return [{"time": r["timestamp"], "value": float(r["value"])} for r in reversed(rows)]
+    except Exception as e:
+        logger.error(f"[api] macro_history 조회 실패 {series_id}: {e}")
         return []

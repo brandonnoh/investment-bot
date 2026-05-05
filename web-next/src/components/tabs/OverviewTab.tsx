@@ -1,16 +1,30 @@
 'use client'
 
 import { useState } from 'react'
+import useSWR from 'swr'
 import { useIntelData } from '@/hooks/useIntelData'
 import { fmtKrw, fmtPct, pctColor } from '@/lib/format'
 import { SyncBadge } from '@/components/SyncBadge'
 import { useCountUp, fgStyle } from '@/hooks/useCountUp'
+import { MacroSparkline } from '@/components/charts/MacroSparkline'
 import { MobileHero, MobileMarketBar, MobileHoldingsList } from '@/components/tabs/OverviewMobile'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 
 const GOLD_TICKER = 'GOLD_KRW_G'
+
+const sparklineFetcher = (url: string) => fetch(url).then(r => r.json())
+
+/** 개별 매크로 지표의 스파크라인 데이터를 SWR로 로드 */
+function MacroSparklineWithData({ seriesId }: { seriesId: string }) {
+  const { data } = useSWR<{ time: string; value: number }[]>(
+    `/api/macro-history?series_id=${encodeURIComponent(seriesId)}&days=30`,
+    sparklineFetcher,
+    { dedupingInterval: 3_600_000 },
+  )
+  return <MacroSparkline data={data ?? undefined} width={60} height={28} />
+}
 
 // ── 데스크탑 War Room: 좌측 포트폴리오 패널 ─────────────────
 
@@ -145,8 +159,9 @@ function MarketPanel() {
           <div className="border-t border-mc-border mb-4" />
           <div className="space-y-2">
             {macro.slice(0, 4).map((m) => (
-              <div key={m.indicator} className="flex justify-between items-baseline">
-                <span className="text-[14px] text-muted-foreground font-mono">{m.indicator}</span>
+              <div key={m.indicator} className="flex items-center gap-2">
+                <span className="text-[14px] text-muted-foreground font-mono flex-1">{m.indicator}</span>
+                <MacroSparklineWithData seriesId={m.indicator} />
                 <span className={`text-[14px] font-mono tabular-nums ${pctColor(m.change_pct)}`}>
                   {m.value?.toFixed(2)}
                   {m.change_pct !== undefined && <span className="opacity-60 ml-1">{fmtPct(m.change_pct)}</span>}

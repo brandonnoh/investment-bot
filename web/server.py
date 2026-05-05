@@ -258,6 +258,10 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             ticker = params.get("ticker", [""])[0]
             days = self._parse_int_param(params, "days", 30, 5, 180)
             self.send_json(api.load_price_history(ticker, days))
+        elif path == "/api/macro-history":
+            series_id = params.get("series_id", [""])[0]
+            days = self._parse_int_param(params, "days", 30, 5, 365)
+            self.send_json(api.load_macro_history(series_id, days))
         else:
             self._serve_static(path)
 

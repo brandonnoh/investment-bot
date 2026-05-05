@@ -56,5 +56,8 @@ PATH=/usr/local/bin:/usr/bin:/bin
 # DB 유지보수 (purge + vacuum): 매주 일요일 03:00 KST
 0 3 * * 0 root cd /app && python3 db/maintenance.py >> /app/logs/maintenance.log 2>&1
 
+# FRED 경제 지표 수집: 매일 08:15, 20:15 KST
+15 8,20 * * * root cd /app && python3 data/fetch_fred.py >> /app/logs/fetch_fred.log 2>&1
+
 # 로그 로테이션: 매일 00:05 KST — 10MB 초과 로그 압축 + 7일 이상 삭제
 5 0 * * * root find /app/logs -name "*.log" -size +10M -exec gzip {} \; && find /app/logs -name "*.log.gz" -mtime +7 -delete

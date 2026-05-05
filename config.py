@@ -12,6 +12,20 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "db" / "history.db"
 OUTPUT_DIR = BASE_DIR / "output" / "intel"
 
+# ── FRED API 설정 ──
+FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
+
+FRED_SERIES = {
+    "FEDFUNDS": {"name": "미국 기준금리", "unit": "%", "category": "금리"},
+    "DGS10": {"name": "미10년 국채", "unit": "%", "category": "금리"},
+    "T10Y2Y": {"name": "장단기 금리차", "unit": "%p", "category": "금리"},
+    "CPIAUCSL": {"name": "미국 CPI", "unit": "%", "category": "물가"},
+    "UNRATE": {"name": "미국 실업률", "unit": "%", "category": "노동"},
+    "GDPC1": {"name": "미 실질GDP 성장률", "unit": "%", "category": "성장"},
+    "VIXCLS": {"name": "VIX (FRED)", "unit": "pt", "category": "변동성"},
+    "DTWEXBGS": {"name": "달러 인덱스(Broad)", "unit": "pt", "category": "외환"},
+}
+
 # ══════════════════════════════════════════════════════════════
 # DEPRECATED: PORTFOLIO는 이제 DB SSoT (holdings 테이블) 사용
 # 아래 데이터는 마이그레이션 완료 후 레거시 참조용으로만 유지

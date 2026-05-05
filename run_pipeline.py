@@ -112,6 +112,17 @@ def _collect_data(engine: EngineStatus):
 
     _collect_fundamentals(engine)
     _collect_supply(engine)
+
+    # FRED 경제 지표 수집 (API key 있을 때만 실행)
+    try:
+        from data.fetch_fred import run as fetch_fred
+
+        fetch_fred()
+        engine.record("fetch_fred", success=True)
+    except Exception as e:
+        engine.record("fetch_fred", success=False, error_msg=str(e))
+        print(f"  ⚠️ fetch_fred 실패: {e}")
+
     _run_sector_intel(engine)
     _fetch_universe_daily(engine)  # 유니버스 일봉 사전 수집 (value_screener DB 스크리닝용)
     _collect_opportunities(engine)
