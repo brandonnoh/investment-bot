@@ -46,17 +46,34 @@ docker exec investment-bot python3 -c \
 
 ---
 
-### 2. docker-compose.yml 수정
-볼륨 추가/삭제, 환경변수 추가, 포트 변경 등 컨테이너 설정이 바뀐 경우.
-컨테이너를 새로 만들어야 한다. **빌드는 하지 않는다.**
+### 2. .env 수정 (환경변수 추가/변경)
+`.env`는 **두 컨테이너가 모두 참조**한다 (`investment-bot` + `mc-web`).
+`docker restart`는 env를 재로드하지 않는다 — **반드시 재생성**해야 한다.
 
 ```bash
 docker compose up -d --no-build --no-deps investment-bot
+docker compose up -d --no-build --no-deps mc-web
+```
+
+⚠️ 한쪽만 재생성하면 env 불일치로 인증 실패 등이 발생한다.
+예: `INTERNAL_API_KEY` 추가 시 mc-web이 401을 받아 데이터 전체가 안 보임.
+
+---
+
+### 3. docker-compose.yml 수정
+볼륨 추가/삭제, 포트 변경 등 컨테이너 설정이 바뀐 경우.
+컨테이너를 새로 만들어야 한다. **빌드는 하지 않는다.**
+
+영향받는 컨테이너만 재생성:
+```bash
+docker compose up -d --no-build --no-deps investment-bot
+# mc-web도 바뀐 경우:
+docker compose up -d --no-build --no-deps mc-web
 ```
 
 ---
 
-### 3. Next.js 소스 수정 (web-next/)
+### 4. Next.js 소스 수정 (web-next/)
 Next.js는 볼륨 마운트 없음 — 빌드 후 직접 복사해야 한다.
 
 ```bash
@@ -75,7 +92,7 @@ docker restart mc-web
 
 ---
 
-### 4. Dockerfile / requirements.txt 수정 (매우 드묾)
+### 5. Dockerfile / requirements.txt 수정 (매우 드묾)
 패키지 설치, OS 설정 등 이미지 자체가 바뀔 때만.
 볼륨 마운트 덕분에 **실질적으로 Dockerfile을 건드릴 일이 거의 없다.**
 `crontab.docker`도 이제 볼륨 마운트이므로 빌드 불필요.

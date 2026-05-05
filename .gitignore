@@ -25,6 +25,11 @@ logs/*.log
 # Ralph 상태
 .ralph-state/
 
+# 도구 캐시 (자동 생성)
+.playwright-mcp/
+.serena/
+.wj-magic/
+
 # macOS
 .DS_Store
 

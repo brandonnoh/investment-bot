@@ -1,0 +1,10 @@
+{
+  "active": false,
+  "started_at": "2026-04-19T13:08:40Z",
+  "current_task": "pipeline-wire",
+  "iteration": 0,
+  "consecutive_failures": 0,
+  "last_gate_result": null,
+  "stop_reason": "all_done",
+  "timeout_min": 0
+}
