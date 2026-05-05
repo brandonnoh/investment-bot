@@ -19,7 +19,7 @@ venv/
 .claude-logs/
 
 # 로그 파일
-logs/*.log
+logs/
 
 # 로컬 MCP 설정
 .mcp.json
