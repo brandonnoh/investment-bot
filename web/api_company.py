@@ -29,6 +29,13 @@ def load_company_profile(ticker: str) -> dict:
     # 펀더멘탈 값이 프로필 값보다 우선 (더 최신)
     result = {**profile, **fundamentals}
     result["recent_news"] = news
+    # description: 하위 호환 필드 (description_kr 우선, 없으면 description_en)
+    result["description"] = (
+        result.get("description_kr")
+        or result.get("description_en")
+        or result.get("description")
+        or ""
+    )
     # JSON 문자열 필드를 리스트로 변환
     for field, fallback in (("screen_strategies", []), ("analyst_reports", [])):
         raw = result.get(field)

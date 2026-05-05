@@ -403,6 +403,9 @@ MIGRATION_COLUMNS = [
     ("company_profiles", "founded", "TEXT"),
     ("company_profiles", "analyst_reports", "TEXT"),
     ("company_profiles", "foreign_rate", "TEXT"),
+    # 기업 설명 영문/한국어 분리 저장 (description은 레거시 — 읽기 전용)
+    ("company_profiles", "description_en", "TEXT"),
+    ("company_profiles", "description_kr", "TEXT"),
 ]
 
 # ── 파이프라인 이력 테이블 (regime / sector / correction / performance) ──

@@ -101,6 +101,7 @@ def _fetch_profile_kr(ticker: str) -> dict | None:
         print(f"  [skip] {ticker}: 유효한 데이터 없음 (KR)")
         return None
 
+    raw_desc = yf_info.get("longBusinessSummary", "") or ""
     return {
         "name": name,
         "name_kr": dart_info.get("name_kr"),
@@ -108,7 +109,8 @@ def _fetch_profile_kr(ticker: str) -> dict | None:
         "industry": yf_info.get("industry"),
         "exchange": exchange,
         "country": "South Korea",
-        "description": _translate_to_korean(yf_info.get("longBusinessSummary", "") or ""),
+        "description_en": raw_desc,
+        "description_kr": _translate_to_korean(raw_desc),
         "website": dart_info.get("website") or yf_info.get("website"),
         "employees": dart_info.get("employees") or yf_info.get("fullTimeEmployees"),
         "market_cap": yf_info.get("marketCap"),
@@ -130,6 +132,7 @@ def _fetch_profile_us(ticker: str) -> dict | None:
         print(f"  [skip] {ticker}: 유효한 데이터 없음")
         return None
 
+    raw_desc = yf_info.get("longBusinessSummary", "") or ""
     return {
         "name": yf_info.get("longName") or yf_info.get("shortName"),
         "name_kr": None,
@@ -137,7 +140,8 @@ def _fetch_profile_us(ticker: str) -> dict | None:
         "industry": yf_info.get("industry"),
         "exchange": yf_info.get("exchange"),
         "country": yf_info.get("country"),
-        "description": _translate_to_korean(yf_info.get("longBusinessSummary", "") or ""),
+        "description_en": raw_desc,
+        "description_kr": _translate_to_korean(raw_desc),
         "website": yf_info.get("website"),
         "employees": yf_info.get("fullTimeEmployees"),
         "market_cap": yf_info.get("marketCap"),
@@ -159,21 +163,45 @@ def _fetch_profile(ticker: str) -> dict | None:
     return _fetch_profile_us(ticker)
 
 
+def _has_both_descriptions(conn, ticker: str) -> bool:
+    """description_en, description_kr 모두 존재하면 True — 스킵 판단에 사용."""
+    row = conn.execute(
+        "SELECT description_en, description_kr FROM company_profiles WHERE ticker = ?",
+        (ticker,),
+    ).fetchone()
+    if not row:
+        return False
+    return bool(row["description_en"]) and bool(row["description_kr"])
+
+
+def _update_strategies_only(conn, ticker: str, strategies: list[str]) -> None:
+    """screen_strategies와 updated_at만 갱신 (설명 수집 스킵 시)."""
+    conn.execute(
+        "UPDATE company_profiles SET screen_strategies = ?, updated_at = ? WHERE ticker = ?",
+        (json.dumps(strategies, ensure_ascii=False), datetime.now(KST).isoformat(), ticker),
+    )
+
+
 def _upsert_profile(conn, ticker: str, profile: dict, strategies: list[str]):
-    """company_profiles 테이블에 UPSERT (DART/네이버 강화 컬럼 포함)."""
+    """company_profiles 테이블에 UPSERT — description_en/kr 별도 컬럼으로 저장."""
     now = datetime.now(KST).isoformat()
     conn.execute(
         """INSERT INTO company_profiles
            (ticker, name, name_kr, sector, industry, exchange, country,
-            description, website, employees, market_cap, current_price,
+            description_en, description_kr,
+            website, employees, market_cap, current_price,
             price_52w_high, price_52w_low, ceo, address, founded,
             analyst_reports, foreign_rate, screen_strategies, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(ticker) DO UPDATE SET
              name=excluded.name, name_kr=excluded.name_kr,
              sector=excluded.sector, industry=excluded.industry,
              exchange=excluded.exchange, country=excluded.country,
-             description=excluded.description, website=excluded.website,
+             description_en=CASE WHEN excluded.description_en != ''
+               THEN excluded.description_en ELSE company_profiles.description_en END,
+             description_kr=CASE WHEN excluded.description_kr != ''
+               THEN excluded.description_kr ELSE company_profiles.description_kr END,
+             website=excluded.website,
              employees=excluded.employees, market_cap=excluded.market_cap,
              current_price=excluded.current_price,
              price_52w_high=excluded.price_52w_high,
@@ -192,7 +220,8 @@ def _upsert_profile(conn, ticker: str, profile: dict, strategies: list[str]):
             profile.get("industry"),
             profile.get("exchange"),
             profile.get("country"),
-            profile.get("description"),
+            profile.get("description_en") or "",
+            profile.get("description_kr") or "",
             profile.get("website"),
             profile.get("employees"),
             profile.get("market_cap"),
@@ -219,15 +248,18 @@ def _is_english(text: str) -> bool:
 
 
 def _retranslate_failed(tickers: list[str]) -> None:
-    """번역 실패(영문 그대로)인 종목 재번역 시도."""
+    """description_kr이 영문 그대로인 종목 재번역 시도."""
     placeholders = ",".join("?" * len(tickers))
     with get_db_conn() as conn:
         rows = conn.execute(
-            f"SELECT ticker, description FROM company_profiles WHERE ticker IN ({placeholders})",
+            f"SELECT ticker, description_en, description_kr FROM company_profiles WHERE ticker IN ({placeholders})",
             tickers,
         ).fetchall()
         failed = [
-            (r["ticker"], r["description"]) for r in rows if _is_english(r["description"] or "")
+            (r["ticker"], r["description_en"])
+            for r in rows
+            if _is_english(r["description_kr"] or "")
+            and (r["description_en"] or "")
         ]
 
     if not failed:
@@ -235,11 +267,11 @@ def _retranslate_failed(tickers: list[str]) -> None:
 
     print(f"[company_profiles] 번역 실패 {len(failed)}개 재시도 중...")
     with get_db_conn() as conn:
-        for ticker, desc in failed:
-            translated = _translate_to_korean(desc)
+        for ticker, desc_en in failed:
+            translated = _translate_to_korean(desc_en)
             if translated and not _is_english(translated):
                 conn.execute(
-                    "UPDATE company_profiles SET description = ? WHERE ticker = ?",
+                    "UPDATE company_profiles SET description_kr = ? WHERE ticker = ?",
                     (translated, ticker),
                 )
                 print(f"  ✓ {ticker} 재번역 완료")
@@ -247,6 +279,15 @@ def _retranslate_failed(tickers: list[str]) -> None:
                 print(f"  ✗ {ticker} 재번역 실패 — 영문 유지")
             time.sleep(_RATE_LIMIT)
         conn.commit()
+
+
+def _migrate_legacy_description(conn) -> None:
+    """기존 description 컬럼 데이터를 description_kr로 일회성 복사."""
+    conn.execute(
+        """UPDATE company_profiles
+           SET description_kr = description
+           WHERE description_kr IS NULL AND description IS NOT NULL AND description != ''"""
+    )
 
 
 def run():
@@ -257,8 +298,15 @@ def run():
     print(f"[company_profiles] 대상 종목 {total}개")
 
     success = 0
+    skipped = 0
     with get_db_conn() as conn:
+        _migrate_legacy_description(conn)
         for i, (ticker, strategies) in enumerate(ticker_strategies.items(), 1):
+            if _has_both_descriptions(conn, ticker):
+                print(f"  ({i}/{total}) {ticker} 스킵 (기수집)")
+                _update_strategies_only(conn, ticker, strategies)
+                skipped += 1
+                continue
             print(f"  ({i}/{total}) {ticker} 수집 중...")
             profile = _fetch_profile(ticker)
             if profile:
@@ -267,7 +315,7 @@ def run():
             time.sleep(_RATE_LIMIT)
         conn.commit()
 
-    print(f"[company_profiles] 완료: {success}/{total}개 저장")
+    print(f"[company_profiles] 완료: {success}개 저장, {skipped}개 스킵")
     _retranslate_failed(list(ticker_strategies.keys()))
 
 

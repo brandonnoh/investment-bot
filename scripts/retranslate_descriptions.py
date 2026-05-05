@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """company_profiles 영문 description 한국어 재번역."""
+
 import sys
 import time
 from pathlib import Path
@@ -14,7 +15,7 @@ from web.claude_caller import call_claude  # noqa: E402
 def _is_english(text: str) -> bool:
     if not text:
         return False
-    kr_chars = sum(1 for c in text if '가' <= c <= '힣')
+    kr_chars = sum(1 for c in text if "가" <= c <= "힣")
     return kr_chars / len(text) < 0.05
 
 
@@ -33,31 +34,24 @@ def _translate(text: str) -> str:
 def run() -> None:
     with get_db_conn() as conn:
         rows = conn.execute(
-            "SELECT ticker, name FROM company_profiles WHERE description IS NOT NULL AND description != ''"
+            "SELECT ticker, name, description_en, description_kr FROM company_profiles"
+            " WHERE description_en IS NOT NULL AND description_en != ''"
         ).fetchall()
-        all_descs = {
-            r["ticker"]: conn.execute(
-                "SELECT description FROM company_profiles WHERE ticker = ?", (r["ticker"],)
-            ).fetchone()["description"]
-            for r in rows
-        }
 
     targets = [
-        (ticker, desc)
-        for ticker, desc in all_descs.items()
-        if _is_english(desc)
+        (r["ticker"], r["name"], r["description_en"])
+        for r in rows
+        if _is_english(r["description_kr"] or "")
     ]
 
     print(f"[retranslate] 번역 대상: {len(targets)}개")
 
     with get_db_conn() as conn:
-        for i, (ticker, desc) in enumerate(targets, 1):
-            name_row = next((r for r in rows if r["ticker"] == ticker), None)
-            name = name_row["name"] if name_row else ticker
-            print(f"  ({i}/{len(targets)}) {ticker} | {name[:30]}")
-            translated = _translate(desc)
+        for i, (ticker, name, desc_en) in enumerate(targets, 1):
+            print(f"  ({i}/{len(targets)}) {ticker} | {(name or ticker)[:30]}")
+            translated = _translate(desc_en)
             conn.execute(
-                "UPDATE company_profiles SET description = ? WHERE ticker = ?",
+                "UPDATE company_profiles SET description_kr = ? WHERE ticker = ?",
                 (translated, ticker),
             )
             conn.commit()
