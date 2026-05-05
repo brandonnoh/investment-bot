@@ -85,7 +85,7 @@ export function CompanyDrawer({ ticker, opportunity, onClose }: CompanyDrawerPro
 
         {!isLoading && !empty && profile && (
           <>
-            {ticker && (
+            {ticker && !ticker.endsWith('.KS') && !ticker.endsWith('.KQ') && (
               <div className="px-4 pt-4">
                 <TradingViewWidget ticker={ticker} height={300} />
               </div>

@@ -1,9 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
 import useSWR from 'swr'
-import { createChart, LineSeries, ColorType } from 'lightweight-charts'
-import { useTheme } from 'next-themes'
 
 interface PricePoint {
   date: string
@@ -18,82 +15,64 @@ interface PriceSparklineProps {
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
+function SparklineSvg({ data, height }: { data: PricePoint[]; height: number }) {
+  if (data.length < 2) return null
+
+  const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date))
+  const values = sorted.map(d => d.close)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+  const W = 100  // viewBox width
+  const H = height
+  const pad = 2
+
+  const points = sorted.map((d, i) => {
+    const x = pad + (i / (sorted.length - 1)) * (W - pad * 2)
+    const y = (H - pad) - ((d.close - min) / range) * (H - pad * 2)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+
+  const isUp = values[values.length - 1] >= values[0]
+  const color = isUp ? '#4dca7e' : '#e05656'
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      className="w-full"
+      style={{ height, display: 'block' }}
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 export function PriceSparkline({ ticker, days = 30, height = 48 }: PriceSparklineProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const { theme } = useTheme()
-  const isDark = theme !== 'light'
   const { data } = useSWR<PricePoint[]>(
     `/api/price-history?ticker=${ticker}&days=${days}`,
     fetcher,
     { dedupingInterval: 300_000 }
   )
 
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el || !data || data.length === 0) return
-
-    const width = el.clientWidth
-    if (width === 0) return
-
-    const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date))
-    const firstVal = sorted[0].close
-    const lastVal = sorted[sorted.length - 1].close
-    const lineColor = lastVal >= firstVal ? '#4dca7e' : '#e05656'
-
-    const chart = createChart(el, {
-      width,
-      height,
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: 'transparent',
-      },
-      grid: {
-        vertLines: { visible: false },
-        horzLines: { visible: false },
-      },
-      rightPriceScale: { visible: false },
-      leftPriceScale: { visible: false },
-      timeScale: { visible: false },
-      crosshair: {
-        vertLine: { visible: false },
-        horzLine: { visible: false },
-      },
-      handleScroll: false,
-      handleScale: false,
-    })
-
-    const series = chart.addSeries(LineSeries, {
-      color: lineColor,
-      lineWidth: 1,
-      priceLineVisible: false,
-      lastValueVisible: false,
-      crosshairMarkerVisible: false,
-    })
-
-    series.setData(sorted.map(d => ({ time: d.date, value: d.close })))
-    chart.timeScale().fitContent()
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (entry) chart.resize(entry.contentRect.width, height)
-    })
-    observer.observe(el)
-
-    return () => {
-      observer.disconnect()
-      chart.remove()
-    }
-  }, [data, height, isDark])
-
-  // 로딩 또는 데이터 없음
-  if (!data || data.length === 0) {
-    return (
-      <div
-        className="rounded bg-muted animate-pulse"
-        style={{ height }}
-      />
-    )
+  if (!data) {
+    return <div className="rounded bg-muted animate-pulse" style={{ height }} />
   }
 
-  return <div ref={containerRef} />
+  if (data.length < 2) {
+    return null
+  }
+
+  return (
+    <div style={{ height }}>
+      <SparklineSvg data={data} height={height} />
+    </div>
+  )
 }

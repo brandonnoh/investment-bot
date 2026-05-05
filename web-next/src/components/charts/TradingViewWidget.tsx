@@ -9,8 +9,7 @@ interface TradingViewWidgetProps {
 
 function toTvSymbol(ticker: string): string {
   const code = ticker.replace(/\.(KS|KQ)$/, '')
-  if (ticker.endsWith('.KS')) return `KOSPI:${code}`
-  if (ticker.endsWith('.KQ')) return `KOSDAQ:${code}`
+  if (ticker.endsWith('.KS') || ticker.endsWith('.KQ')) return `KRX:${code}`
   return ticker
 }
 
@@ -55,5 +54,5 @@ export function TradingViewWidget({ ticker, height = 350 }: TradingViewWidgetPro
     }
   }, [ticker, height])
 
-  return <div ref={containerRef} />
+  return <div ref={containerRef} style={{ height, minHeight: height }} />
 }
