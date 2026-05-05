@@ -1,5 +1,7 @@
 # 데이터베이스 (로컬 전용)
 db/history.db
+db/history.db.bak
+db/history.db.corrupted
 
 # 출력 파일 (자동 생성)
 output/
