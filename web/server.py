@@ -262,15 +262,30 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             series_id = params.get("series_id", [""])[0]
             days = self._parse_int_param(params, "days", 30, 5, 365)
             self.send_json(api.load_macro_history(series_id, days))
+        elif path == "/api/alerts-history":
+            event_type = params.get("type", [""])[0]
+            limit = self._parse_int_param(params, "limit", 20, 1, 100)
+            self.send_json(api.load_alerts_history(event_type, limit))
         else:
             self._serve_static(path)
 
     def do_POST(self):
         """POST 요청 라우팅."""
+        path = urlparse(self.path).path
+
+        # TradingView Webhook — 자체 secret으로 인증, X-API-Key 불필요
+        if path == "/api/tv-alert":
+            try:
+                body = self._read_json_body()
+            except Exception:
+                self.send_json({"error": "invalid json"}, 400)
+                return
+            self.send_json(api.handle_tv_alert(body))
+            return
+
         if not self._check_auth():
             self.send_json({"error": "인증 실패"}, 401)
             return
-        path = urlparse(self.path).path
 
         if path == "/api/run-pipeline":
             result = api.run_background(

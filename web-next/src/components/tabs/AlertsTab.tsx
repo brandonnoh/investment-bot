@@ -1,9 +1,22 @@
 'use client'
 
 import { useState } from 'react'
+import useSWR from 'swr'
 import { useIntelData } from '@/hooks/useIntelData'
 
 type AlertLevel = 'critical' | 'warning' | 'info'
+
+interface TvAlertRow {
+  id?: number
+  level: string
+  event_type: string
+  ticker: string
+  message: string
+  value?: number
+  triggered_at: string
+}
+
+const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 const LEVEL_CONFIG: Record<AlertLevel, {
   dot: string
@@ -64,6 +77,43 @@ function levelKey(raw: string | undefined): AlertLevel {
   return 'info'
 }
 
+function TvAlertsSection() {
+  const { data } = useSWR<TvAlertRow[]>(
+    '/api/alerts-history?type=tv_webhook&limit=20',
+    fetcher,
+    { dedupingInterval: 60_000 },
+  )
+
+  if (!data || data.length === 0) return null
+
+  return (
+    <div className="mt-4">
+      <div className="text-[14px] text-muted-foreground font-mono tracking-widest uppercase mb-2">
+        TradingView Alerts
+      </div>
+      <div className="space-y-2">
+        {data.map((alert, i) => (
+          <div
+            key={alert.id ?? i}
+            className="rounded-md border border-mc-border bg-mc-card px-3 py-2.5 flex items-center gap-2"
+          >
+            <span className="text-[14px] font-mono font-bold px-1.5 py-0.5 rounded border border-blue-500/30 text-blue-400 bg-blue-500/10 shrink-0">
+              TV
+            </span>
+            {alert.ticker && (
+              <span className="text-xs font-mono text-muted-foreground shrink-0">{alert.ticker}</span>
+            )}
+            <span className="text-xs flex-1 min-w-0 truncate">{alert.message}</span>
+            <span className="text-[14px] text-muted-foreground font-mono shrink-0">
+              {fmtTime(alert.triggered_at)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function AlertsTab() {
   const { data } = useIntelData()
   const alerts = data?.alerts?.alerts ?? []
@@ -81,9 +131,12 @@ export function AlertsTab() {
 
   if (alerts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-40 gap-2">
-        <span className="text-2xl text-mc-border">◆</span>
-        <span className="text-sm text-muted-foreground">현재 활성 알림이 없습니다</span>
+      <div>
+        <div className="flex flex-col items-center justify-center h-40 gap-2">
+          <span className="text-2xl text-mc-border">◆</span>
+          <span className="text-sm text-muted-foreground">현재 활성 알림이 없습니다</span>
+        </div>
+        <TvAlertsSection />
       </div>
     )
   }
@@ -190,6 +243,8 @@ export function AlertsTab() {
           })}
         </div>
       </div>
+
+      <TvAlertsSection />
     </div>
   )
 }

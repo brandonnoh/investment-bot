@@ -9,6 +9,8 @@ import logging
 import os
 import subprocess
 import threading
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from db.connection import get_db_conn
@@ -16,6 +18,8 @@ from utils.schema import validate_json
 from web.portfolio_refresh import refresh_portfolio_with_live_prices
 
 logger = logging.getLogger(__name__)
+
+_TVHOOK_SECRET = os.environ.get("TVHOOK_SECRET", "")
 
 # 프로젝트 루트
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -371,4 +375,73 @@ def load_macro_history(series_id: str, days: int = 30) -> list[dict]:
         return [{"time": r["timestamp"], "value": float(r["value"])} for r in reversed(rows)]
     except Exception as e:
         logger.error(f"[api] macro_history 조회 실패 {series_id}: {e}")
+        return []
+
+
+def _send_discord_message(message: str) -> None:
+    """Discord 웹훅으로 단순 문자 메시지 전송."""
+    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL", "")
+    if not webhook_url:
+        return
+    try:
+        payload = json.dumps({"content": message}).encode("utf-8")
+        req = urllib.request.Request(
+            webhook_url,
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "investment-bot/1.0",
+            },
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except Exception as e:
+        logger.error(f"[api] Discord 전송 실패: {e}")
+
+
+def handle_tv_alert(payload: dict) -> dict:
+    """TradingView Webhook 처리 — 시크릿 검증 → DB 저장 → Discord 전송."""
+    if not _TVHOOK_SECRET or payload.get("secret") != _TVHOOK_SECRET:
+        return {"ok": False, "error": "unauthorized"}
+
+    ticker = str(payload.get("ticker", ""))
+    action = str(payload.get("action", "ALERT")).upper()
+    price = float(payload.get("price", 0))
+    strategy = str(payload.get("strategy", ""))
+    message = f"[TV] {action} {ticker} @ {price:,.0f} — {strategy}"
+
+    try:
+        with get_db_conn() as conn:
+            conn.execute(
+                """INSERT INTO alerts
+                   (level, event_type, ticker, message, value, triggered_at, notified)
+                   VALUES (?, ?, ?, ?, ?, datetime('now','localtime'), 0)""",
+                ("INFO", "tv_webhook", ticker, message, price),
+            )
+            conn.commit()
+    except Exception as e:
+        logger.error(f"[api] TV alert DB 저장 실패: {e}")
+        return {"ok": False, "error": str(e)}
+
+    _send_discord_message(message)
+    return {"ok": True}
+
+
+def load_alerts_history(event_type: str = "", limit: int = 20) -> list[dict]:
+    """DB alerts 테이블 이력 조회 (AlertsTab TV 섹션용)."""
+    try:
+        with get_db_conn() as conn:
+            if event_type:
+                rows = conn.execute(
+                    "SELECT * FROM alerts WHERE event_type=? ORDER BY triggered_at DESC LIMIT ?",
+                    (event_type, limit),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM alerts ORDER BY triggered_at DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        logger.error(f"[api] alerts_history 조회 실패: {e}")
         return []
