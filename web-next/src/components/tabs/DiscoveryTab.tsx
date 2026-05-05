@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useMCStore } from '@/store/useMCStore'
 import { CompanyDrawer } from '@/components/discovery/CompanyDrawer'
 import type { Opportunity } from '@/types/api'
+import { PriceSparkline } from '@/components/charts/PriceSparkline'
 
 const HOW_IT_WORKS = [
   { step: '1', label: 'Marcus AI가 오늘 주목할 섹터 선정', sub: '뉴스·시장 분석 기반' },
@@ -102,6 +103,7 @@ function OpportunityCard({ o, highlighted, id, onClick }: { o: Opportunity; high
       className="rounded-md border border-mc-border bg-mc-card p-3 space-y-2 transition-all cursor-pointer hover:border-[#4dca7e]/40"
       style={highlighted ? { borderColor: '#4dca7e', boxShadow: '0 0 0 1px #4dca7e' } : undefined}
     >
+      <PriceSparkline ticker={o.ticker} days={30} height={48} />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-baseline gap-1.5 flex-wrap">

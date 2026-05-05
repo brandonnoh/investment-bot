@@ -13,6 +13,7 @@ import {
   AnalystReportsSection,
   NewsSection,
 } from './DrawerSections'
+import { TradingViewWidget } from '@/components/charts/TradingViewWidget'
 
 // -- 프로필이 비어있는지 확인 --
 function isEmptyProfile(p: CompanyProfile | undefined): boolean {
@@ -84,6 +85,11 @@ export function CompanyDrawer({ ticker, opportunity, onClose }: CompanyDrawerPro
 
         {!isLoading && !empty && profile && (
           <>
+            {ticker && (
+              <div className="px-4 pt-4">
+                <TradingViewWidget ticker={ticker} height={300} />
+              </div>
+            )}
             <PriceSection profile={profile} />
             <DescriptionSection profile={profile} />
             <MetricsGrid profile={profile} />

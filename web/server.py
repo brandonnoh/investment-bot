@@ -254,6 +254,10 @@ class MissionControlHandler(BaseHTTPRequestHandler):
             self.send_json(api_company.load_company_profile(ticker))
         elif path == "/api/health":
             self.send_json(api.load_health_status())
+        elif path == "/api/price-history":
+            ticker = params.get("ticker", [""])[0]
+            days = self._parse_int_param(params, "days", 30, 5, 180)
+            self.send_json(api.load_price_history(ticker, days))
         else:
             self._serve_static(path)
 

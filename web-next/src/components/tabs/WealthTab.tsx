@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { useWealthData } from '@/hooks/useWealthData'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { WealthLineChart } from '@/components/charts/WealthLineChart'
 import { fmtKrw } from '@/lib/format'
 import { SyncBadge } from '@/components/SyncBadge'
 
@@ -212,7 +213,20 @@ export function WealthTab() {
 
 
   return (
-    <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[1fr_1.6fr] lg:gap-4 lg:items-start">
+    <div className="space-y-4">
+      {/* 전재산 추이 차트 */}
+      {data.wealth_history && data.wealth_history.length > 1 && (
+        <Card className="bg-mc-card border-mc-border">
+          <CardHeader className="py-3 px-5">
+            <CardTitle className="text-xs font-mono">Wealth History</CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-4">
+            <WealthLineChart history={data.wealth_history} height={220} />
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="lg:grid lg:grid-cols-[1fr_1.6fr] lg:gap-4 lg:items-start space-y-4 lg:space-y-0">
       {/* 전체 자산 Hero */}
       <Card className="bg-mc-card border-mc-border">
         <CardContent className="pt-5 pb-5 px-5">
@@ -298,6 +312,7 @@ export function WealthTab() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

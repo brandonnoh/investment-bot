@@ -335,3 +335,21 @@ def run_health_check_sync() -> dict:
     except Exception as e:
         logger.error(f"health_check.py 실행 실패: {e}")
     return load_health_status()
+
+
+def load_price_history(ticker: str, days: int = 30) -> list[dict]:
+    """prices_daily 테이블에서 최근 N일 종가 이력 반환 (차트용)."""
+    if not ticker:
+        return []
+    try:
+        with get_db_conn() as conn:
+            rows = conn.execute(
+                """SELECT date, close FROM prices_daily
+                   WHERE ticker = ?
+                   ORDER BY date DESC LIMIT ?""",
+                (ticker, days),
+            ).fetchall()
+        return [{"date": r["date"], "close": float(r["close"])} for r in reversed(rows)]
+    except Exception as e:
+        logger.error(f"[api] price_history 조회 실패 {ticker}: {e}")
+        return []
