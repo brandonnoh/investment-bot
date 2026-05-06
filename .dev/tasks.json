@@ -1,10 +1,10 @@
 {
-  "summary": { "total": 5, "done": 0, "in_progress": 0, "pending": 5 },
+  "summary": { "total": 5, "done": 5, "in_progress": 0, "pending": 0 },
   "features": [
     {
       "id": "sector-map",
       "title": "섹터 → 종목 매핑 + 매크로 신호 룰셋",
-      "status": "pending",
+      "status": "done",
       "priority": "critical",
       "affected_packages": ["analysis"],
       "tags": ["python", "engine"],
@@ -24,7 +24,7 @@
     {
       "id": "sector-intel",
       "title": "매크로/뉴스/레짐 기반 섹터 점수화 → sector_scores.json",
-      "status": "pending",
+      "status": "done",
       "priority": "critical",
       "affected_packages": ["analysis"],
       "tags": ["python", "engine"],
@@ -45,7 +45,7 @@
     {
       "id": "value-screener",
       "title": "상위 섹터 종목 RSI/PER/PBR 스크리닝 → opportunities.json",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "affected_packages": ["analysis"],
       "tags": ["python", "engine"],
@@ -69,7 +69,7 @@
     {
       "id": "opp-refactor",
       "title": "fetch_opportunities.py를 value_screener 위임으로 교체",
-      "status": "pending",
+      "status": "done",
       "priority": "high",
       "affected_packages": ["data"],
       "tags": ["python", "engine"],
@@ -88,7 +88,7 @@
     {
       "id": "pipeline-wire",
       "title": "run_pipeline.py에 sector_intel 단계 통합",
-      "status": "pending",
+      "status": "done",
       "priority": "medium",
       "affected_packages": ["root"],
       "tags": ["python"],

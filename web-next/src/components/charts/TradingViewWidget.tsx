@@ -39,7 +39,7 @@ export function TradingViewWidget({ ticker, height = 350 }: TradingViewWidgetPro
       width: '100%',
       height,
       locale: 'kr',
-      dateRange: '3M',
+      dateRange: '12M',
       colorTheme: 'dark',
       isTransparent: true,
       autosize: true,

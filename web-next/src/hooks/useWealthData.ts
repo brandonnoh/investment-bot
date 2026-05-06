@@ -31,7 +31,11 @@ export interface WealthSummary {
   last_updated: string | null
 }
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+const fetcher = (url: string) =>
+  fetch(url).then(r => r.json()).then(d => {
+    if (d && d.error) throw new Error(d.error)
+    return d
+  })
 
 export function useWealthData() {
   const { data, error, mutate } = useSWR<WealthSummary>('/api/wealth', fetcher, {

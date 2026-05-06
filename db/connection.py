@@ -18,5 +18,7 @@ def get_db_conn(timeout: float = 30.0) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA busy_timeout=30000")
+    # 300 페이지(~1.2MB)마다 자동 체크포인트 — 기본 1000(4MB)이면 WAL이 너무 커져 오류 발생
+    conn.execute("PRAGMA wal_autocheckpoint=300")
     conn.row_factory = sqlite3.Row
     return conn

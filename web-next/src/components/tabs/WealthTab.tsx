@@ -264,7 +264,7 @@ export function WealthTab() {
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <div>
-            {(data.extra_assets as ExtraAsset[]).map(a => (
+            {((data.extra_assets ?? []) as ExtraAsset[]).map(a => (
               <div key={a.id} className="border-b border-mc-border last:border-0">
                 <button
                   onClick={() => editingId === a.id ? cancel() : startEdit(a)}

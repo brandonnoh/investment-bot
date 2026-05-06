@@ -120,7 +120,9 @@ def purge_old_data(conn, raw_months=None, news_months=None):
 def vacuum_db(conn):
     """VACUUM 실행 + WAL 모드 복구.
     SQLite VACUUM은 journal_mode를 DELETE로 리셋할 수 있으므로 반드시 WAL 재설정 필요.
+    WAL 파일이 커지면 'database disk image is malformed' 에러가 발생하므로 VACUUM 전 TRUNCATE 체크포인트 수행.
     """
+    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     conn.execute("VACUUM")
     conn.execute("PRAGMA journal_mode=WAL")
 

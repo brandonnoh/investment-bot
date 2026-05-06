@@ -342,8 +342,26 @@ def run_health_check_sync() -> dict:
     return load_health_status()
 
 
+def _fetch_price_history_yf(ticker: str, days: int) -> list[dict]:
+    """yfinance에서 종가 이력 조회 (prices_daily 데이터 부족 시 fallback)."""
+    try:
+        import yfinance as yf
+
+        period = f"{min(days, 90)}d"
+        hist = yf.Ticker(ticker).history(period=period)
+        if hist.empty:
+            return []
+        return [
+            {"date": str(d.date()), "close": round(float(c), 4)}
+            for d, c in zip(hist.index, hist["Close"])
+        ]
+    except Exception as e:
+        logger.warning(f"[api] yfinance price_history 실패 {ticker}: {e}")
+        return []
+
+
 def load_price_history(ticker: str, days: int = 30) -> list[dict]:
-    """prices_daily 테이블에서 최근 N일 종가 이력 반환 (차트용)."""
+    """prices_daily 테이블에서 최근 N일 종가 이력 반환. 5개 미만이면 yfinance fallback."""
     if not ticker:
         return []
     try:
@@ -354,10 +372,14 @@ def load_price_history(ticker: str, days: int = 30) -> list[dict]:
                    ORDER BY date DESC LIMIT ?""",
                 (ticker, days),
             ).fetchall()
-        return [{"date": r["date"], "close": float(r["close"])} for r in reversed(rows)]
+        db_data = [{"date": r["date"], "close": float(r["close"])} for r in reversed(rows)]
     except Exception as e:
         logger.error(f"[api] price_history 조회 실패 {ticker}: {e}")
-        return []
+        db_data = []
+
+    if len(db_data) >= 5:
+        return db_data
+    return _fetch_price_history_yf(ticker, days) or db_data
 
 
 def load_macro_history(series_id: str, days: int = 30) -> list[dict]:

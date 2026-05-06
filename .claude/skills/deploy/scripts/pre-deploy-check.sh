@@ -39,14 +39,17 @@ check_api() {
   local path="$1" desc="$2" expect="$3"
   local result
   result=$(docker exec investment-bot python3 -c "
-import urllib.request, sys
+import urllib.request, os, sys
+api_key = os.environ.get('INTERNAL_API_KEY', '')
 try:
-    r = urllib.request.urlopen('http://localhost:8421${path}', timeout=10)
+    req = urllib.request.Request('http://localhost:8421${path}')
+    if api_key:
+        req.add_header('X-API-Key', api_key)
+    r = urllib.request.urlopen(req, timeout=10)
     print(r.read().decode()[:200])
 except Exception as e:
     print('ERROR:' + str(e))
-    sys.exit(1)
-" 2>&1)
+" 2>&1) || true
   if echo "$result" | grep -q "ERROR:"; then
     fail "$desc — $(echo "$result" | grep ERROR)"
   elif [ -n "$expect" ] && ! echo "$result" | grep -q "$expect"; then
