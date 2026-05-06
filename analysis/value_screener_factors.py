@@ -17,6 +17,14 @@ WEIGHTS: dict[str, float] = {
     "growth": 0.10,
 }
 
+# flow 데이터 없는 종목(미국 등)용 4팩터 재가중
+WEIGHTS_NO_FLOW: dict[str, float] = {
+    "quality": 0.35,
+    "value": 0.30,
+    "momentum": 0.20,
+    "growth": 0.15,
+}
+
 _GRADE_CUTOFFS = [
     (0.90, "A+"),
     (0.80, "A"),
@@ -60,8 +68,11 @@ def _factor_value(m: dict) -> float:
     if pbr is not None and pbr > 0:
         scores.append(min(1.0, max(0.0, 1.5 / (pbr + 0.5))))
     per = m.get("per")
-    if per is not None and 0 < per < 100:
-        scores.append(min(1.0, max(0.0, 1 - (per - 5) / 40)))
+    if per is not None:
+        if per <= 0 or per >= 100:
+            scores.append(0.0)  # 적자 또는 고평가 → 낙제점
+        else:
+            scores.append(min(1.0, max(0.0, 1 - (per - 5) / 40)))
     pos = m.get("pos_52w_pct")
     if pos is not None:
         scores.append(min(1.0, max(0.0, 1 - pos / 100)))
@@ -164,18 +175,31 @@ def _generate_reason(m: dict, factors: dict[str, float]) -> str:
 
 
 def calc_composite(metrics: dict) -> dict:
-    """5-팩터 복합 점수 계산 → {score, grade, factors, reason}"""
-    factors = {
+    """5(또는 4)팩터 복합 점수 계산 → {score, grade, factors, reason}
+
+    flow 데이터(foreign_net, inst_net)가 없는 종목은 4팩터 가중치를 사용한다.
+    """
+    has_flow = (
+        metrics.get("foreign_net") is not None
+        or metrics.get("inst_net") is not None
+    )
+
+    factor_results: dict[str, float] = {
         "quality": _factor_quality(metrics),
         "value": _factor_value(metrics),
-        "flow": _factor_flow(metrics),
         "momentum": _factor_momentum(metrics),
         "growth": _factor_growth(metrics),
     }
-    score = round(sum(WEIGHTS[k] * v for k, v in factors.items()), 4)
+    if has_flow:
+        factor_results["flow"] = _factor_flow(metrics)
+        weights = WEIGHTS
+    else:
+        weights = WEIGHTS_NO_FLOW
+
+    score = round(sum(weights[k] * v for k, v in factor_results.items()), 4)
     return {
         "score": score,
         "grade": grade_from_score(score),
-        "factors": {k: round(v, 3) for k, v in factors.items()},
-        "reason": _generate_reason(metrics, factors),
+        "factors": {k: round(v, 3) for k, v in factor_results.items()},
+        "reason": _generate_reason(metrics, factor_results),
     }

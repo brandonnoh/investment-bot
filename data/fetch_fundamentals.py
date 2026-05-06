@@ -229,11 +229,16 @@ def _collect_for_ticker(ticker_info: dict) -> dict | None:
 
 
 def _load_tickers(conn: sqlite3.Connection) -> list:
-    """ticker_master에서 종목 목록 조회. 실패 시 빈 리스트 반환."""
+    """ticker_master + UNIVERSE_KOSPI200에서 종목 목록 조회. 실패 시 빈 리스트 반환."""
     try:
         from data.ticker_master import load_master_from_db
+        from analysis.screener_universe import UNIVERSE_KOSPI200
 
-        return load_master_from_db(conn)
+        master: dict[str, dict] = {t["ticker"]: t for t in load_master_from_db(conn)}
+        for info in UNIVERSE_KOSPI200:
+            if info["ticker"] not in master:
+                master[info["ticker"]] = info
+        return list(master.values())
     except Exception as e:
         logger.warning(f"종목 사전 로드 실패: {e}")
         return []

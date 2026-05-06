@@ -132,7 +132,10 @@ def _upsert_fundamentals(conn: sqlite3.Connection, ticker: str, name: str, marke
                dividend_yield=COALESCE(excluded.dividend_yield, dividend_yield),
                market_cap=excluded.market_cap,
                sector=COALESCE(excluded.sector, sector),
-               data_source='yahoo_universe',
+               data_source=CASE
+                   WHEN fundamentals.data_source LIKE 'dart%' THEN fundamentals.data_source
+                   ELSE 'yahoo_universe'
+               END,
                updated_at=excluded.updated_at,
                foreign_net=excluded.foreign_net, inst_net=excluded.inst_net""",
         (
